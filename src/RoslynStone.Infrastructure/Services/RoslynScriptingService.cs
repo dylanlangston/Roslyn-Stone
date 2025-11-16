@@ -16,6 +16,8 @@ public class RoslynScriptingService
     private readonly ScriptOptions _scriptOptions;
     private readonly StringWriter _outputWriter;
 
+    public ScriptOptions ScriptOptions => _scriptOptions;
+
     public RoslynScriptingService()
     {
         _outputWriter = new StringWriter();
