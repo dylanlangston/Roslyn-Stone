@@ -13,6 +13,10 @@ public class ReplTools
     /// <summary>
     /// Execute C# code in the REPL and return the result
     /// </summary>
+    /// <param name="scriptingService">The Roslyn scripting service for code execution</param>
+    /// <param name="code">C# code to execute</param>
+    /// <param name="cancellationToken">Cancellation token for async operations</param>
+    /// <returns>An object containing execution results, including success status, return value, output, errors, warnings, and execution time</returns>
     [McpServerTool]
     [Description("Execute C# code in the REPL and return the result with compilation errors, warnings, and output")]
     public static async Task<object> EvaluateCsharp(
@@ -50,6 +54,10 @@ public class ReplTools
     /// <summary>
     /// Validate C# code without executing it
     /// </summary>
+    /// <param name="scriptingService">The Roslyn scripting service for code validation</param>
+    /// <param name="code">C# code to validate</param>
+    /// <param name="cancellationToken">Cancellation token for async operations</param>
+    /// <returns>An object containing validation results with isValid flag and list of issues</returns>
     [McpServerTool]
     [Description("Validate C# code and return compilation errors and warnings without executing the code")]
     public static async Task<object> ValidateCsharp(
@@ -98,6 +106,8 @@ public class ReplTools
     /// <summary>
     /// Reset the REPL state
     /// </summary>
+    /// <param name="scriptingService">The Roslyn scripting service to reset</param>
+    /// <returns>A confirmation message indicating the REPL state has been reset</returns>
     [McpServerTool]
     [Description("Reset the REPL state, clearing all variables and references")]
     public static string ResetRepl(RoslynScriptingService scriptingService)

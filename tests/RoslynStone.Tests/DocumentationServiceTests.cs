@@ -3,6 +3,11 @@ using Xunit;
 
 namespace RoslynStone.Tests;
 
+/// <summary>
+/// Tests for DocumentationService
+/// </summary>
+[Trait("Category", "Unit")]
+[Trait("Component", "Documentation")]
 public class DocumentationServiceTests
 {
     private readonly DocumentationService _service;
@@ -13,6 +18,7 @@ public class DocumentationServiceTests
     }
 
     [Fact]
+    [Trait("Feature", "Lookup")]
     public void GetDocumentation_StringType_ReturnsDocumentation()
     {
         // Arrange
@@ -28,6 +34,7 @@ public class DocumentationServiceTests
     }
 
     [Fact]
+    [Trait("Feature", "Validation")]
     public void GetDocumentation_InvalidSymbol_ReturnsNull()
     {
         // Arrange

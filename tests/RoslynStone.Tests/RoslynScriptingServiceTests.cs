@@ -3,6 +3,11 @@ using Xunit;
 
 namespace RoslynStone.Tests;
 
+/// <summary>
+/// Tests for RoslynScriptingService
+/// </summary>
+[Trait("Category", "Unit")]
+[Trait("Component", "REPL")]
 public class RoslynScriptingServiceTests
 {
     private readonly RoslynScriptingService _service;
@@ -13,6 +18,7 @@ public class RoslynScriptingServiceTests
     }
 
     [Fact]
+    [Trait("Feature", "Execution")]
     public async Task ExecuteAsync_SimpleExpression_ReturnsResult()
     {
         // Arrange
@@ -28,6 +34,7 @@ public class RoslynScriptingServiceTests
     }
 
     [Fact]
+    [Trait("Feature", "Output")]
     public async Task ExecuteAsync_ConsoleOutput_CapturesOutput()
     {
         // Arrange
@@ -42,6 +49,7 @@ public class RoslynScriptingServiceTests
     }
 
     [Fact]
+    [Trait("Feature", "Validation")]
     public async Task ExecuteAsync_CompilationError_ReturnsErrors()
     {
         // Arrange
@@ -56,6 +64,7 @@ public class RoslynScriptingServiceTests
     }
 
     [Fact]
+    [Trait("Feature", "State")]
     public async Task ExecuteAsync_MultipleStatements_MaintainsState()
     {
         // Arrange
@@ -75,6 +84,7 @@ public class RoslynScriptingServiceTests
     }
 
     [Fact]
+    [Trait("Feature", "Warnings")]
     public async Task ExecuteAsync_Warning_ReturnsWarnings()
     {
         // Arrange

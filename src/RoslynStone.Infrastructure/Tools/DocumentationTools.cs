@@ -13,6 +13,9 @@ public class DocumentationTools
     /// <summary>
     /// Get XML documentation for a .NET type or method
     /// </summary>
+    /// <param name="documentationService">The documentation service for symbol lookup</param>
+    /// <param name="symbolName">The fully qualified name of the type or method (e.g., 'System.String', 'System.Linq.Enumerable.Select')</param>
+    /// <returns>An object containing documentation information including summary, remarks, parameters, returns, exceptions, and examples</returns>
     [McpServerTool]
     [Description("Get XML documentation for a .NET type, method, property, or other symbol including summary, remarks, parameters, and examples")]
     public static object GetDocumentation(
