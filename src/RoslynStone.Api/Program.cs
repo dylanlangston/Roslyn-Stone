@@ -26,12 +26,24 @@ builder.Services.AddSingleton<AssemblyExecutionService>();
 builder.Services.AddSingleton<NuGetService>();
 
 // Register command handlers
-builder.Services.AddSingleton<ICommandHandler<LoadPackageCommand, PackageReference>, LoadPackageCommandHandler>();
+builder.Services.AddSingleton<
+    ICommandHandler<LoadPackageCommand, PackageReference>,
+    LoadPackageCommandHandler
+>();
 
 // Register query handlers
-builder.Services.AddSingleton<IQueryHandler<SearchPackagesQuery, PackageSearchResult>, SearchPackagesQueryHandler>();
-builder.Services.AddSingleton<IQueryHandler<GetPackageVersionsQuery, List<PackageVersion>>, GetPackageVersionsQueryHandler>();
-builder.Services.AddSingleton<IQueryHandler<GetPackageReadmeQuery, string?>, GetPackageReadmeQueryHandler>();
+builder.Services.AddSingleton<
+    IQueryHandler<SearchPackagesQuery, PackageSearchResult>,
+    SearchPackagesQueryHandler
+>();
+builder.Services.AddSingleton<
+    IQueryHandler<GetPackageVersionsQuery, List<PackageVersion>>,
+    GetPackageVersionsQueryHandler
+>();
+builder.Services.AddSingleton<
+    IQueryHandler<GetPackageReadmeQuery, string?>,
+    GetPackageReadmeQueryHandler
+>();
 
 // Configure MCP server with stdio transport
 builder.Services.AddMcpServer().WithStdioServerTransport().WithToolsFromAssembly();

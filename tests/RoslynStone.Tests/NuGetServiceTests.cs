@@ -138,8 +138,8 @@ public class NuGetServiceTests
         var packageId = "ThisPackageDefinitelyDoesNotExist12345XYZ";
 
         // Act & Assert
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await _service.DownloadPackageAsync(packageId)
+        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await _service.DownloadPackageAsync(packageId)
         );
     }
 }

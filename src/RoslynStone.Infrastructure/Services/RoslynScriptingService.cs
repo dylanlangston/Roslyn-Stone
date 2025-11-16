@@ -183,9 +183,7 @@ public class RoslynScriptingService
                 // Add each assembly to script options
                 foreach (var assemblyPath in assemblyPaths.Where(File.Exists))
                 {
-                    _scriptOptions = _scriptOptions.AddReferences(
-                        Assembly.LoadFrom(assemblyPath)
-                    );
+                    _scriptOptions = _scriptOptions.AddReferences(Assembly.LoadFrom(assemblyPath));
                 }
 
                 // Reset script state to apply new references

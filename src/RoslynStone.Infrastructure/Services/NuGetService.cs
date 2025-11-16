@@ -98,8 +98,9 @@ public class NuGetService : IDisposable
         CancellationToken cancellationToken = default
     )
     {
-        var metadataResource =
-            await _repository.GetResourceAsync<PackageMetadataResource>(cancellationToken);
+        var metadataResource = await _repository.GetResourceAsync<PackageMetadataResource>(
+            cancellationToken
+        );
 
         var metadata = await metadataResource.GetMetadataAsync(
             packageId,
@@ -125,12 +126,14 @@ public class NuGetService : IDisposable
         }
 
         // Sort versions in descending order (newest first)
-        versions.Sort((a, b) =>
-        {
-            var versionA = NuGetVersion.Parse(a.Version);
-            var versionB = NuGetVersion.Parse(b.Version);
-            return versionB.CompareTo(versionA);
-        });
+        versions.Sort(
+            (a, b) =>
+            {
+                var versionA = NuGetVersion.Parse(a.Version);
+                var versionB = NuGetVersion.Parse(b.Version);
+                return versionB.CompareTo(versionA);
+            }
+        );
 
         return versions;
     }
@@ -149,8 +152,9 @@ public class NuGetService : IDisposable
     )
     {
         // Get package metadata to find the version
-        var metadataResource =
-            await _repository.GetResourceAsync<PackageMetadataResource>(cancellationToken);
+        var metadataResource = await _repository.GetResourceAsync<PackageMetadataResource>(
+            cancellationToken
+        );
 
         var metadata = await metadataResource.GetMetadataAsync(
             packageId,
@@ -245,8 +249,9 @@ public class NuGetService : IDisposable
     )
     {
         // Get package metadata
-        var metadataResource =
-            await _repository.GetResourceAsync<PackageMetadataResource>(cancellationToken);
+        var metadataResource = await _repository.GetResourceAsync<PackageMetadataResource>(
+            cancellationToken
+        );
 
         var metadata = await metadataResource.GetMetadataAsync(
             packageId,
@@ -313,15 +318,19 @@ public class NuGetService : IDisposable
 
         // Get lib files that match the current framework
         var libItems = packageReader.GetLibItems().ToList();
-        
+
         // Use NuGet framework compatibility logic to select the best framework
         var currentFramework = NuGetFramework.Parse($"net{Environment.Version.Major}.0");
         var reducer = new FrameworkReducer();
-        var nearestFramework = reducer.GetNearest(currentFramework, libItems.Select(l => l.TargetFramework));
-        
-        var targetFramework = nearestFramework != null
-            ? libItems.FirstOrDefault(l => l.TargetFramework.Equals(nearestFramework))
-            : libItems.OrderByDescending(g => g.TargetFramework.Version).FirstOrDefault();
+        var nearestFramework = reducer.GetNearest(
+            currentFramework,
+            libItems.Select(l => l.TargetFramework)
+        );
+
+        var targetFramework =
+            nearestFramework != null
+                ? libItems.FirstOrDefault(l => l.TargetFramework.Equals(nearestFramework))
+                : libItems.OrderByDescending(g => g.TargetFramework.Version).FirstOrDefault();
 
         if (targetFramework != null)
         {
@@ -331,9 +340,12 @@ public class NuGetService : IDisposable
                 packageMetadata.Identity.Version.ToNormalizedString()
             );
 
-            foreach (var file in targetFramework.Items.Where(f => 
-                f.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)
-                && !f.Replace('\\', '/').Contains("/ref/")))
+            foreach (
+                var file in targetFramework.Items.Where(f =>
+                    f.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)
+                    && !f.Replace('\\', '/').Contains("/ref/")
+                )
+            )
             {
                 var fullPath = Path.Combine(packagePath, file);
                 if (File.Exists(fullPath))

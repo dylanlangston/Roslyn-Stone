@@ -129,8 +129,8 @@ public class NuGetTools
     public static async Task<object> LoadNuGetPackage(
         ICommandHandler<LoadPackageCommand, Core.Models.PackageReference> commandHandler,
         [Description("Package name to load")] string packageName,
-        [Description("Optional version (uses latest stable if not specified)")] string? version =
-            null,
+        [Description("Optional version (uses latest stable if not specified)")]
+            string? version = null,
         CancellationToken cancellationToken = default
     )
     {

@@ -129,9 +129,7 @@ public class AssemblyExecutionService
                 // Execute the entry point
                 var result = entryPoint.Invoke(
                     null,
-                    entryPoint.GetParameters().Length == 0
-                        ? null
-                        : [Array.Empty<string>()]
+                    entryPoint.GetParameters().Length == 0 ? null : [Array.Empty<string>()]
                 );
 
                 // Handle async Task return types
