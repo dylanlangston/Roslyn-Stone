@@ -4,6 +4,7 @@
 
 var target = Argument("target", "Default");
 var configuration = Argument("configuration", "Debug");
+var version = Argument("version", "1.0.0");
 
 ///////////////////////////////////////////////////////////////////////////////
 // SETUP / TEARDOWN
@@ -13,6 +14,7 @@ Setup(ctx =>
 {
     Information("Running tasks...");
     Information($"Configuration: {configuration}");
+    Information($"Version: {version}");
 });
 
 Teardown(ctx =>
@@ -31,6 +33,7 @@ Task("Clean")
     CleanDirectories("./src/**/obj");
     CleanDirectories("./tests/**/bin");
     CleanDirectories("./tests/**/obj");
+    CleanDirectories("./artifacts");
 });
 
 Task("Restore")
@@ -122,6 +125,59 @@ Task("Test-Coverage")
             .Append("--collect:\"XPlat Code Coverage\"")
             .Append("--results-directory ./artifacts/coverage")
     });
+});
+
+Task("Pack")
+    .Description("Create NuGet packages")
+    .IsDependentOn("Build")
+    .Does(() =>
+{
+    EnsureDirectoryExists("./artifacts/packages");
+    
+    var projects = new[]
+    {
+        "./src/RoslynStone.Core/RoslynStone.Core.csproj",
+        "./src/RoslynStone.Infrastructure/RoslynStone.Infrastructure.csproj"
+    };
+    
+    foreach (var project in projects)
+    {
+        DotNetPack(project, new DotNetPackSettings
+        {
+            Configuration = configuration,
+            OutputDirectory = "./artifacts/packages",
+            NoRestore = true,
+            NoBuild = true,
+            ArgumentCustomization = args => args
+                .Append($"/p:Version={version}")
+                .Append($"/p:PackageVersion={version}")
+        });
+    }
+    
+    Information($"NuGet packages created in ./artifacts/packages");
+});
+
+Task("Publish-NuGet")
+    .Description("Publish NuGet packages to NuGet.org")
+    .IsDependentOn("Pack")
+    .Does(() =>
+{
+    var apiKey = EnvironmentVariable("NUGET_API_KEY");
+    if (string.IsNullOrEmpty(apiKey))
+    {
+        throw new Exception("NUGET_API_KEY environment variable not set");
+    }
+    
+    var packages = GetFiles("./artifacts/packages/*.nupkg");
+    
+    foreach (var package in packages)
+    {
+        DotNetNuGetPush(package.FullPath, new DotNetNuGetPushSettings
+        {
+            Source = "https://api.nuget.org/v3/index.json",
+            ApiKey = apiKey
+        });
+    }
 });
 
 Task("CI")

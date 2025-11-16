@@ -4,5 +4,21 @@
     <LangVersion>14</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    
+    <!-- NuGet Package Metadata -->
+    <PackageId>RoslynStone.Core</PackageId>
+    <Authors>Dylan Langston</Authors>
+    <Description>Core domain models, commands, queries, and CQRS interfaces for RoslynStone - a C# REPL service for LLMs</Description>
+    <PackageTags>roslyn;repl;csharp;mcp;llm;ai;scripting</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/dylanlangston/Rosyln-Stone</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/dylanlangston/Rosyln-Stone</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
+  
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 </Project>
