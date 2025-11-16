@@ -11,14 +11,6 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
-{
-    c.SwaggerDoc("v1", new() { 
-        Title = "RoslynStone API", 
-        Version = "v1",
-        Description = "C# REPL service with MCP protocol support"
-    });
-});
 
 // Register services
 builder.Services.AddSingleton<RoslynScriptingService>();
@@ -47,15 +39,23 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // Configure the HTTP request pipeline
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-
 app.UseHttpsRedirection();
 app.UseCors("AllowAll");
 app.UseAuthorization();
 app.MapControllers();
+
+// Add a health check endpoint
+app.MapGet("/", () => new { 
+    service = "RoslynStone API", 
+    version = "1.0", 
+    status = "running",
+    endpoints = new[]
+    {
+        "/api/repl/execute",
+        "/api/repl/validate",
+        "/api/documentation/{symbolName}",
+        "/api/mcp"
+    }
+});
 
 app.Run();

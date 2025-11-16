@@ -49,40 +49,6 @@ public class RoslynScriptingService
 
         try
         {
-            // First, check for compilation errors
-            var script = CSharpScript.Create(code, _scriptOptions);
-            var diagnostics = script.Compile(cancellationToken);
-
-            foreach (var diagnostic in diagnostics)
-            {
-                var error = new CompilationError
-                {
-                    Code = diagnostic.Id,
-                    Message = diagnostic.GetMessage(),
-                    Severity = diagnostic.Severity.ToString(),
-                    Line = diagnostic.Location.GetLineSpan().StartLinePosition.Line + 1,
-                    Column = diagnostic.Location.GetLineSpan().StartLinePosition.Character + 1
-                };
-
-                if (diagnostic.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
-                    errors.Add(error);
-                else if (diagnostic.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Warning)
-                    warnings.Add(error);
-            }
-
-            // If there are compilation errors, return them without executing
-            if (errors.Count > 0)
-            {
-                stopwatch.Stop();
-                return new ExecutionResult
-                {
-                    Success = false,
-                    Errors = errors,
-                    Warnings = warnings,
-                    ExecutionTime = stopwatch.Elapsed
-                };
-            }
-
             // Capture console output
             var originalOut = Console.Out;
             Console.SetOut(_outputWriter);
@@ -101,8 +67,12 @@ public class RoslynScriptingService
 
                 stopwatch.Stop();
 
+                // Get the current output
                 var output = _outputWriter.ToString();
-                _outputWriter.GetStringBuilder().Clear();
+                
+                // Clear the buffer for next execution
+                var sb = _outputWriter.GetStringBuilder();
+                sb.Clear();
 
                 return new ExecutionResult
                 {
