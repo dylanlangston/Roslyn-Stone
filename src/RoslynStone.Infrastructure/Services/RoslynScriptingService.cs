@@ -74,6 +74,9 @@ public class RoslynScriptingService
 
                 stopwatch.Stop();
 
+                // Ensure all output is flushed
+                await Console.Out.FlushAsync();
+
                 // Get the current output
                 var output = _outputWriter.ToString();
 
