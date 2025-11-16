@@ -11,8 +11,8 @@
     <Description>Infrastructure implementations for RoslynStone - Roslyn scripting services, MCP tools, command/query handlers</Description>
     <PackageTags>roslyn;repl;csharp;mcp;llm;ai;scripting;infrastructure</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/dylanlangston/Rosyln-Stone</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/dylanlangston/Rosyln-Stone</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/dylanlangston/Roslyn-Stone</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/dylanlangston/Roslyn-Stone</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>

@@ -11,8 +11,8 @@
     <Description>Core domain models, commands, queries, and CQRS interfaces for RoslynStone - a C# REPL service for LLMs</Description>
     <PackageTags>roslyn;repl;csharp;mcp;llm;ai;scripting</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/dylanlangston/Rosyln-Stone</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/dylanlangston/Rosyln-Stone</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/dylanlangston/Roslyn-Stone</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/dylanlangston/Roslyn-Stone</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>

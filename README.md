@@ -51,8 +51,8 @@ RoslynStone/
 
 ```bash
 # Clone the repository
-git clone https://github.com/dylanlangston/Rosyln-Stone.git
-cd Rosyln-Stone
+git clone https://github.com/dylanlangston/Roslyn-Stone.git
+cd Roslyn-Stone
 
 # Build the solution
 dotnet build
@@ -78,7 +78,7 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
   "mcpServers": {
     "roslyn-stone": {
       "command": "dotnet",
-      "args": ["run", "--project", "/path/to/Rosyln-Stone/src/RoslynStone.Api"],
+      "args": ["run", "--project", "/path/to/Roslyn-Stone/src/RoslynStone.Api"],
       "env": {
         "DOTNET_ENVIRONMENT": "Development"
       }
