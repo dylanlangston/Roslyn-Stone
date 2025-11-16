@@ -2,10 +2,8 @@
   "name": "Roslyn-Stone Development Container",
   "build": {
     "dockerfile": "Dockerfile",
-    "context": "..",
-    "args": {
-      "VARIANT": "10.0-noble"
-    }
+    "target": "base",
+    "context": ".."
   },
   
   "features": {
@@ -13,11 +11,10 @@
       "version": "latest",
       "moby": true,
       "dockerDashComposeVersion": "v2"
-    },
-    "ghcr.io/devcontainers/features/git:1": {
-      "version": "latest"
     }
   },
+  
+  "containerUser": "vscode",
 
   "customizations": {
     "vscode": {
@@ -25,10 +22,15 @@
         "ms-dotnettools.csdevkit",
         "ms-dotnettools.csharp",
         "ms-dotnettools.vscode-dotnet-runtime",
+        "ms-dotnettools.vscodeintellicode-csharp",
         "kreativ-software.csharpextensions",
         "jchannon.csharpextensions",
         "ms-azuretools.vscode-docker",
-        "eamodio.gitlens"
+        "ms-vscode-remote.remote-containers",
+        "eamodio.gitlens",
+        "github.vscode-github-actions",
+        "bierner.markdown-preview-github-styles",
+        "redhat.vscode-yaml"
       ],
       "settings": {
         "dotnet.defaultSolution": "RoslynStone.sln",
@@ -38,13 +40,12 @@
     }
   },
 
-  "forwardPorts": [],
+  "containerEnv": {
+    "DOTNET_CLI_TELEMETRY_OPTOUT": "1",
+    "DOTNET_GENERATE_ASPNET_CERTIFICATE": "0",
+    "DOTNET_NOLOGO": "1",
+    "DOTNET_USE_POLLING_FILE_WATCHER": "1"
+  },
   
-  "postCreateCommand": "dotnet restore && dotnet build",
-  
-  "remoteUser": "ubuntu",
-  
-  "mounts": [
-    "source=/var/run/docker.sock,target=/var/run/docker-host.sock,type=bind"
-  ]
+  "postCreateCommand": "dotnet restore && dotnet build"
 }
