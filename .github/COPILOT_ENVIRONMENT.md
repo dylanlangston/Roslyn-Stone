@@ -31,6 +31,12 @@ The custom environment is configured through the `.github/workflows/copilot-setu
 - **Command**: `dotnet cake <script.cake>`
 - **Documentation**: https://cakebuild.net/
 
+### dotnet-outdated
+- **Purpose**: Check for outdated NuGet package dependencies
+- **Usage**: Identify packages that can be updated
+- **Command**: `dotnet-outdated` or `dotnet-outdated -u` to upgrade
+- **Documentation**: https://github.com/dotnet-outdated/dotnet-outdated
+
 ## How It Works
 
 1. **Automatic Triggers**: The workflow runs automatically when:

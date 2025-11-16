@@ -37,6 +37,9 @@ jobs:
       - name: Install Cake build tool
         run: dotnet tool install --global Cake.Tool
 
+      - name: Install dotnet-outdated (package update checker)
+        run: dotnet tool install --global dotnet-outdated-tool
+
       - name: Display installed global tools
         run: dotnet tool list --global
 
@@ -72,6 +75,9 @@ jobs:
           echo ""
           echo "Cake version:"
           dotnet cake --version || echo "Cake not found"
+          echo ""
+          echo "dotnet-outdated version:"
+          dotnet-outdated --version || echo "dotnet-outdated not found"
           echo ""
           echo "=== Environment Ready ==="
         shell: bash

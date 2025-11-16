@@ -1,0 +1,54 @@
+name: 'Setup .NET Tools'
+description: 'Sets up .NET SDK and all development tools (CSharpier, ReSharper, Cake, dotnet-outdated)'
+inputs:
+  dotnet-version:
+    description: '.NET SDK version to install'
+    required: false
+    default: '10.0.x'
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ inputs.dotnet-version }}
+    
+    - name: Display .NET version
+      shell: bash
+      run: dotnet --version
+    
+    - name: Cache global tools
+      uses: actions/cache@v4
+      with:
+        path: ~/.dotnet/tools
+        key: ${{ runner.os }}-dotnet-tools-${{ hashFiles('**/.config/dotnet-tools.json') }}
+        restore-keys: |
+          ${{ runner.os }}-dotnet-tools-
+    
+    - name: Install CSharpier
+      shell: bash
+      run: dotnet tool install --global csharpier || dotnet tool update --global csharpier
+    
+    - name: Install ReSharper CLI
+      shell: bash
+      run: dotnet tool install --global JetBrains.ReSharper.GlobalTools || dotnet tool update --global JetBrains.ReSharper.GlobalTools
+    
+    - name: Install Cake
+      shell: bash
+      run: dotnet tool install --global Cake.Tool || dotnet tool update --global Cake.Tool
+    
+    - name: Install dotnet-outdated
+      shell: bash
+      run: dotnet tool install --global dotnet-outdated-tool || dotnet tool update --global dotnet-outdated-tool
+    
+    - name: List installed tools
+      shell: bash
+      run: dotnet tool list --global
+    
+    - name: Cache NuGet packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
