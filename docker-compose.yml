@@ -1,19 +1,42 @@
 version: '3.8'
 
 services:
-  roslyn-stone-mcp:
+  # MCP Server with stdio transport (default)
+  roslyn-stone-mcp-stdio:
     build:
       context: .
       dockerfile: src/RoslynStone.Api/Dockerfile
     image: roslyn-stone-mcp:latest
-    container_name: roslyn-stone-mcp
+    container_name: roslyn-stone-mcp-stdio
     environment:
       - DOTNET_ENVIRONMENT=Development
+      - MCP_TRANSPORT=stdio
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://aspire-dashboard:18889
-      - OTEL_SERVICE_NAME=roslyn-stone-mcp
-      - OTEL_RESOURCE_ATTRIBUTES=service.namespace=roslyn-stone,service.instance.id=mcp-1
+      - OTEL_SERVICE_NAME=roslyn-stone-mcp-stdio
+      - OTEL_RESOURCE_ATTRIBUTES=service.namespace=roslyn-stone,service.instance.id=mcp-stdio-1
     stdin_open: true
     tty: true
+    networks:
+      - roslyn-stone-network
+    depends_on:
+      - aspire-dashboard
+
+  # MCP Server with HTTP transport
+  roslyn-stone-mcp-http:
+    build:
+      context: .
+      dockerfile: src/RoslynStone.Api/Dockerfile
+    image: roslyn-stone-mcp:latest
+    container_name: roslyn-stone-mcp-http
+    environment:
+      - DOTNET_ENVIRONMENT=Development
+      - MCP_TRANSPORT=http
+      - ASPNETCORE_URLS=http://+:8080
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://aspire-dashboard:18889
+      - OTEL_SERVICE_NAME=roslyn-stone-mcp-http
+      - OTEL_RESOURCE_ATTRIBUTES=service.namespace=roslyn-stone,service.instance.id=mcp-http-1
+    ports:
+      - "8080:8080"  # MCP HTTP endpoint
     networks:
       - roslyn-stone-network
     depends_on:
