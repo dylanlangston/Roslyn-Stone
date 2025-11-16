@@ -1,7 +1,6 @@
 using System.Text.Json;
 using RoslynStone.Infrastructure.Services;
 using RoslynStone.Infrastructure.Tools;
-using Xunit;
 
 namespace RoslynStone.Tests;
 
@@ -224,25 +223,24 @@ public class McpToolsIntegrationTests
 
         // Assert
         Assert.NotNull(resultDict);
-        Assert.True(resultDict.ContainsKey("frameworkVersion"));
+        Assert.True(resultDict.TryGetValue("frameworkVersion", out var frameworkVersion));
         Assert.True(resultDict.ContainsKey("language"));
         Assert.True(resultDict.ContainsKey("state"));
-        Assert.True(resultDict.ContainsKey("defaultImports"));
-        Assert.True(resultDict.ContainsKey("capabilities"));
+        Assert.True(resultDict.TryGetValue("defaultImports", out var defaultImports));
+        Assert.True(resultDict.TryGetValue("capabilities", out var capabilities));
         Assert.True(resultDict.ContainsKey("tips"));
         Assert.True(resultDict.ContainsKey("examples"));
 
         // Verify framework version
-        Assert.Equal(".NET 10.0", resultDict["frameworkVersion"].GetString());
-        
+        Assert.Equal(".NET 10.0", frameworkVersion.GetString());
+
         // Verify capabilities
-        var capabilities = resultDict["capabilities"];
         Assert.True(capabilities.GetProperty("asyncAwait").GetBoolean());
         Assert.True(capabilities.GetProperty("linq").GetBoolean());
         Assert.True(capabilities.GetProperty("statefulness").GetBoolean());
-        
+
         // Verify default imports exist
-        var imports = resultDict["defaultImports"].EnumerateArray().ToList();
+        var imports = defaultImports.EnumerateArray().ToList();
         Assert.NotEmpty(imports);
         Assert.Contains(imports, i => i.GetString() == "System");
         Assert.Contains(imports, i => i.GetString() == "System.Linq");

@@ -516,8 +516,6 @@ Use the prompts to help LLMs understand how to effectively use Roslyn-Stone for 
 ```
 
 Returns information about the REPL including framework version, available namespaces, capabilities, tips, and examples.
-
-// Returns: "{\"Name\":\"Test\"}"
 ```
 
 ## Technology Stack

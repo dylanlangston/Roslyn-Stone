@@ -148,13 +148,13 @@ public class ReplTools
             "System.Collections.Generic",
             "System.Linq",
             "System.Text",
-            "System.Threading.Tasks"
+            "System.Threading.Tasks",
         };
 
         return new
         {
             frameworkVersion = ".NET 10.0",
-            language = "C# 13",
+            language = "C# 14",
             state = "Ready",
             defaultImports = imports,
             capabilities = new
@@ -164,7 +164,7 @@ public class ReplTools
                 topLevelStatements = true,
                 consoleOutput = true,
                 nugetPackages = true,
-                statefulness = true
+                statefulness = true,
             },
             tips = new[]
             {
@@ -175,7 +175,7 @@ public class ReplTools
                 "Use LoadNuGetPackage to add external libraries",
                 "Use ResetRepl to clear all state and start fresh",
                 "Use ValidateCsharp to check syntax before execution",
-                "Use GetDocumentation to learn about .NET APIs"
+                "Use GetDocumentation to learn about .NET APIs",
             },
             examples = new
             {
@@ -183,8 +183,8 @@ public class ReplTools
                 variableDeclaration = "var name = \"Alice\"; name",
                 asyncOperation = "await Task.Delay(100); \"Done\"",
                 linqQuery = "new[] { 1, 2, 3 }.Select(x => x * 2)",
-                consoleOutput = "Console.WriteLine(\"Debug\"); return \"Result\""
-            }
+                consoleOutput = "Console.WriteLine(\"Debug\"); return \"Result\"",
+            },
         };
     }
 }

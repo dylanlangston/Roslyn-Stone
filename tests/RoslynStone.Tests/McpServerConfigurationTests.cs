@@ -1,7 +1,5 @@
-using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol.Server;
 using RoslynStone.Infrastructure.Tools;
-using Xunit;
 
 namespace RoslynStone.Tests;
 
@@ -18,7 +16,7 @@ public class McpServerConfigurationTests
     {
         // This test verifies that we have the expected number of tools
         // to detect if tools are accidentally removed or duplicated
-        
+
         var methods = typeof(ReplTools)
             .GetMethods()
             .Where(m => m.GetCustomAttributes(typeof(McpServerToolAttribute), false).Any())
@@ -63,7 +61,7 @@ public class McpServerConfigurationTests
             .Where(m => m.GetCustomAttributes(typeof(McpServerPromptAttribute), false).Any())
             .ToList();
 
-        // We expect: GetStartedWithCsharpRepl, CodeExperimentationWorkflow, 
+        // We expect: GetStartedWithCsharpRepl, CodeExperimentationWorkflow,
         //            PackageIntegrationGuide, DebuggingAndErrorHandling
         Assert.Equal(4, methods.Count);
     }
@@ -74,7 +72,7 @@ public class McpServerConfigurationTests
     {
         // Verify all tools have [Description] attributes for MCP protocol
         var toolTypes = new[] { typeof(ReplTools), typeof(DocumentationTools), typeof(NuGetTools) };
-        
+
         foreach (var toolType in toolTypes)
         {
             var methods = toolType
@@ -87,15 +85,19 @@ public class McpServerConfigurationTests
                 var descriptionAttr = method
                     .GetCustomAttributes(typeof(System.ComponentModel.DescriptionAttribute), false)
                     .FirstOrDefault();
-                
+
                 Assert.NotNull(descriptionAttr);
-                
-                var description = ((System.ComponentModel.DescriptionAttribute)descriptionAttr).Description;
+
+                var description = (
+                    (System.ComponentModel.DescriptionAttribute)descriptionAttr
+                ).Description;
                 Assert.NotEmpty(description);
-                
+
                 // Verify description is substantial (not just a few words)
-                Assert.True(description.Length > 50, 
-                    $"Tool {toolType.Name}.{method.Name} has a description that is too short: {description}");
+                Assert.True(
+                    description.Length > 50,
+                    $"Tool {toolType.Name}.{method.Name} has a description that is too short: {description}"
+                );
             }
         }
     }
@@ -115,15 +117,19 @@ public class McpServerConfigurationTests
             var descriptionAttr = method
                 .GetCustomAttributes(typeof(System.ComponentModel.DescriptionAttribute), false)
                 .FirstOrDefault();
-            
+
             Assert.NotNull(descriptionAttr);
-            
-            var description = ((System.ComponentModel.DescriptionAttribute)descriptionAttr).Description;
+
+            var description = (
+                (System.ComponentModel.DescriptionAttribute)descriptionAttr
+            ).Description;
             Assert.NotEmpty(description);
-            
+
             // Verify description is substantial
-            Assert.True(description.Length > 30, 
-                $"Prompt {method.Name} has a description that is too short: {description}");
+            Assert.True(
+                description.Length > 30,
+                $"Prompt {method.Name} has a description that is too short: {description}"
+            );
         }
     }
 }
