@@ -18,7 +18,8 @@ public class AssemblyExecutionServiceTests
         // Arrange
         var compilationService = new CompilationService();
         var executionService = new AssemblyExecutionService(compilationService);
-        var code = @"
+        var code =
+            @"
 using System;
 
 public class Program
@@ -45,7 +46,8 @@ public class Program
         // Arrange
         var compilationService = new CompilationService();
         var executionService = new AssemblyExecutionService(compilationService);
-        var code = @"
+        var code =
+            @"
 using System;
 Console.WriteLine(""Top-level statement test"");
 ";
@@ -84,7 +86,8 @@ Console.WriteLine(""Top-level statement test"");
         // Arrange
         var compilationService = new CompilationService();
         var executionService = new AssemblyExecutionService(compilationService);
-        var code = @"
+        var code =
+            @"
 using System;
 
 public class Program
@@ -111,7 +114,8 @@ public class Program
         // Arrange
         var compilationService = new CompilationService();
         var executionService = new AssemblyExecutionService(compilationService);
-        var code = @"
+        var code =
+            @"
 using System;
 using System.Threading.Tasks;
 
@@ -139,7 +143,8 @@ public class Program
         // Arrange
         var compilationService = new CompilationService();
         var executionService = new AssemblyExecutionService(compilationService);
-        var code = @"
+        var code =
+            @"
 using System;
 public class Program
 {
@@ -190,7 +195,8 @@ public class Program
         var compilationService = new CompilationService();
         var executionService = new AssemblyExecutionService(compilationService);
         var filePath = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid()}.cs");
-        var code = @"
+        var code =
+            @"
 using System;
 public class Program
 {

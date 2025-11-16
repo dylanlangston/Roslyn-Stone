@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    
+
     <!-- NuGet Package Metadata -->
     <PackageId>RoslynStone.Infrastructure</PackageId>
     <Authors>Dylan Langston</Authors>
@@ -28,7 +28,7 @@
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.14.0" />
     <PackageReference Include="ModelContextProtocol" Version="0.4.0-preview.3" />
   </ItemGroup>
-  
+
   <ItemGroup>
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>

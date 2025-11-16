@@ -16,7 +16,8 @@ public class CompilationServiceTests
     {
         // Arrange
         var service = new CompilationService();
-        var code = @"
+        var code =
+            @"
 using System;
 
 public class Program
@@ -31,7 +32,10 @@ public class Program
         var result = service.Compile(code);
 
         // Assert
-        Assert.True(result.Success, $"Compilation failed: {string.Join(", ", result.ErrorMessages ?? new List<string>())}");
+        Assert.True(
+            result.Success,
+            $"Compilation failed: {string.Join(", ", result.ErrorMessages ?? new List<string>())}"
+        );
         Assert.NotNull(result.AssemblyStream);
         Assert.NotNull(result.AssemblyName);
         Assert.True(result.AssemblyStream!.Length > 0);
@@ -43,7 +47,8 @@ public class Program
     {
         // Arrange
         var service = new CompilationService();
-        var code = @"
+        var code =
+            @"
 using System;
 Console.WriteLine(""Hello from top-level!"");
 ";
@@ -80,7 +85,8 @@ Console.WriteLine(""Hello from top-level!"");
     {
         // Arrange
         var service = new CompilationService();
-        var code = @"
+        var code =
+            @"
 using System;
 
 public class Program
@@ -107,7 +113,8 @@ public class Program
     {
         // Arrange
         var service = new CompilationService();
-        var code = @"
+        var code =
+            @"
 using System;
 public class Program { public static void Main() { } }";
 
@@ -127,7 +134,8 @@ public class Program { public static void Main() { } }";
     {
         // Arrange
         var service = new CompilationService();
-        var code = @"
+        var code =
+            @"
 using System;
 public class Program { public static void Main() { } }";
         var customName = "MyCustomAssembly";

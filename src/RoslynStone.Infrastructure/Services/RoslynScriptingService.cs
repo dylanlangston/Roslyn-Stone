@@ -74,9 +74,17 @@ public class RoslynScriptingService
             try
             {
                 // Continue from previous state or start new
-                _scriptState = _scriptState == null
-                    ? await CSharpScript.RunAsync(code, _scriptOptions, cancellationToken: cancellationToken)
-                    : await _scriptState.ContinueWithAsync(code, cancellationToken: cancellationToken);
+                _scriptState =
+                    _scriptState == null
+                        ? await CSharpScript.RunAsync(
+                            code,
+                            _scriptOptions,
+                            cancellationToken: cancellationToken
+                        )
+                        : await _scriptState.ContinueWithAsync(
+                            code,
+                            cancellationToken: cancellationToken
+                        );
 
                 stopwatch.Stop();
 
@@ -118,8 +126,7 @@ public class RoslynScriptingService
                         Message = diagnostic.GetMessage(),
                         Severity = diagnostic.Severity.ToString(),
                         Line = diagnostic.Location.GetLineSpan().StartLinePosition.Line + 1,
-                        Column =
-                            diagnostic.Location.GetLineSpan().StartLinePosition.Character + 1,
+                        Column = diagnostic.Location.GetLineSpan().StartLinePosition.Character + 1,
                     }
                 );
             }

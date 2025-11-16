@@ -43,5 +43,5 @@ public class DocumentationInfo
     /// <summary>
     /// Gets or sets the full XML documentation
     /// </summary>
-    public string? FullDocumentation { get; set; }
+    public string? FullDocumentation { get; init; }
 }

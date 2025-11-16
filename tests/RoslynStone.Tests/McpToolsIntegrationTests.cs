@@ -147,7 +147,7 @@ public class McpToolsIntegrationTests
         // Documentation may not be found in test environment without XML docs
         // Just verify the tool returns a valid structure
         Assert.True(resultDict.ContainsKey("found"));
-        
+
         if (resultDict["found"].GetBoolean())
         {
             Assert.Equal("System.String", resultDict["symbolName"].GetString());
@@ -181,7 +181,7 @@ public class McpToolsIntegrationTests
         // Act
         var result1 = await ReplTools.EvaluateCsharp(service, "int value = 100;");
         var result2 = await ReplTools.EvaluateCsharp(service, "value + 50");
-        
+
         var json1 = JsonSerializer.Serialize(result1);
         var json2 = JsonSerializer.Serialize(result2);
         var result1Dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json1);

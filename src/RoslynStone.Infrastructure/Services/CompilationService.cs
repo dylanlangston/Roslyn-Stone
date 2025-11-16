@@ -51,18 +51,14 @@ public class CompilationService
         var syntaxTree = CSharpSyntaxTree.ParseText(code);
 
         // Get metadata references from existing assemblies
-        var references = _scriptOptions.MetadataReferences
-            .OfType<PortableExecutableReference>()
+        var references = _scriptOptions
+            .MetadataReferences.OfType<PortableExecutableReference>()
             .ToList();
 
         // Add additional required references
         references.Add(MetadataReference.CreateFromFile(typeof(object).Assembly.Location));
-        references.Add(
-            MetadataReference.CreateFromFile(typeof(Console).Assembly.Location)
-        );
-        references.Add(
-            MetadataReference.CreateFromFile(typeof(Enumerable).Assembly.Location)
-        );
+        references.Add(MetadataReference.CreateFromFile(typeof(Console).Assembly.Location));
+        references.Add(MetadataReference.CreateFromFile(typeof(Enumerable).Assembly.Location));
 
         // Add System.Runtime
         var runtimeAssembly = Assembly.Load("System.Runtime");
@@ -74,7 +70,7 @@ public class CompilationService
             syntaxTrees: new[] { syntaxTree },
             references: references,
             options: new CSharpCompilationOptions(
-                OutputKind.ConsoleApplication,  // Changed from DynamicallyLinkedLibrary to support top-level statements
+                OutputKind.ConsoleApplication, // Changed from DynamicallyLinkedLibrary to support top-level statements
                 optimizationLevel: OptimizationLevel.Release,
                 allowUnsafe: false
             )
@@ -90,8 +86,7 @@ public class CompilationService
         {
             var failures = emitResult
                 .Diagnostics.Where(diagnostic =>
-                    diagnostic.IsWarningAsError
-                    || diagnostic.Severity == DiagnosticSeverity.Error
+                    diagnostic.IsWarningAsError || diagnostic.Severity == DiagnosticSeverity.Error
                 )
                 .ToList();
 
