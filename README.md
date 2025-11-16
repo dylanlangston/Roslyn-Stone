@@ -55,8 +55,11 @@ RoslynStone/
 
 - .NET 9.0 SDK or later
 - C# 13
+- Optional: Docker and VS Code with Dev Containers extension for containerized development
 
 ### Build and Run
+
+#### Local Development
 
 ```bash
 # Clone the repository
@@ -73,6 +76,24 @@ dotnet test
 cd src/RoslynStone.Api
 dotnet run
 ```
+
+#### Development Container
+
+The repository includes a fully configured devcontainer with Docker-in-Docker support for isolated development:
+
+```bash
+# Clone the repository
+git clone https://github.com/dylanlangston/Roslyn-Stone.git
+cd Roslyn-Stone
+
+# Open in VS Code
+code .
+
+# Press F1 and select "Dev Containers: Reopen in Container"
+# The container will automatically build, restore dependencies, and build the project
+```
+
+See [`.devcontainer/README.md`](.devcontainer/README.md) for more details about the devcontainer setup and Docker-in-Docker testing.
 
 The server uses stdio transport for MCP protocol communication. It reads JSON-RPC messages from stdin and writes responses to stdout, with logging to stderr.
 
@@ -406,12 +427,12 @@ public class MyTools
 ## Future Enhancements
 
 - [x] Full NuGet package resolution and loading
+- [x] Docker container support (devcontainer with Docker-in-Docker)
 - [ ] Persistent REPL sessions with user isolation
 - [ ] Code snippet history and caching
 - [ ] Syntax highlighting and IntelliSense data
 - [ ] Performance metrics and profiling
 - [ ] WebSocket support for interactive sessions
-- [ ] Docker container support
 - [ ] OpenTelemetry integration
 
 ## Contributing
