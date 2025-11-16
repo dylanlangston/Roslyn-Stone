@@ -37,13 +37,22 @@ RUN dotnet publish "RoslynStone.Api.csproj" \
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 
+# Create non-root user for security
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+
 # Copy published application
 COPY --from=publish /app/publish .
+
+# Change ownership to non-root user
+RUN chown -R appuser:appuser /app
 
 # Set environment variables for MCP server
 ENV DOTNET_ENVIRONMENT=Production \
     ASPNETCORE_URLS= \
     DOTNET_EnableDiagnostics=0
+
+# Switch to non-root user
+USER appuser
 
 # The MCP server uses stdio transport, so we expose no HTTP ports
 # Telemetry will be sent to the OTEL endpoint configured via environment variables

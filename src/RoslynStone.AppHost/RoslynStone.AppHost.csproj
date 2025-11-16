@@ -1,5 +1,4 @@
 <Project Sdk="Aspire.AppHost.Sdk/13.0.0">
-
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
@@ -10,7 +9,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\RoslynStone.Api\RoslynStone.Api.csproj" />
-    <ProjectReference Include="..\RoslynStone.ServiceDefaults\RoslynStone.ServiceDefaults.csproj" IsAspireProjectResource="false" />
+    <ProjectReference
+      Include="..\RoslynStone.ServiceDefaults\RoslynStone.ServiceDefaults.csproj"
+      IsAspireProjectResource="false"
+    />
   </ItemGroup>
-
 </Project>
