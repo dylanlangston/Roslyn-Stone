@@ -40,13 +40,8 @@ jobs:
       - name: Display installed global tools
         run: dotnet tool list --global
 
-      - name: Restore .NET dependencies (if project files exist)
-        run: |
-          if [ -f "*.sln" ] || [ -f "*.csproj" ]; then
-            dotnet restore
-          else
-            echo "No .NET solution or project files found to restore"
-          fi
+      - name: Ensure NuGet cache directory exists
+        run: mkdir -p ~/.nuget/packages
         shell: bash
 
       - name: Cache .NET packages
@@ -56,6 +51,15 @@ jobs:
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
           restore-keys: |
             ${{ runner.os }}-nuget-
+
+      - name: Restore .NET dependencies (if project files exist)
+        run: |
+          if compgen -G "*.sln" > /dev/null || compgen -G "**/*.csproj" > /dev/null; then
+            dotnet restore
+          else
+            echo "No .NET solution or project files found to restore"
+          fi
+        shell: bash
 
       - name: Verify tools installation
         run: |
