@@ -212,4 +212,39 @@ public class McpToolsIntegrationTests
         Assert.True(resultDict["success"].GetBoolean());
         Assert.Equal("completed", resultDict["returnValue"].GetString());
     }
+
+    [Fact]
+    [Trait("Feature", "ReplInfo")]
+    public void GetReplInfo_ReturnsEnvironmentInformation()
+    {
+        // Act
+        var result = ReplTools.GetReplInfo(_scriptingService);
+        var json = JsonSerializer.Serialize(result);
+        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+
+        // Assert
+        Assert.NotNull(resultDict);
+        Assert.True(resultDict.ContainsKey("frameworkVersion"));
+        Assert.True(resultDict.ContainsKey("language"));
+        Assert.True(resultDict.ContainsKey("state"));
+        Assert.True(resultDict.ContainsKey("defaultImports"));
+        Assert.True(resultDict.ContainsKey("capabilities"));
+        Assert.True(resultDict.ContainsKey("tips"));
+        Assert.True(resultDict.ContainsKey("examples"));
+
+        // Verify framework version
+        Assert.Equal(".NET 10.0", resultDict["frameworkVersion"].GetString());
+        
+        // Verify capabilities
+        var capabilities = resultDict["capabilities"];
+        Assert.True(capabilities.GetProperty("asyncAwait").GetBoolean());
+        Assert.True(capabilities.GetProperty("linq").GetBoolean());
+        Assert.True(capabilities.GetProperty("statefulness").GetBoolean());
+        
+        // Verify default imports exist
+        var imports = resultDict["defaultImports"].EnumerateArray().ToList();
+        Assert.NotEmpty(imports);
+        Assert.Contains(imports, i => i.GetString() == "System");
+        Assert.Contains(imports, i => i.GetString() == "System.Linq");
+    }
 }
