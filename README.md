@@ -1,31 +1,37 @@
 # Roslyn-Stone
 
-A developer- and LLM-friendly C# REPL service built with Roslyn and ASP.NET Core, designed for Model Context Protocol (MCP) integration. Execute C# code, validate syntax, lookup documentation, and run single-file programs through a REST API.
+A developer- and LLM-friendly C# REPL service built with Roslyn and the Model Context Protocol (MCP) SDK. Execute C# code, validate syntax, and lookup documentation through MCP stdio transport for seamless AI integration.
 
 ## Features
 
 ✨ **C# REPL via Roslyn Scripting** - Execute C# code snippets with state preservation  
 🔍 **Real-time Compile Error Reporting** - Get detailed compilation errors and warnings  
 📚 **XML Documentation Lookup** - Query .NET type/method documentation via reflection  
-📦 **NuGet Package Support** - Load external dependencies with `#r "nuget:Package"` (infrastructure ready)  
-📄 **Single-File Execution** - Run standalone `.cs` files using `dotnet run-app`  
-🏗️ **CQRS Architecture** - Clean separation of commands and queries without MediatR  
-🔌 **MCP Protocol Integration** - JSON-RPC 2.0 compatible endpoints for LLM interactions  
-🌐 **REST API** - Simple HTTP endpoints for all functionality
+📦 **NuGet Package Support** - Load external dependencies (infrastructure ready)  
+🏗️ **CQRS Architecture** - Clean separation of commands and queries  
+🔌 **MCP Protocol** - Official ModelContextProtocol SDK with stdio transport  
+🤖 **AI-Friendly** - Designed for LLM interactions via Model Context Protocol  
 
 ## Architecture
 
-The solution follows clean architecture principles with CQRS pattern:
+The solution follows clean architecture principles with CQRS pattern and MCP integration:
 
 ```
 RoslynStone/
 ├── src/
-│   ├── RoslynStone.Api/          # ASP.NET Core Web API
-│   ├── RoslynStone.Core/         # Domain models, commands, queries, interfaces
-│   └── RoslynStone.Infrastructure/ # Handlers, Roslyn services, implementations
+│   ├── RoslynStone.Api/            # Console Host with MCP Server
+│   ├── RoslynStone.Core/           # Domain models, commands, queries, interfaces
+│   └── RoslynStone.Infrastructure/ # MCP Tools, Roslyn services, handlers
 └── tests/
-    └── RoslynStone.Tests/        # xUnit tests
+    └── RoslynStone.Tests/          # xUnit tests
 ```
+
+### MCP Tools
+
+- **EvaluateCsharp** - Execute C# code with return value and output
+- **ValidateCsharp** - Syntax/semantic validation without execution
+- **GetDocumentation** - XML documentation lookup for .NET symbols
+- **ResetRepl** - Clear REPL state
 
 ### CQRS Pattern
 
@@ -54,135 +60,145 @@ dotnet build
 # Run tests
 dotnet test
 
-# Run the API
+# Run the MCP server (stdio transport)
 cd src/RoslynStone.Api
 dotnet run
 ```
 
-The API will start on `http://localhost:5242` (or as configured in launchSettings.json).
+The server uses stdio transport for MCP protocol communication. It reads JSON-RPC messages from stdin and writes responses to stdout, with logging to stderr.
 
-## API Endpoints
+## Usage with MCP Clients
 
-### Root
-```bash
-GET /
-# Returns service information and available endpoints
-```
+### Claude Desktop Configuration
 
-### REPL - Execute Code
-```bash
-POST /api/repl/execute
-Content-Type: application/json
+Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
 
-{
-  "code": "Console.WriteLine(\"Hello, World!\"); return 42;"
-}
-```
-
-Response:
 ```json
 {
-  "success": true,
-  "returnValue": 42,
-  "output": "Hello, World!\n",
-  "errors": [],
-  "warnings": [],
-  "executionTime": "00:00:00.2228022"
-}
-```
-
-### REPL - Validate Code
-```bash
-POST /api/repl/validate
-Content-Type: application/json
-
-{
-  "code": "int x = \"not a number\";"
-}
-```
-
-Response:
-```json
-[
-  {
-    "code": "CS0029",
-    "message": "Cannot implicitly convert type 'string' to 'int'",
-    "severity": "Error",
-    "line": 1,
-    "column": 9
-  }
-]
-```
-
-### Documentation Lookup
-```bash
-GET /api/documentation/{symbolName}
-# Example: GET /api/documentation/System.String
-```
-
-### MCP Protocol Endpoint
-```bash
-POST /api/mcp
-Content-Type: application/json
-
-{
-  "jsonrpc": "2.0",
-  "id": "1",
-  "method": "tools/list"
-}
-```
-
-Response:
-```json
-{
-  "jsonrpc": "2.0",
-  "id": "1",
-  "result": {
-    "tools": [
-      {
-        "name": "execute_code",
-        "description": "Execute C# code in the REPL and return the result",
-        "inputSchema": { ... }
-      },
-      {
-        "name": "validate_code",
-        "description": "Validate C# code and return compilation errors/warnings",
-        "inputSchema": { ... }
-      },
-      {
-        "name": "get_documentation",
-        "description": "Get XML documentation for a .NET type or method",
-        "inputSchema": { ... }
+  "mcpServers": {
+    "roslyn-stone": {
+      "command": "dotnet",
+      "args": ["run", "--project", "/path/to/Rosyln-Stone/src/RoslynStone.Api"],
+      "env": {
+        "DOTNET_ENVIRONMENT": "Development"
       }
-    ]
+    }
   }
 }
 ```
+
+See `.github/MCP_CONFIGURATION.md` for more configuration examples.
+
+## MCP Tools
+
+### EvaluateCsharp
+
+Execute C# code in the REPL:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "tools/call",
+  "params": {
+    "name": "EvaluateCsharp",
+    "arguments": {
+      "code": "var x = 10; x + 5"
+    }
+  },
+  "id": 1
+}
+```
+
+Response includes success status, return value, output, errors, warnings, and execution time.
+
+### ValidateCsharp
+
+Validate C# code without executing:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "tools/call",
+  "params": {
+    "name": "ValidateCsharp",
+    "arguments": {
+      "code": "int x = \"not a number\";"
+    }
+  },
+  "id": 2
+}
+```
+
+Returns validation results with isValid flag and list of issues (errors/warnings).
+
+### GetDocumentation
+
+Lookup XML documentation for .NET symbols:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "tools/call",
+  "params": {
+    "name": "GetDocumentation",
+    "arguments": {
+      "symbolName": "System.String"
+    }
+  },
+  "id": 3
+}
+```
+
+Returns documentation including summary, remarks, parameters, returns, exceptions, and examples.
+
+### ResetRepl
+
+Clear the REPL state:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "tools/call",
+  "params": {
+    "name": "ResetRepl"
+  },
+  "id": 4
+}
+```
+
+## Development Tools
+
+This project uses a custom GitHub Copilot environment with pre-installed development tools:
+
+- **CSharpier** - Code formatter (`dotnet csharpier <file-or-directory>`)
+- **ReSharper CLI** - Code analysis (`jb <command>`)
+- **Cake** - Build automation (`dotnet cake <script>`)
+
+See `.github/COPILOT_ENVIRONMENT.md` for details on the custom environment setup.
 
 ## Examples
 
 ### Basic Expression Evaluation
 ```csharp
-// Request: POST /api/repl/execute
-{"code": "2 + 2"}
-
+// Execute simple expression
+code: "2 + 2"
 // Returns: 4
 ```
 
 ### Stateful Execution
 ```csharp
-// First request
-{"code": "int x = 10; x"}
+// First execution
+code: "int x = 10; x"
 // Returns: 10
 
-// Second request (state preserved in same service instance)
-{"code": "x + 5"}
+// Second execution (state preserved in same REPL instance)
+code: "x + 5"
 // Returns: 15
 ```
 
 ### Console Output Capture
 ```csharp
-{"code": "Console.WriteLine(\"Debug info\"); return \"Result\";"}
+code: "Console.WriteLine(\"Debug info\"); return \"Result\";"
 
 // Response includes both output and return value
 {
@@ -193,14 +209,15 @@ Response:
 
 ### Compilation Error Detection
 ```csharp
-{"code": "string text = 123;"}
+code: "string text = 123;"
 
-// Returns compilation error with line/column info
+// Returns compilation error with line/column info and error code
 ```
 
 ## Technology Stack
 
-- **ASP.NET Core** - Web API framework
+- **Model Context Protocol SDK** - MCP stdio transport
+- **Microsoft.Extensions.Hosting** - Host builder with DI
 - **Roslyn** - C# compiler and scripting APIs
   - `Microsoft.CodeAnalysis.CSharp.Scripting` - Script execution
   - `Microsoft.CodeAnalysis.CSharp.Workspaces` - Code analysis
@@ -214,30 +231,62 @@ Response:
 - **Commands**: ExecuteCodeCommand, LoadPackageCommand, ExecuteFileCommand
 - **Queries**: GetDocumentationQuery, ValidateCodeQuery
 - **Models**: ExecutionResult, DocumentationInfo, CompilationError, PackageReference
-- **MCP**: Protocol models (McpRequest, McpResponse, McpTool)
 
 ### Infrastructure (Implementation Layer)
+- **Tools**: MCP tool implementations (ReplTools, DocumentationTools)
 - **Services**: RoslynScriptingService, DocumentationService
 - **CommandHandlers**: Execute commands and return results
 - **QueryHandlers**: Fetch data without side effects
 
-### API (Presentation Layer)
-- **Controllers**: ReplController, DocumentationController, McpController
-- **Configuration**: Dependency injection, CORS, routing
+### Api (Presentation Layer)
+- **Program.cs**: Host configuration with MCP server setup
+- **Stdio Transport**: JSON-RPC communication via stdin/stdout
+- **Logging**: Configured to stderr to avoid protocol interference
 
 ## Development
 
 ### Running Tests
 ```bash
 dotnet test --logger "console;verbosity=normal"
+
+# Run tests by category
+dotnet test --filter "Category=Unit"
+
+# Run tests by component
+dotnet test --filter "Component=REPL"
 ```
 
-### Adding New Commands/Queries
+### Adding New MCP Tools
 
-1. Define command/query in `Core/Commands` or `Core/Queries`
-2. Implement handler in `Infrastructure/CommandHandlers` or `Infrastructure/QueryHandlers`
-3. Register handler in `Program.cs` DI container
-4. Add controller endpoint in `Api/Controllers`
+1. Create tool method in `Infrastructure/Tools` with `[McpServerTool]` attribute
+2. Add to existing `[McpServerToolType]` class or create new one
+3. Use dependency injection for services (RoslynScriptingService, etc.)
+4. Include comprehensive XML documentation with `<param>` and `<returns>` tags
+5. Add `[Description]` attributes for MCP protocol metadata
+6. Tools are auto-discovered via `WithToolsFromAssembly()`
+
+Example:
+```csharp
+[McpServerToolType]
+public class MyTools
+{
+    /// <summary>
+    /// Tool description
+    /// </summary>
+    /// <param name="service">Injected service</param>
+    /// <param name="input">Input parameter</param>
+    /// <returns>Result description</returns>
+    [McpServerTool]
+    [Description("Tool description for MCP")]
+    public static async Task<object> MyTool(
+        MyService service,
+        [Description("Input description")] string input,
+        CancellationToken cancellationToken = default)
+    {
+        // Implementation
+    }
+}
+```
 
 ## Security Considerations
 
