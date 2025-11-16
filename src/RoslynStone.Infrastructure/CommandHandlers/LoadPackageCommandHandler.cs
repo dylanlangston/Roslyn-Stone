@@ -11,14 +11,20 @@ namespace RoslynStone.Infrastructure.CommandHandlers;
 public class LoadPackageCommandHandler : ICommandHandler<LoadPackageCommand, PackageReference>
 {
     private readonly RoslynScriptingService _scriptingService;
+    private readonly NuGetService _nugetService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LoadPackageCommandHandler"/> class
     /// </summary>
     /// <param name="scriptingService">The Roslyn scripting service</param>
-    public LoadPackageCommandHandler(RoslynScriptingService scriptingService)
+    /// <param name="nugetService">The NuGet service</param>
+    public LoadPackageCommandHandler(
+        RoslynScriptingService scriptingService,
+        NuGetService nugetService
+    )
     {
         _scriptingService = scriptingService;
+        _nugetService = nugetService;
     }
 
     /// <summary>
@@ -27,21 +33,42 @@ public class LoadPackageCommandHandler : ICommandHandler<LoadPackageCommand, Pac
     /// <param name="command">The command containing the package name and version</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>The package reference</returns>
-    public Task<PackageReference> HandleAsync(
+    public async Task<PackageReference> HandleAsync(
         LoadPackageCommand command,
         CancellationToken cancellationToken = default
     )
     {
-        // Note: AddPackageReference is currently a stub - actual NuGet loading not implemented
-        _scriptingService.AddPackageReference(command.PackageName, command.Version);
+        try
+        {
+            // Download the package and get assembly paths
+            var assemblyPaths = await _nugetService.DownloadPackageAsync(
+                command.PackageName,
+                command.Version,
+                cancellationToken
+            );
 
-        return Task.FromResult(
-            new PackageReference
+            // Add package reference to scripting service
+            _scriptingService.AddPackageReference(
+                command.PackageName,
+                command.Version,
+                assemblyPaths
+            );
+
+            return new PackageReference
             {
                 Name = command.PackageName,
                 Version = command.Version,
-                IsLoaded = false, // TODO: Implement actual NuGet package loading
-            }
-        );
+                IsLoaded = true,
+            };
+        }
+        catch (Exception)
+        {
+            return new PackageReference
+            {
+                Name = command.PackageName,
+                Version = command.Version,
+                IsLoaded = false,
+            };
+        }
     }
 }

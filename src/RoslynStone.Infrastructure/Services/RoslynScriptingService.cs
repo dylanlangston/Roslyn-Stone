@@ -14,7 +14,7 @@ namespace RoslynStone.Infrastructure.Services;
 public class RoslynScriptingService
 {
     private ScriptState? _scriptState;
-    private readonly ScriptOptions _scriptOptions;
+    private ScriptOptions _scriptOptions;
     private readonly StringWriter _outputWriter;
     private readonly SemaphoreSlim _semaphore = new(1, 1); // Thread-safe async execution
 
@@ -168,11 +168,37 @@ public class RoslynScriptingService
     /// </summary>
     /// <param name="packageName">Name of the NuGet package</param>
     /// <param name="version">Optional package version</param>
-    public void AddPackageReference(string packageName, string? version = null)
+    /// <param name="assemblyPaths">List of assembly file paths to add</param>
+    public void AddPackageReference(
+        string packageName,
+        string? version = null,
+        List<string>? assemblyPaths = null
+    )
     {
-        // Note: For full NuGet support, we would need to integrate with NuGet.Protocol
-        // For now, we can add assembly references if the package is already restored
-        // This is a simplified version
+        _semaphore.Wait();
+        try
+        {
+            if (assemblyPaths != null && assemblyPaths.Count > 0)
+            {
+                // Add each assembly to script options
+                foreach (var assemblyPath in assemblyPaths)
+                {
+                    if (File.Exists(assemblyPath))
+                    {
+                        _scriptOptions = _scriptOptions.AddReferences(
+                            Assembly.LoadFrom(assemblyPath)
+                        );
+                    }
+                }
+
+                // Reset script state to apply new references
+                _scriptState = null;
+            }
+        }
+        finally
+        {
+            _semaphore.Release();
+        }
     }
 
     /// <summary>
