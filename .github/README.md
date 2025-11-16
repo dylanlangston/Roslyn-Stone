@@ -13,6 +13,16 @@ Custom environment setup workflow for GitHub Copilot coding agent. This workflow
 - Caches NuGet packages for faster subsequent runs
 - Runs automatically when the workflow file is modified
 
+See `COPILOT_ENVIRONMENT.md` for detailed documentation on the custom environment setup.
+
+### `/COPILOT_ENVIRONMENT.md`
+Detailed documentation about the custom Copilot environment:
+- Overview of installed tools and their versions
+- How the environment setup works
+- Customization instructions
+- Troubleshooting guide
+- References and links to official documentation
+
 This ensures Copilot has all necessary tools available when working on C# code.
 
 ### `/copilot-instructions.md`
