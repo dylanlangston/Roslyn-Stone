@@ -11,6 +11,8 @@ A developer- and LLM-friendly C# REPL service built with Roslyn and the Model Co
 🏗️ **CQRS Architecture** - Clean separation of commands and queries  
 🔌 **MCP Protocol** - Official ModelContextProtocol SDK with stdio transport  
 🤖 **AI-Friendly** - Designed for LLM interactions via Model Context Protocol  
+🐳 **Containerized** - Docker support with .NET Aspire orchestration  
+📊 **OpenTelemetry** - Built-in observability with logs, metrics, and traces  
 
 ## Architecture
 
@@ -21,7 +23,9 @@ RoslynStone/
 ├── src/
 │   ├── RoslynStone.Api/            # Console Host with MCP Server
 │   ├── RoslynStone.Core/           # Domain models, commands, queries, interfaces
-│   └── RoslynStone.Infrastructure/ # MCP Tools, Roslyn services, handlers
+│   ├── RoslynStone.Infrastructure/ # MCP Tools, Roslyn services, handlers
+│   ├── RoslynStone.ServiceDefaults/# OpenTelemetry and Aspire defaults
+│   └── RoslynStone.AppHost/        # Aspire orchestration
 └── tests/
     └── RoslynStone.Tests/          # xUnit tests
 ```
@@ -53,10 +57,14 @@ RoslynStone/
 
 ### Prerequisites
 
-- .NET 9.0 SDK or later
+- .NET 10.0 SDK or later
 - C# 13
+- Docker (optional, for containerized deployment)
+- .NET Aspire workload (optional, for local orchestration)
 
 ### Build and Run
+
+#### Local Development
 
 ```bash
 # Clone the repository
@@ -74,11 +82,41 @@ cd src/RoslynStone.Api
 dotnet run
 ```
 
+#### With Aspire (Orchestrated)
+
+```bash
+# Install Aspire workload
+dotnet workload install aspire
+
+# Run with Aspire dashboard for observability
+cd src/RoslynStone.AppHost
+dotnet run
+```
+
+This will start the Aspire dashboard at `http://localhost:18888` where you can view logs, metrics, and traces.
+
+#### Docker Compose (Containerized)
+
+```bash
+# Build and run with Docker Compose
+docker-compose up --build
+
+# Access Aspire dashboard at http://localhost:18888
+```
+
 The server uses stdio transport for MCP protocol communication. It reads JSON-RPC messages from stdin and writes responses to stdout, with logging to stderr.
+
+## Container Registry
+
+Pre-built container images are available from GitHub Container Registry:
+
+```bash
+docker pull ghcr.io/dylanlangston/roslyn-stone:latest
+```
 
 ## Usage with MCP Clients
 
-### Claude Desktop Configuration
+### Claude Desktop Configuration (Local)
 
 Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
 
@@ -91,6 +129,20 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
       "env": {
         "DOTNET_ENVIRONMENT": "Development"
       }
+    }
+  }
+}
+```
+
+### Claude Desktop Configuration (Docker)
+
+```json
+{
+  "mcpServers": {
+    "roslyn-stone": {
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "ghcr.io/dylanlangston/roslyn-stone:latest"],
+      "env": {}
     }
   }
 }
@@ -322,12 +374,65 @@ code: "using Newtonsoft.Json; var obj = new { Name = \"Test\" }; JsonConvert.Ser
 
 - **Model Context Protocol SDK** - MCP stdio transport
 - **Microsoft.Extensions.Hosting** - Host builder with DI
+- **.NET Aspire** - Cloud-native orchestration and observability
+  - `Aspire.Hosting` - Application orchestration
+  - Service Defaults - OpenTelemetry configuration
+- **OpenTelemetry** - Distributed tracing, metrics, and logging
+  - OTLP Exporter - Send telemetry to Aspire dashboard or other collectors
+  - ASP.NET Core Instrumentation - HTTP and runtime metrics
 - **Roslyn** - C# compiler and scripting APIs
   - `Microsoft.CodeAnalysis.CSharp.Scripting` - Script execution
   - `Microsoft.CodeAnalysis.CSharp.Workspaces` - Code analysis
 - **NuGet.Protocol** - NuGet package discovery and downloading
 - **xUnit** - Testing framework
 - **System.Reflection** - XML documentation lookup
+- **Docker** - Containerization and deployment
+
+## Observability with OpenTelemetry
+
+RoslynStone includes built-in OpenTelemetry support for comprehensive observability:
+
+### Telemetry Features
+
+- **Logs**: Structured logging with OpenTelemetry format
+- **Metrics**: Runtime metrics, HTTP client metrics, custom application metrics
+- **Traces**: Distributed tracing for request correlation
+
+### Aspire Dashboard
+
+When running with Aspire (`dotnet run` from AppHost), the dashboard provides:
+
+- Real-time log viewing with structured data
+- Metrics visualization (P50, P90, P99 percentiles)
+- Distributed trace visualization
+- Resource health monitoring
+
+Access the dashboard at `http://localhost:18888` when running with Aspire.
+
+### Environment Variables
+
+Configure OpenTelemetry export with environment variables:
+
+```bash
+# OTLP endpoint (default: Aspire dashboard)
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:18889
+
+# Service name
+OTEL_SERVICE_NAME=roslyn-stone-mcp
+
+# Additional resource attributes
+OTEL_RESOURCE_ATTRIBUTES=service.namespace=roslyn-stone,deployment.environment=production
+```
+
+### Production Deployment
+
+For production, configure the OTLP endpoint to send telemetry to your monitoring solution:
+
+- Azure Monitor / Application Insights
+- AWS CloudWatch
+- Google Cloud Operations
+- Grafana / Prometheus / Jaeger
+- Any OTLP-compatible collector
 
 ## Project Structure
 
@@ -406,13 +511,14 @@ public class MyTools
 ## Future Enhancements
 
 - [x] Full NuGet package resolution and loading
+- [x] Docker container support
+- [x] OpenTelemetry integration
 - [ ] Persistent REPL sessions with user isolation
 - [ ] Code snippet history and caching
 - [ ] Syntax highlighting and IntelliSense data
 - [ ] Performance metrics and profiling
 - [ ] WebSocket support for interactive sessions
-- [ ] Docker container support
-- [ ] OpenTelemetry integration
+- [ ] Multi-architecture container images (amd64, arm64)
 
 ## Contributing
 

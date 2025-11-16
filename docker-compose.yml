@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  roslyn-stone-mcp:
+    build:
+      context: .
+      dockerfile: src/RoslynStone.Api/Dockerfile
+    image: roslyn-stone-mcp:latest
+    container_name: roslyn-stone-mcp
+    environment:
+      - DOTNET_ENVIRONMENT=Development
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://aspire-dashboard:18889
+      - OTEL_SERVICE_NAME=roslyn-stone-mcp
+      - OTEL_RESOURCE_ATTRIBUTES=service.namespace=roslyn-stone,service.instance.id=mcp-1
+    stdin_open: true
+    tty: true
+    networks:
+      - roslyn-stone-network
+    depends_on:
+      - aspire-dashboard
+
+  aspire-dashboard:
+    image: mcr.microsoft.com/dotnet/aspire-dashboard:10.0
+    container_name: aspire-dashboard
+    ports:
+      - "18888:18888"  # Dashboard UI
+      - "18889:18889"  # OTLP gRPC endpoint
+    environment:
+      - DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS=true
+    networks:
+      - roslyn-stone-network
+
+networks:
+  roslyn-stone-network:
+    driver: bridge
