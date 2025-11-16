@@ -427,12 +427,12 @@ public class MyTools
 ## Future Enhancements
 
 - [x] Full NuGet package resolution and loading
+- [x] Docker container support (devcontainer with Docker-in-Docker)
 - [ ] Persistent REPL sessions with user isolation
 - [ ] Code snippet history and caching
 - [ ] Syntax highlighting and IntelliSense data
 - [ ] Performance metrics and profiling
 - [ ] WebSocket support for interactive sessions
-- [ ] Docker container support
 - [ ] OpenTelemetry integration
 
 ## Contributing
