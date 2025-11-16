@@ -1,0 +1,73 @@
+name: "Copilot Setup Steps"
+
+# This workflow sets up the development environment for GitHub Copilot coding agent
+# It preinstalls .NET 10, CSharpier, ReSharper CLI tools, and Cake build tool
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/copilot-setup-steps.yml"
+  pull_request:
+    paths:
+      - ".github/workflows/copilot-setup-steps.yml"
+
+jobs:
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Display .NET version
+        run: dotnet --version
+
+      - name: Install CSharpier (code formatter)
+        run: dotnet tool install --global csharpier
+
+      - name: Install ReSharper Command Line Tools
+        run: dotnet tool install --global JetBrains.ReSharper.GlobalTools
+
+      - name: Install Cake build tool
+        run: dotnet tool install --global Cake.Tool
+
+      - name: Display installed global tools
+        run: dotnet tool list --global
+
+      - name: Restore .NET dependencies (if project files exist)
+        run: |
+          if [ -f "*.sln" ] || [ -f "*.csproj" ]; then
+            dotnet restore
+          else
+            echo "No .NET solution or project files found to restore"
+          fi
+        shell: bash
+
+      - name: Cache .NET packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Verify tools installation
+        run: |
+          echo "=== Installed Tools ==="
+          echo "CSharpier version:"
+          dotnet csharpier --version || echo "CSharpier not found"
+          echo ""
+          echo "ReSharper CLI:"
+          jb || echo "ReSharper CLI not found"
+          echo ""
+          echo "Cake version:"
+          dotnet cake --version || echo "Cake not found"
+          echo ""
+          echo "=== Environment Ready ==="
+        shell: bash
