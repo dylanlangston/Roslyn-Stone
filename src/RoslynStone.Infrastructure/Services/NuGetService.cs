@@ -1,4 +1,3 @@
-using System.IO.Compression;
 using NuGet.Common;
 using NuGet.Configuration;
 using NuGet.Frameworks;
@@ -165,17 +164,20 @@ public class NuGetService : IDisposable
             cancellationToken
         );
 
+        var metadataList = metadata.ToList();
         IPackageSearchMetadata? packageMetadata;
         if (string.IsNullOrEmpty(version))
         {
             // Get the latest version
-            packageMetadata = metadata.OrderByDescending(m => m.Identity.Version).FirstOrDefault();
+            packageMetadata = metadataList
+                .OrderByDescending(m => m.Identity.Version)
+                .FirstOrDefault();
         }
         else
         {
             // Find specific version
             var targetVersion = NuGetVersion.Parse(version);
-            packageMetadata = metadata.FirstOrDefault(m => m.Identity.Version == targetVersion);
+            packageMetadata = metadataList.FirstOrDefault(m => m.Identity.Version == targetVersion);
         }
 
         if (packageMetadata == null)
@@ -262,22 +264,23 @@ public class NuGetService : IDisposable
             cancellationToken
         );
 
+        var metadataList = metadata.ToList();
         IPackageSearchMetadata? packageMetadata;
         if (string.IsNullOrEmpty(version))
         {
             // Get the latest stable version or latest prerelease if no stable exists
             packageMetadata =
-                metadata
+                metadataList
                     .Where(m => !m.Identity.Version.IsPrerelease)
                     .OrderByDescending(m => m.Identity.Version)
                     .FirstOrDefault()
-                ?? metadata.OrderByDescending(m => m.Identity.Version).FirstOrDefault();
+                ?? metadataList.OrderByDescending(m => m.Identity.Version).FirstOrDefault();
         }
         else
         {
             // Find specific version
             var targetVersion = NuGetVersion.Parse(version);
-            packageMetadata = metadata.FirstOrDefault(m => m.Identity.Version == targetVersion);
+            packageMetadata = metadataList.FirstOrDefault(m => m.Identity.Version == targetVersion);
         }
 
         if (packageMetadata == null)
@@ -365,7 +368,7 @@ public class NuGetService : IDisposable
     {
         if (!_disposed)
         {
-            _cache?.Dispose();
+            _cache.Dispose();
             _disposed = true;
         }
     }

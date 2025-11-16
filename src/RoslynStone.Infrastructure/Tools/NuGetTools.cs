@@ -73,7 +73,7 @@ public class NuGetTools
 
         return new
         {
-            packageId = packageId,
+            packageId,
             versions = versions.Select(v => new
             {
                 version = v.Version,
@@ -107,7 +107,7 @@ public class NuGetTools
 
         return new
         {
-            packageId = packageId,
+            packageId,
             version = version ?? "latest",
             readme = readme ?? "README not found",
             found = readme != null,
