@@ -8,6 +8,7 @@ using RoslynStone.Core.Queries;
 using RoslynStone.Infrastructure.CommandHandlers;
 using RoslynStone.Infrastructure.QueryHandlers;
 using RoslynStone.Infrastructure.Services;
+using RoslynStone.Infrastructure.Tools;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -51,7 +52,11 @@ builder.Services.AddSingleton<
 >();
 
 // Configure MCP server with stdio transport
-builder.Services.AddMcpServer().WithStdioServerTransport().WithToolsFromAssembly();
+// Register tools from the Infrastructure assembly where the MCP tools are defined
+builder.Services
+    .AddMcpServer()
+    .WithStdioServerTransport()
+    .WithToolsFromAssembly(typeof(ReplTools).Assembly);
 
 // Build and run the host
 await builder.Build().RunAsync();
