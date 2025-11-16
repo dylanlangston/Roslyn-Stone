@@ -28,7 +28,8 @@ public class ExecutionResult
     /// <summary>
     /// Gets or sets the compilation warnings that occurred
     /// </summary>
-    public IReadOnlyList<CompilationError> Warnings { get; init; } = Array.Empty<CompilationError>();
+    public IReadOnlyList<CompilationError> Warnings { get; init; } =
+        Array.Empty<CompilationError>();
 
     /// <summary>
     /// Gets or sets the total execution time

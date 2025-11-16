@@ -65,7 +65,7 @@ public class ReplTools
     [Description(
         "Validate C# code and return compilation errors and warnings without executing the code"
     )]
-    public static async Task<object> ValidateCsharp(
+    public static Task<object> ValidateCsharp(
         RoslynScriptingService scriptingService,
         [Description("C# code to validate")] string code,
         CancellationToken cancellationToken = default
@@ -107,7 +107,7 @@ public class ReplTools
             }
         }
 
-        return new { isValid = errorCount == 0, issues = issues };
+        return Task.FromResult<object>(new { isValid = errorCount == 0, issues });
     }
 
     /// <summary>

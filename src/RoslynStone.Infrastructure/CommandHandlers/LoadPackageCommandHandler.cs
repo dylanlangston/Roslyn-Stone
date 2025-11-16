@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using RoslynStone.Core.Commands;
 using RoslynStone.Core.CQRS;
 using RoslynStone.Core.Models;
@@ -11,14 +12,24 @@ namespace RoslynStone.Infrastructure.CommandHandlers;
 public class LoadPackageCommandHandler : ICommandHandler<LoadPackageCommand, PackageReference>
 {
     private readonly RoslynScriptingService _scriptingService;
+    private readonly NuGetService _nugetService;
+    private readonly ILogger<LoadPackageCommandHandler> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LoadPackageCommandHandler"/> class
     /// </summary>
     /// <param name="scriptingService">The Roslyn scripting service</param>
-    public LoadPackageCommandHandler(RoslynScriptingService scriptingService)
+    /// <param name="nugetService">The NuGet service</param>
+    /// <param name="logger">The logger</param>
+    public LoadPackageCommandHandler(
+        RoslynScriptingService scriptingService,
+        NuGetService nugetService,
+        ILogger<LoadPackageCommandHandler> logger
+    )
     {
         _scriptingService = scriptingService;
+        _nugetService = nugetService;
+        _logger = logger;
     }
 
     /// <summary>
@@ -27,21 +38,50 @@ public class LoadPackageCommandHandler : ICommandHandler<LoadPackageCommand, Pac
     /// <param name="command">The command containing the package name and version</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>The package reference</returns>
-    public Task<PackageReference> HandleAsync(
+    public async Task<PackageReference> HandleAsync(
         LoadPackageCommand command,
         CancellationToken cancellationToken = default
     )
     {
-        // Note: AddPackageReference is currently a stub - actual NuGet loading not implemented
-        _scriptingService.AddPackageReference(command.PackageName, command.Version);
+        try
+        {
+            // Download the package and get assembly paths
+            var assemblyPaths = await _nugetService.DownloadPackageAsync(
+                command.PackageName,
+                command.Version,
+                cancellationToken
+            );
 
-        return Task.FromResult(
-            new PackageReference
+            // Add package reference to scripting service
+            await _scriptingService.AddPackageReferenceAsync(
+                command.PackageName,
+                command.Version,
+                assemblyPaths
+            );
+
+            return new PackageReference
             {
                 Name = command.PackageName,
                 Version = command.Version,
-                IsLoaded = false, // TODO: Implement actual NuGet package loading
-            }
-        );
+                IsLoaded = true,
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "Failed to load package '{PackageName}' version '{Version}': {ErrorMessage}",
+                command.PackageName,
+                command.Version ?? "latest",
+                ex.Message
+            );
+
+            return new PackageReference
+            {
+                Name = command.PackageName,
+                Version = command.Version,
+                IsLoaded = false,
+            };
+        }
     }
 }

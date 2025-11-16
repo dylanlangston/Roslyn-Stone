@@ -7,7 +7,7 @@ A developer- and LLM-friendly C# REPL service built with Roslyn and the Model Co
 ✨ **C# REPL via Roslyn Scripting** - Execute C# code snippets with state preservation  
 🔍 **Real-time Compile Error Reporting** - Get detailed compilation errors and warnings  
 📚 **XML Documentation Lookup** - Query .NET type/method documentation via reflection  
-📦 **NuGet Package Support** - Load external dependencies (infrastructure ready)  
+📦 **NuGet Package Support** - Search, discover, and load NuGet packages dynamically  
 🏗️ **CQRS Architecture** - Clean separation of commands and queries  
 🔌 **MCP Protocol** - Official ModelContextProtocol SDK with stdio transport  
 🤖 **AI-Friendly** - Designed for LLM interactions via Model Context Protocol  
@@ -28,15 +28,24 @@ RoslynStone/
 
 ### MCP Tools
 
+#### REPL Tools
 - **EvaluateCsharp** - Execute C# code with return value and output
 - **ValidateCsharp** - Syntax/semantic validation without execution
-- **GetDocumentation** - XML documentation lookup for .NET symbols
 - **ResetRepl** - Clear REPL state
+
+#### Documentation Tools
+- **GetDocumentation** - XML documentation lookup for .NET symbols
+
+#### NuGet Tools
+- **SearchNuGetPackages** - Search for NuGet packages by name, description, or tags
+- **GetNuGetPackageVersions** - Get all available versions of a package
+- **GetNuGetPackageReadme** - Get the README content for a package
+- **LoadNuGetPackage** - Load a NuGet package into the REPL environment
 
 ### CQRS Pattern
 
 - **Commands**: Operations that change state (ExecuteCode, LoadPackage, ExecuteFile)
-- **Queries**: Read-only operations (GetDocumentation, ValidateCode)
+- **Queries**: Read-only operations (GetDocumentation, ValidateCode, SearchPackages, GetPackageVersions, GetPackageReadme)
 - **Handlers**: Implement business logic for commands and queries
 - **No MediatR**: Direct dependency injection for simplicity and transparency
 
@@ -166,6 +175,90 @@ Clear the REPL state:
 }
 ```
 
+### SearchNuGetPackages
+
+Search for NuGet packages:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "tools/call",
+  "params": {
+    "name": "SearchNuGetPackages",
+    "arguments": {
+      "query": "json",
+      "skip": 0,
+      "take": 5
+    }
+  },
+  "id": 5
+}
+```
+
+Returns package metadata including ID, title, description, authors, latest version, download count, and URLs.
+
+### GetNuGetPackageVersions
+
+Get all available versions of a package:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "tools/call",
+  "params": {
+    "name": "GetNuGetPackageVersions",
+    "arguments": {
+      "packageId": "Newtonsoft.Json"
+    }
+  },
+  "id": 6
+}
+```
+
+Returns a list of versions with metadata including prerelease and deprecated flags.
+
+### GetNuGetPackageReadme
+
+Get the README content for a package:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "tools/call",
+  "params": {
+    "name": "GetNuGetPackageReadme",
+    "arguments": {
+      "packageId": "Newtonsoft.Json",
+      "version": "13.0.3"
+    }
+  },
+  "id": 7
+}
+```
+
+Returns the README content if available.
+
+### LoadNuGetPackage
+
+Load a NuGet package into the REPL:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "tools/call",
+  "params": {
+    "name": "LoadNuGetPackage",
+    "arguments": {
+      "packageName": "Newtonsoft.Json",
+      "version": "13.0.3"
+    }
+  },
+  "id": 8
+}
+```
+
+After loading, the package's types and methods are available in the REPL.
+
 ## Development Tools
 
 This project uses a custom GitHub Copilot environment with pre-installed development tools:
@@ -214,6 +307,17 @@ code: "string text = 123;"
 // Returns compilation error with line/column info and error code
 ```
 
+### Using NuGet Packages
+```csharp
+// First, load the package
+LoadNuGetPackage: { packageName: "Newtonsoft.Json", version: "13.0.3" }
+
+// Then use it in the REPL
+code: "using Newtonsoft.Json; var obj = new { Name = \"Test\" }; JsonConvert.SerializeObject(obj)"
+
+// Returns: "{\"Name\":\"Test\"}"
+```
+
 ## Technology Stack
 
 - **Model Context Protocol SDK** - MCP stdio transport
@@ -221,6 +325,7 @@ code: "string text = 123;"
 - **Roslyn** - C# compiler and scripting APIs
   - `Microsoft.CodeAnalysis.CSharp.Scripting` - Script execution
   - `Microsoft.CodeAnalysis.CSharp.Workspaces` - Code analysis
+- **NuGet.Protocol** - NuGet package discovery and downloading
 - **xUnit** - Testing framework
 - **System.Reflection** - XML documentation lookup
 
@@ -229,12 +334,11 @@ code: "string text = 123;"
 ### Core (Domain Layer)
 - **CQRS**: Interfaces for commands, queries, and handlers
 - **Commands**: ExecuteCodeCommand, LoadPackageCommand, ExecuteFileCommand
-- **Queries**: GetDocumentationQuery, ValidateCodeQuery
-- **Models**: ExecutionResult, DocumentationInfo, CompilationError, PackageReference
-
+- **Queries**: GetDocumentationQuery, ValidateCodeQuery, SearchPackagesQuery, GetPackageVersionsQuery, GetPackageReadmeQuery
+- **Models**: ExecutionResult, DocumentationInfo, CompilationError, PackageReference, PackageMetadata, PackageVersion, PackageSearchResult
 ### Infrastructure (Implementation Layer)
-- **Tools**: MCP tool implementations (ReplTools, DocumentationTools)
-- **Services**: RoslynScriptingService, DocumentationService
+- **Tools**: MCP tool implementations (ReplTools, DocumentationTools, NuGetTools)
+- **Services**: RoslynScriptingService, DocumentationService, NuGetService
 - **CommandHandlers**: Execute commands and return results
 - **QueryHandlers**: Fetch data without side effects
 
@@ -301,7 +405,7 @@ public class MyTools
 
 ## Future Enhancements
 
-- [ ] Full NuGet package resolution and loading
+- [x] Full NuGet package resolution and loading
 - [ ] Persistent REPL sessions with user isolation
 - [ ] Code snippet history and caching
 - [ ] Syntax highlighting and IntelliSense data
