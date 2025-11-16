@@ -144,7 +144,7 @@ public class NuGetTools
             isLoaded = result.IsLoaded,
             message = result.IsLoaded
                 ? $"Package '{result.Name}' version '{result.Version ?? "latest"}' loaded successfully"
-                : $"Failed to load package '{result.Name}' version '{result.Version ?? "latest"}'",
+                : $"Failed to load package '{result.Name}' version '{result.Version ?? "unspecified"}'",
         };
     }
 }

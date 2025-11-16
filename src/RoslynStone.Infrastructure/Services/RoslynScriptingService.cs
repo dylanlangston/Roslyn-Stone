@@ -169,26 +169,23 @@ public class RoslynScriptingService
     /// <param name="packageName">Name of the NuGet package</param>
     /// <param name="version">Optional package version</param>
     /// <param name="assemblyPaths">List of assembly file paths to add</param>
-    public void AddPackageReference(
+    public async Task AddPackageReferenceAsync(
         string packageName,
         string? version = null,
         List<string>? assemblyPaths = null
     )
     {
-        _semaphore.Wait();
+        await _semaphore.WaitAsync();
         try
         {
             if (assemblyPaths != null && assemblyPaths.Count > 0)
             {
                 // Add each assembly to script options
-                foreach (var assemblyPath in assemblyPaths)
+                foreach (var assemblyPath in assemblyPaths.Where(File.Exists))
                 {
-                    if (File.Exists(assemblyPath))
-                    {
-                        _scriptOptions = _scriptOptions.AddReferences(
-                            Assembly.LoadFrom(assemblyPath)
-                        );
-                    }
+                    _scriptOptions = _scriptOptions.AddReferences(
+                        Assembly.LoadFrom(assemblyPath)
+                    );
                 }
 
                 // Reset script state to apply new references

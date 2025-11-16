@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using RoslynStone.Core.Commands;
 using RoslynStone.Core.CQRS;
 using RoslynStone.Core.Models;
@@ -12,19 +13,23 @@ public class LoadPackageCommandHandler : ICommandHandler<LoadPackageCommand, Pac
 {
     private readonly RoslynScriptingService _scriptingService;
     private readonly NuGetService _nugetService;
+    private readonly ILogger<LoadPackageCommandHandler> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LoadPackageCommandHandler"/> class
     /// </summary>
     /// <param name="scriptingService">The Roslyn scripting service</param>
     /// <param name="nugetService">The NuGet service</param>
+    /// <param name="logger">The logger</param>
     public LoadPackageCommandHandler(
         RoslynScriptingService scriptingService,
-        NuGetService nugetService
+        NuGetService nugetService,
+        ILogger<LoadPackageCommandHandler> logger
     )
     {
         _scriptingService = scriptingService;
         _nugetService = nugetService;
+        _logger = logger;
     }
 
     /// <summary>
@@ -48,7 +53,7 @@ public class LoadPackageCommandHandler : ICommandHandler<LoadPackageCommand, Pac
             );
 
             // Add package reference to scripting service
-            _scriptingService.AddPackageReference(
+            await _scriptingService.AddPackageReferenceAsync(
                 command.PackageName,
                 command.Version,
                 assemblyPaths
@@ -61,8 +66,16 @@ public class LoadPackageCommandHandler : ICommandHandler<LoadPackageCommand, Pac
                 IsLoaded = true,
             };
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            _logger.LogError(
+                ex,
+                "Failed to load package '{PackageName}' version '{Version}': {ErrorMessage}",
+                command.PackageName,
+                command.Version ?? "latest",
+                ex.Message
+            );
+
             return new PackageReference
             {
                 Name = command.PackageName,

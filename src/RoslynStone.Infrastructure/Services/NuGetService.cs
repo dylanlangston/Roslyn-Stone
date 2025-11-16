@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using NuGet.Common;
 using NuGet.Configuration;
+using NuGet.Frameworks;
 using NuGet.Packaging;
 using NuGet.Protocol;
 using NuGet.Protocol.Core.Types;
@@ -12,11 +13,12 @@ namespace RoslynStone.Infrastructure.Services;
 /// <summary>
 /// Service for NuGet package operations including search, version lookup, and package loading
 /// </summary>
-public class NuGetService
+public class NuGetService : IDisposable
 {
     private readonly SourceRepository _repository;
     private readonly SourceCacheContext _cache;
     private readonly ILogger _logger;
+    private bool _disposed;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="NuGetService"/> class
@@ -24,7 +26,6 @@ public class NuGetService
     public NuGetService()
     {
         _logger = NullLogger.Instance;
-        var providers = Repository.Provider.GetCoreV3();
         _repository = Repository.Factory.GetCoreV3("https://api.nuget.org/v3/index.json");
         _cache = new SourceCacheContext();
     }
@@ -118,7 +119,7 @@ public class NuGetService
                     Version = item.Identity.Version.ToString(),
                     DownloadCount = item.DownloadCount,
                     IsPrerelease = item.Identity.Version.IsPrerelease,
-                    IsDeprecated = item.IsListed == false,
+                    IsDeprecated = !item.IsListed,
                 }
             );
         }
@@ -261,7 +262,10 @@ public class NuGetService
         {
             // Get the latest stable version or latest prerelease if no stable exists
             packageMetadata =
-                metadata.FirstOrDefault(m => !m.Identity.Version.IsPrerelease)
+                metadata
+                    .Where(m => !m.Identity.Version.IsPrerelease)
+                    .OrderByDescending(m => m.Identity.Version)
+                    .FirstOrDefault()
                 ?? metadata.OrderByDescending(m => m.Identity.Version).FirstOrDefault();
         }
         else
@@ -308,10 +312,16 @@ public class NuGetService
         using var packageReader = new PackageArchiveReader(packageStream);
 
         // Get lib files that match the current framework
-        var libItems = packageReader.GetLibItems();
-        var targetFramework = libItems
-            .OrderByDescending(g => g.TargetFramework.Version)
-            .FirstOrDefault();
+        var libItems = packageReader.GetLibItems().ToList();
+        
+        // Use NuGet framework compatibility logic to select the best framework
+        var currentFramework = NuGetFramework.Parse($"net{Environment.Version.Major}.0");
+        var reducer = new FrameworkReducer();
+        var nearestFramework = reducer.GetNearest(currentFramework, libItems.Select(l => l.TargetFramework));
+        
+        var targetFramework = nearestFramework != null
+            ? libItems.FirstOrDefault(l => l.TargetFramework.Equals(nearestFramework))
+            : libItems.OrderByDescending(g => g.TargetFramework.Version).FirstOrDefault();
 
         if (targetFramework != null)
         {
@@ -321,22 +331,30 @@ public class NuGetService
                 packageMetadata.Identity.Version.ToNormalizedString()
             );
 
-            foreach (var file in targetFramework.Items)
+            foreach (var file in targetFramework.Items.Where(f => 
+                f.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)
+                && !f.Replace('\\', '/').Contains("/ref/")))
             {
-                if (
-                    file.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)
-                    && !file.Contains("/ref/")
-                )
+                var fullPath = Path.Combine(packagePath, file);
+                if (File.Exists(fullPath))
                 {
-                    var fullPath = Path.Combine(packagePath, file);
-                    if (File.Exists(fullPath))
-                    {
-                        assemblies.Add(fullPath);
-                    }
+                    assemblies.Add(fullPath);
                 }
             }
         }
 
         return assemblies;
+    }
+
+    /// <summary>
+    /// Disposes the NuGet service and releases resources
+    /// </summary>
+    public void Dispose()
+    {
+        if (!_disposed)
+        {
+            _cache?.Dispose();
+            _disposed = true;
+        }
     }
 }

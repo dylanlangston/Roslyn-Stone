@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using RoslynStone.Core.Commands;
 using RoslynStone.Infrastructure.CommandHandlers;
 using RoslynStone.Infrastructure.Services;
@@ -19,7 +21,8 @@ public class LoadPackageCommandHandlerTests
         // Arrange
         var scriptingService = new RoslynScriptingService();
         var nugetService = new NuGetService();
-        var handler = new LoadPackageCommandHandler(scriptingService, nugetService);
+        var logger = NullLogger<LoadPackageCommandHandler>.Instance;
+        var handler = new LoadPackageCommandHandler(scriptingService, nugetService, logger);
         var command = new LoadPackageCommand("Newtonsoft.Json", "13.0.3");
 
         // Act
@@ -39,7 +42,8 @@ public class LoadPackageCommandHandlerTests
         // Arrange
         var scriptingService = new RoslynScriptingService();
         var nugetService = new NuGetService();
-        var handler = new LoadPackageCommandHandler(scriptingService, nugetService);
+        var logger = NullLogger<LoadPackageCommandHandler>.Instance;
+        var handler = new LoadPackageCommandHandler(scriptingService, nugetService, logger);
         var command = new LoadPackageCommand("ThisPackageDefinitelyDoesNotExist12345XYZ");
 
         // Act
