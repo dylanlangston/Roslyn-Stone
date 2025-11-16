@@ -18,12 +18,12 @@ The primary instructions file that Copilot will reference for all work in this r
 - **Custom Agents**: When to delegate to the CSharpExpert agent
 
 ### 2. Scoped Instruction Files (`.github/instructions/`)
-Three specialized instruction files that provide additional context for specific areas:
+Specialized instruction files that provide additional context for specific areas:
 
-#### `mcp.instructions.md`
-- **Scope**: C# files matching patterns: `*mcp*`, `*MCP*`, `*protocol*`, `*server*`
-- **Content**: MCP server development patterns, tool registration, JSON-RPC 2.0 compliance, security, performance
-- **Use Case**: Automatically applies when working on MCP-related code
+#### `csharp-mcp-server.instructions.md`
+- **Scope**: C# and .csproj files (`**/*.cs`, `**/*.csproj`)
+- **Content**: C# MCP SDK best practices, tool and prompt implementation patterns, server setup with dependency injection, common code examples
+- **Use Case**: Automatically applies when working on C# MCP server code
 
 #### `repl.instructions.md`
 - **Scope**: C# files matching patterns: `*repl*`, `*REPL*`, `*eval*`, `*interactive*`
@@ -51,7 +51,21 @@ Pre-existing custom agent for C# and .NET expertise:
 - Should be delegated to for complex C# work
 - Referenced in main instructions
 
-### 5. Documentation (`.github/README.md`)
+### 5. Chat Mode Configuration (`.github/chatmodes/csharp-mcp-expert.chatmode.md`)
+Expert chat mode for C# MCP server development:
+- World-class expertise in ModelContextProtocol SDK
+- Deep knowledge of .NET architecture and async programming
+- Provides complete, production-ready code examples
+- Best practices for tool design and LLM-friendly interfaces
+
+### 6. Prompt Templates (`.github/prompts/csharp-mcp-server-generator.prompt.md`)
+Reusable prompt for generating complete C# MCP server projects:
+- Generates project structure with proper configuration
+- Includes tools, prompts, and error handling
+- Provides testing guidance and troubleshooting tips
+- Production-ready with comprehensive documentation
+
+### 7. Documentation (`.github/README.md`)
 Structure and usage documentation for all the configuration files.
 
 ## How It Works
@@ -61,12 +75,14 @@ When Copilot works on your repository:
 1. **Always reads**: `.github/copilot-instructions.md` for general context
 2. **Conditionally reads**: Scoped instructions in `.github/instructions/` based on file patterns
 3. **Can delegate to**: Custom agents in `.github/agents/` for specialized tasks
+4. **Can use**: Chat modes in `.github/chatmodes/` for expert conversational assistance
+5. **Can invoke**: Prompt templates in `.github/prompts/` for generating code structures
 
 ### Example Scenarios
 
 **Working on MCP server code** (`src/McpServer.cs`):
-- Reads: copilot-instructions.md + mcp.instructions.md
-- Gets: General guidelines + MCP-specific patterns and requirements
+- Reads: copilot-instructions.md + csharp-mcp-server.instructions.md
+- Gets: General guidelines + C# MCP SDK patterns and best practices
 
 **Working on REPL functionality** (`src/Repl/Evaluator.cs`):
 - Reads: copilot-instructions.md + repl.instructions.md
@@ -107,18 +123,23 @@ When Copilot works on your repository:
 
 ```
 .github/
-├── README.md                              (NEW - 2,586 bytes)
-├── copilot-instructions.md                (NEW - 3,464 bytes)
-├── MCP_CONFIGURATION.md                   (NEW - 4,312 bytes)
+├── README.md                                      (UPDATED)
+├── copilot-instructions.md                        (NEW - 3,464 bytes)
+├── MCP_CONFIGURATION.md                           (NEW - 4,312 bytes)
+├── SETUP_SUMMARY.md                               (UPDATED)
 ├── instructions/
-│   ├── mcp.instructions.md               (NEW - 3,154 bytes)
-│   ├── repl.instructions.md              (NEW - 4,605 bytes)
-│   └── testing.instructions.md           (NEW - 7,509 bytes)
-└── agents/
-    └── CSharpExpert.agent.md             (EXISTING - 8,322 bytes)
+│   ├── csharp-mcp-server.instructions.md         (USER - 4,350 bytes)
+│   ├── repl.instructions.md                      (NEW - 4,605 bytes)
+│   └── testing.instructions.md                   (NEW - 7,509 bytes)
+├── agents/
+│   └── CSharpExpert.agent.md                     (EXISTING - 8,322 bytes)
+├── chatmodes/
+│   └── csharp-mcp-expert.chatmode.md             (USER - 4,546 bytes)
+└── prompts/
+    └── csharp-mcp-server-generator.prompt.md     (USER - 2,218 bytes)
 ```
 
-**Total**: 6 new files, 1 existing file documented
+**Total**: 3 new files (created by Copilot), 3 user files (manually added), 2 updated documentation files, 1 existing agent
 
 ## Next Steps
 

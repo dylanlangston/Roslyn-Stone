@@ -63,11 +63,14 @@ dotnet test
 ## MCP Integration
 
 When working with MCP-related code:
-- Follow the Model Context Protocol specification
-- Ensure tools/endpoints are discoverable via JSON-RPC 2.0
-- Implement proper schema definitions for all exposed operations
-- Handle versioning and backwards compatibility
+- Follow the C# MCP SDK instructions in `.github/instructions/csharp-mcp-server.instructions.md`
+- Use the ModelContextProtocol NuGet package (prerelease)
+- Configure logging to stderr to avoid interfering with stdio transport
+- Use proper attributes: `[McpServerToolType]`, `[McpServerTool]`, `[Description]`
+- Implement proper error handling with `McpProtocolException`
 - Validate inputs and sanitize paths for security
+- For expert assistance, use the C# MCP Expert chat mode in `.github/chatmodes/csharp-mcp-expert.chatmode.md`
+- For generating new MCP servers, use the prompt template in `.github/prompts/csharp-mcp-server-generator.prompt.md`
 
 ## Security Considerations
 
