@@ -11,7 +11,11 @@ using RoslynStone.Infrastructure.Services;
 
 var builder = Host.CreateApplicationBuilder(args);
 
+// Add Aspire service defaults (OpenTelemetry, health checks, service discovery)
+builder.AddServiceDefaults();
+
 // Configure logging to stderr to avoid interfering with stdio transport
+// This overrides the default console logging to ensure MCP protocol integrity
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole(options =>
 {
