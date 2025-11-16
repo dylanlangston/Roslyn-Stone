@@ -11,6 +11,10 @@ public class AssemblyExecutionService
 {
     private readonly CompilationService _compilationService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AssemblyExecutionService"/> class
+    /// </summary>
+    /// <param name="compilationService">The compilation service</param>
     public AssemblyExecutionService(CompilationService compilationService)
     {
         _compilationService = compilationService;
@@ -78,10 +82,7 @@ public class AssemblyExecutionService
         }
 
         // Execute in an unloadable context
-        return await ExecuteInUnloadableContextAsync(
-            compilationResult,
-            cancellationToken
-        );
+        return await ExecuteInUnloadableContextAsync(compilationResult, cancellationToken);
     }
 
     /// <summary>
@@ -121,14 +122,16 @@ public class AssemblyExecutionService
 
             try
             {
-                using var outputWriter = new StringWriter(outputBuilder);
+                await using var outputWriter = new StringWriter(outputBuilder);
                 Console.SetOut(outputWriter);
                 Console.SetError(outputWriter);
 
                 // Execute the entry point
                 var result = entryPoint.Invoke(
                     null,
-                    entryPoint.GetParameters().Length == 0 ? null : new object[] { Array.Empty<string>() }
+                    entryPoint.GetParameters().Length == 0
+                        ? null
+                        : [Array.Empty<string>()]
                 );
 
                 // Handle async Task return types
@@ -138,8 +141,8 @@ public class AssemblyExecutionService
                 }
 
                 // Flush output after async completion
-                await Console.Out.FlushAsync();
-                await outputWriter.FlushAsync();
+                await Console.Out.FlushAsync(cancellationToken);
+                await outputWriter.FlushAsync(cancellationToken);
 
                 return new AssemblyExecutionResult
                 {
@@ -182,8 +185,10 @@ public class AssemblyExecutionService
             );
 
             // Dispose streams
-            compilationResult.AssemblyStream?.Dispose();
-            compilationResult.SymbolsStream?.Dispose();
+            if (compilationResult.AssemblyStream != null)
+                await compilationResult.AssemblyStream.DisposeAsync();
+            if (compilationResult.SymbolsStream != null)
+                await compilationResult.SymbolsStream.DisposeAsync();
         }
     }
 
@@ -225,10 +230,33 @@ public class AssemblyExecutionService
 /// </summary>
 public class AssemblyExecutionResult
 {
-    public bool Success { get; set; }
-    public string? Output { get; set; }
-    public object? ReturnValue { get; set; }
-    public string? ErrorMessage { get; set; }
-    public List<string>? CompilationErrors { get; set; }
-    public Exception? Exception { get; set; }
+    /// <summary>
+    /// Gets or sets a value indicating whether the execution was successful
+    /// </summary>
+    public bool Success { get; init; }
+
+    /// <summary>
+    /// Gets or sets the console output from execution
+    /// </summary>
+    public string? Output { get; init; }
+
+    /// <summary>
+    /// Gets or sets the return value from the entry point
+    /// </summary>
+    public object? ReturnValue { get; init; }
+
+    /// <summary>
+    /// Gets or sets the error message if execution failed
+    /// </summary>
+    public string? ErrorMessage { get; init; }
+
+    /// <summary>
+    /// Gets or sets the compilation errors if any
+    /// </summary>
+    public List<string>? CompilationErrors { get; init; }
+
+    /// <summary>
+    /// Gets or sets the exception that occurred during execution
+    /// </summary>
+    public Exception? Exception { get; init; }
 }

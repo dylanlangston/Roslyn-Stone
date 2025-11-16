@@ -7,6 +7,12 @@ namespace RoslynStone.Core.CQRS;
 public interface ICommandHandler<in TCommand>
     where TCommand : ICommand
 {
+    /// <summary>
+    /// Handles the command asynchronously
+    /// </summary>
+    /// <param name="command">The command to handle</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>A task representing the asynchronous operation</returns>
     Task HandleAsync(TCommand command, CancellationToken cancellationToken = default);
 }
 
@@ -18,5 +24,11 @@ public interface ICommandHandler<in TCommand>
 public interface ICommandHandler<in TCommand, TResult>
     where TCommand : ICommand<TResult>
 {
+    /// <summary>
+    /// Handles the command asynchronously and returns a result
+    /// </summary>
+    /// <param name="command">The command to handle</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>A task representing the asynchronous operation with the result</returns>
     Task<TResult> HandleAsync(TCommand command, CancellationToken cancellationToken = default);
 }

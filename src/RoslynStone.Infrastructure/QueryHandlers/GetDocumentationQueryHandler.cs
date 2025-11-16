@@ -12,11 +12,21 @@ public class GetDocumentationQueryHandler : IQueryHandler<GetDocumentationQuery,
 {
     private readonly DocumentationService _documentationService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="GetDocumentationQueryHandler"/> class
+    /// </summary>
+    /// <param name="documentationService">The documentation service</param>
     public GetDocumentationQueryHandler(DocumentationService documentationService)
     {
         _documentationService = documentationService;
     }
 
+    /// <summary>
+    /// Handles the get documentation query
+    /// </summary>
+    /// <param name="query">The query containing the symbol name</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>The documentation information or null if not found</returns>
     public Task<DocumentationInfo?> HandleAsync(
         GetDocumentationQuery query,
         CancellationToken cancellationToken = default

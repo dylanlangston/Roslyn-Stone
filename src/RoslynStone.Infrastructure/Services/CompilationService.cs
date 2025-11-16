@@ -15,6 +15,9 @@ public class CompilationService
 {
     private readonly ScriptOptions _scriptOptions;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CompilationService"/> class
+    /// </summary>
     public CompilationService()
     {
         // Configure default references
@@ -48,18 +51,14 @@ public class CompilationService
         var syntaxTree = CSharpSyntaxTree.ParseText(code);
 
         // Get metadata references from existing assemblies
-        var references = _scriptOptions.MetadataReferences
-            .OfType<PortableExecutableReference>()
+        var references = _scriptOptions
+            .MetadataReferences.OfType<PortableExecutableReference>()
             .ToList();
 
         // Add additional required references
         references.Add(MetadataReference.CreateFromFile(typeof(object).Assembly.Location));
-        references.Add(
-            MetadataReference.CreateFromFile(typeof(Console).Assembly.Location)
-        );
-        references.Add(
-            MetadataReference.CreateFromFile(typeof(Enumerable).Assembly.Location)
-        );
+        references.Add(MetadataReference.CreateFromFile(typeof(Console).Assembly.Location));
+        references.Add(MetadataReference.CreateFromFile(typeof(Enumerable).Assembly.Location));
 
         // Add System.Runtime
         var runtimeAssembly = Assembly.Load("System.Runtime");
@@ -71,7 +70,7 @@ public class CompilationService
             syntaxTrees: new[] { syntaxTree },
             references: references,
             options: new CSharpCompilationOptions(
-                OutputKind.ConsoleApplication,  // Changed from DynamicallyLinkedLibrary to support top-level statements
+                OutputKind.ConsoleApplication, // Changed from DynamicallyLinkedLibrary to support top-level statements
                 optimizationLevel: OptimizationLevel.Release,
                 allowUnsafe: false
             )
@@ -87,8 +86,7 @@ public class CompilationService
         {
             var failures = emitResult
                 .Diagnostics.Where(diagnostic =>
-                    diagnostic.IsWarningAsError
-                    || diagnostic.Severity == DiagnosticSeverity.Error
+                    diagnostic.IsWarningAsError || diagnostic.Severity == DiagnosticSeverity.Error
                 )
                 .ToList();
 
@@ -129,11 +127,34 @@ public class CompilationService
 /// </summary>
 public class CompilationResult
 {
+    /// <summary>
+    /// Gets or sets a value indicating whether the compilation was successful
+    /// </summary>
     public bool Success { get; set; }
+
+    /// <summary>
+    /// Gets or sets the name of the compiled assembly
+    /// </summary>
     public string? AssemblyName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the stream containing the compiled assembly
+    /// </summary>
     public MemoryStream? AssemblyStream { get; set; }
+
+    /// <summary>
+    /// Gets or sets the stream containing the debug symbols
+    /// </summary>
     public MemoryStream? SymbolsStream { get; set; }
+
+    /// <summary>
+    /// Gets or sets the compilation diagnostics
+    /// </summary>
     public List<Diagnostic>? Diagnostics { get; set; }
+
+    /// <summary>
+    /// Gets or sets the error messages from compilation
+    /// </summary>
     public List<string>? ErrorMessages { get; set; }
 }
 
@@ -143,9 +164,17 @@ public class CompilationResult
 /// </summary>
 public class UnloadableAssemblyLoadContext : AssemblyLoadContext
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="UnloadableAssemblyLoadContext"/> class
+    /// </summary>
     public UnloadableAssemblyLoadContext()
         : base(isCollectible: true) { }
 
+    /// <summary>
+    /// Resolves an assembly by name
+    /// </summary>
+    /// <param name="assemblyName">The assembly name to resolve</param>
+    /// <returns>The loaded assembly or null to use default loading behavior</returns>
     protected override Assembly? Load(AssemblyName assemblyName)
     {
         // Return null to use default loading behavior
