@@ -10,22 +10,16 @@ namespace RoslynStone.Tests;
 [Trait("Component", "REPL")]
 public class RoslynScriptingServiceTests
 {
-    private readonly RoslynScriptingService _service;
-
-    public RoslynScriptingServiceTests()
-    {
-        _service = new RoslynScriptingService();
-    }
-
     [Fact]
     [Trait("Feature", "Execution")]
     public async Task ExecuteAsync_SimpleExpression_ReturnsResult()
     {
         // Arrange
+        var service = new RoslynScriptingService();
         var code = "1 + 1";
 
         // Act
-        var result = await _service.ExecuteAsync(code);
+        var result = await service.ExecuteAsync(code);
 
         // Assert
         Assert.True(result.Success);
@@ -38,10 +32,11 @@ public class RoslynScriptingServiceTests
     public async Task ExecuteAsync_ConsoleOutput_CapturesOutput()
     {
         // Arrange
+        var service = new RoslynScriptingService();
         var code = "Console.WriteLine(\"Hello, World!\");";
 
         // Act
-        var result = await _service.ExecuteAsync(code);
+        var result = await service.ExecuteAsync(code);
 
         // Assert
         Assert.True(result.Success);
@@ -53,10 +48,11 @@ public class RoslynScriptingServiceTests
     public async Task ExecuteAsync_CompilationError_ReturnsErrors()
     {
         // Arrange
+        var service = new RoslynScriptingService();
         var code = "int x = \"not a number\";";
 
         // Act
-        var result = await _service.ExecuteAsync(code);
+        var result = await service.ExecuteAsync(code);
 
         // Assert
         Assert.False(result.Success);
@@ -94,10 +90,11 @@ public class RoslynScriptingServiceTests
     public async Task ExecuteAsync_Warning_ReturnsWarnings()
     {
         // Arrange
+        var service = new RoslynScriptingService();
         var code = "int x = 5; int y = 10;";
 
         // Act
-        var result = await _service.ExecuteAsync(code);
+        var result = await service.ExecuteAsync(code);
 
         // Assert
         Assert.True(result.Success);

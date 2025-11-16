@@ -22,6 +22,7 @@ public class LoadPackageCommandHandler : ICommandHandler<LoadPackageCommand, Pac
         CancellationToken cancellationToken = default
     )
     {
+        // Note: AddPackageReference is currently a stub - actual NuGet loading not implemented
         _scriptingService.AddPackageReference(command.PackageName, command.Version);
 
         return Task.FromResult(
@@ -29,7 +30,7 @@ public class LoadPackageCommandHandler : ICommandHandler<LoadPackageCommand, Pac
             {
                 Name = command.PackageName,
                 Version = command.Version,
-                IsLoaded = true,
+                IsLoaded = false, // TODO: Implement actual NuGet package loading
             }
         );
     }
