@@ -1,29 +1,81 @@
+### Git
+.git
+.gitignore
+.gitattributes
+
+### Build artifacts
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+artifacts/
+
+### .NET Core
+project.lock.json
+project.fragment.lock.json
+
+### NuGet packages
+*.nupkg
+*.snupkg
+
+### Test Results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+
+### IDE / Editor
+.vs/
+.vscode/
 **/.classpath
-**/.dockerignore
-**/.env
-**/.git
-**/.gitignore
 **/.project
 **/.settings
-**/.toolstarget
-**/.vs
-**/.vscode
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
 **/*.*proj.user
-**/*.dbmdl
-**/*.jfm
+
+### MSBuild and logs
+*.binlog
+*.dbmdl
+*.jfm
+
+### Misc
+*.swp
+*.*~
+~$*
+*~
+LICENSE
+
+### Node / JS
+node_modules
+npm-debug.log
+
+### Docker/Compose
+docker-compose*
+Dockerfile*
+
+### Kubernetes / Helm (charts)
+charts/
+
+### Config / Secrets for development
+**/.env
 **/azds.yaml
-**/bin
-**/charts
-**/docker-compose*
-**/Dockerfile*
-**/node_modules
-**/npm-debug.log
-**/obj
 **/secrets.dev.yaml
 **/values.dev.yaml
-LICENSE
-README.md
-.github
-tests
-artifacts
-*.md
+
+### Exclude CI/CD metadata
+.github/
+
+### Allow README.md to be included if needed
+!README.md
+

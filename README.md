@@ -60,6 +60,7 @@ RoslynStone/
 - .NET 10.0 SDK or later
 - C# 13
 - Docker (optional, for containerized deployment)
+- VS Code with Dev Containers extension (optional, for containerized development)
 - .NET Aspire workload (optional, for local orchestration)
 
 ### Build and Run
@@ -85,7 +86,7 @@ dotnet run
 #### With Aspire (Orchestrated)
 
 ```bash
-# Install Aspire workload
+# Install Aspire workload (or skip if you don't need local orchestration)
 dotnet workload install aspire
 
 # Run with Aspire dashboard for observability
@@ -100,13 +101,27 @@ This will start:
 
 The MCP Inspector is automatically started in development mode, providing a web-based interface to test and debug MCP tools in real-time.
 
+#### Development Container
+
+The repository includes a fully configured devcontainer with Docker-in-Docker support for isolated development:
+
+```bash
+# Open the repo in VS Code
+code .
+
+# Press F1 and select "Dev Containers: Reopen in Container"
+# The container will automatically build, restore dependencies, and build the project
+```
+
+See [`.devcontainer/README.md`](.devcontainer/README.md) for more details about the devcontainer setup and Docker-in-Docker testing.
+
 #### Docker Compose (Containerized)
 
 ```bash
 # Build and run with Docker Compose
 docker-compose up --build
 
-# Access Aspire dashboard at http://localhost:18888
+# Access Aspire dashboard at http://localhost:18888 (if Aspire is enabled in the container)
 ```
 
 The server uses stdio transport for MCP protocol communication. It reads JSON-RPC messages from stdin and writes responses to stdout, with logging to stderr.
@@ -606,7 +621,7 @@ For more details, see the [MCP Inspector documentation](https://modelcontextprot
 ## Future Enhancements
 
 - [x] Full NuGet package resolution and loading
-- [x] Docker container support
+- [x] Docker container support (including devcontainer with Docker-in-Docker)
 - [x] OpenTelemetry integration
 - [ ] Persistent REPL sessions with user isolation
 - [ ] Code snippet history and caching
