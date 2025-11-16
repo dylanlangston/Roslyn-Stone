@@ -62,7 +62,8 @@ public class ExecuteFileCommandHandler : ICommandHandler<ExecuteFileCommand, str
             var errorMessage = result.ErrorMessage ?? "Unknown error";
             if (result.CompilationErrors?.Any() == true)
             {
-                errorMessage += "\n\nCompilation errors:\n" + string.Join("\n", result.CompilationErrors);
+                errorMessage +=
+                    "\n\nCompilation errors:\n" + string.Join("\n", result.CompilationErrors);
             }
             return $"Error: {errorMessage}";
         }
@@ -90,7 +91,8 @@ public class ExecuteFileCommandHandler : ICommandHandler<ExecuteFileCommand, str
                 CreateNoWindow = true,
             };
 
-            using var process = new Process { StartInfo = startInfo };
+            using var process = new Process();
+            process.StartInfo = startInfo;
             process.Start();
 
             var output = await process.StandardOutput.ReadToEndAsync(cancellationToken);
