@@ -18,12 +18,13 @@ This is the primary reference that Copilot will use when working on any part of 
 ### `/instructions/`
 Directory containing scope-specific instruction files that provide more granular guidance for particular areas of the codebase.
 
-#### `mcp.instructions.md`
-Instructions specific to Model Context Protocol (MCP) server development:
-- Scoped to C# files and MCP-related patterns
-- MCP tool definition patterns
-- JSON-RPC 2.0 compliance guidelines
-- Security and performance considerations
+#### `csharp-mcp-server.instructions.md`
+Instructions specific to building Model Context Protocol (MCP) servers using the C# SDK:
+- Scoped to C# and .csproj files
+- C# MCP SDK best practices (ModelContextProtocol NuGet packages)
+- Tool and prompt implementation patterns
+- Server setup with dependency injection
+- Common code patterns and examples
 
 #### `repl.instructions.md`
 Instructions specific to C# REPL implementation:
@@ -51,16 +52,40 @@ Custom agent definition for C# and .NET expertise. This agent should be delegate
 - .NET framework integrations
 - Performance-critical code paths
 
+### `/chatmodes/`
+Directory containing chat mode definitions for specialized conversational contexts.
+
+#### `csharp-mcp-expert.chatmode.md`
+Expert chat mode for C# MCP server development:
+- World-class expertise in ModelContextProtocol SDK
+- Deep knowledge of .NET architecture and async programming
+- Best practices for tool design and LLM-friendly interfaces
+- Provides complete, production-ready code examples
+
+### `/prompts/`
+Directory containing reusable prompt templates for common tasks.
+
+#### `csharp-mcp-server-generator.prompt.md`
+Prompt template for generating complete C# MCP server projects:
+- Generates project structure with proper configuration
+- Includes tools, prompts, and error handling
+- Provides testing guidance and troubleshooting tips
+- Production-ready with comprehensive documentation
+
 ## How It Works
 
 1. **Global Instructions**: `copilot-instructions.md` provides repository-wide context and guidelines
 2. **Scoped Instructions**: Files in `instructions/` directory provide additional context based on file patterns and languages
 3. **Custom Agents**: Specialized agents in `agents/` directory handle domain-specific tasks
+4. **Chat Modes**: Conversational modes in `chatmodes/` directory provide expert assistance for specific scenarios
+5. **Prompts**: Reusable templates in `prompts/` directory for generating code or completing common tasks
 
 When Copilot works on a file, it:
 1. Always reads the global `copilot-instructions.md`
 2. Reads any applicable scoped instructions based on file path and language
 3. Can delegate to custom agents for specialized work
+4. Can switch to expert chat modes for conversational assistance
+5. Can use prompt templates to generate code or structures
 
 ## Best Practices
 
