@@ -4,6 +4,27 @@ This directory contains configuration files for GitHub Copilot and other GitHub 
 
 ## Structure
 
+### `/workflows/copilot-setup-steps.yml`
+Custom environment setup workflow for GitHub Copilot coding agent. This workflow:
+- Installs .NET 10 SDK for latest C# features
+- Installs CSharpier for code formatting
+- Installs ReSharper Command Line Tools for code analysis
+- Installs Cake for build automation
+- Caches NuGet packages for faster subsequent runs
+- Runs automatically when the workflow file is modified
+
+See `COPILOT_ENVIRONMENT.md` for detailed documentation on the custom environment setup.
+
+### `/COPILOT_ENVIRONMENT.md`
+Detailed documentation about the custom Copilot environment:
+- Overview of installed tools and their versions
+- How the environment setup works
+- Customization instructions
+- Troubleshooting guide
+- References and links to official documentation
+
+This ensures Copilot has all necessary tools available when working on C# code.
+
 ### `/copilot-instructions.md`
 Main instructions file for GitHub Copilot coding agent. This file provides:
 - Project overview and architecture
