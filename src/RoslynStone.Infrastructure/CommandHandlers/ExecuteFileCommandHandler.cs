@@ -1,14 +1,29 @@
 using System.Diagnostics;
 using RoslynStone.Core.Commands;
 using RoslynStone.Core.CQRS;
+using RoslynStone.Infrastructure.Services;
 
 namespace RoslynStone.Infrastructure.CommandHandlers;
 
 /// <summary>
-/// Handler for executing single-file C# programs using dotnet CLI
+/// Handler for executing single-file C# programs
+/// Uses AssemblyLoadContext for proper isolation and memory management
+/// Falls back to dotnet CLI if preferred
 /// </summary>
 public class ExecuteFileCommandHandler : ICommandHandler<ExecuteFileCommand, string>
 {
+    private readonly AssemblyExecutionService _assemblyExecutionService;
+    private readonly bool _useDotnetCli;
+
+    public ExecuteFileCommandHandler(
+        AssemblyExecutionService assemblyExecutionService,
+        bool useDotnetCli = false
+    )
+    {
+        _assemblyExecutionService = assemblyExecutionService;
+        _useDotnetCli = useDotnetCli;
+    }
+
     public async Task<string> HandleAsync(
         ExecuteFileCommand command,
         CancellationToken cancellationToken = default
@@ -19,12 +34,45 @@ public class ExecuteFileCommandHandler : ICommandHandler<ExecuteFileCommand, str
             return $"Error: File not found: {command.FilePath}";
         }
 
+        // Use dotnet CLI if explicitly requested
+        if (_useDotnetCli)
+        {
+            return await ExecuteWithDotnetCliAsync(command.FilePath, cancellationToken);
+        }
+
+        // Use AssemblyLoadContext approach (preferred)
+        var result = await _assemblyExecutionService.ExecuteFileAsync(
+            command.FilePath,
+            cancellationToken
+        );
+
+        if (!result.Success)
+        {
+            var errorMessage = result.ErrorMessage ?? "Unknown error";
+            if (result.CompilationErrors?.Any() == true)
+            {
+                errorMessage += "\n\nCompilation errors:\n" + string.Join("\n", result.CompilationErrors);
+            }
+            return $"Error: {errorMessage}";
+        }
+
+        return result.Output ?? string.Empty;
+    }
+
+    /// <summary>
+    /// Execute file using dotnet CLI (fallback method)
+    /// </summary>
+    private async Task<string> ExecuteWithDotnetCliAsync(
+        string filePath,
+        CancellationToken cancellationToken
+    )
+    {
         try
         {
             var startInfo = new ProcessStartInfo
             {
                 FileName = "dotnet",
-                Arguments = $"run-app {command.FilePath}",
+                Arguments = $"run-app {filePath}",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,

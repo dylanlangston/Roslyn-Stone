@@ -14,7 +14,7 @@ A developer- and LLM-friendly C# REPL service built with Roslyn and the Model Co
 
 ## Architecture
 
-The solution follows clean architecture principles with CQRS pattern and MCP integration:
+The solution follows clean architecture principles with CQRS pattern and MCP integration. It implements best practices for dynamic code compilation and execution, including proper AssemblyLoadContext usage for memory management. See `DYNAMIC_COMPILATION_BEST_PRACTICES.md` for details.
 
 ```
 RoslynStone/
@@ -324,3 +324,4 @@ See [LICENSE](LICENSE) file for details.
 - [Roslyn Scripting APIs](https://learn.microsoft.com/en-us/archive/msdn-magazine/2016/january/essential-net-csharp-scripting)
 - [CQRS Pattern without MediatR](https://cezarypiatek.github.io/post/why-i-dont-use-mediatr-for-cqrs/)
 - [dotnet run-app](https://devblogs.microsoft.com/dotnet/announcing-dotnet-run-app/)
+- [Dynamic Compilation Best Practices](DYNAMIC_COMPILATION_BEST_PRACTICES.md) - Based on Laurent Kempé's approach
