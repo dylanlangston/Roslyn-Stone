@@ -24,6 +24,7 @@ This document summarizes the changes made to containerize the Roslyn-Stone MCP s
   - AppHost.cs: Configures MCP server as a containerized resource
   - Provides Aspire dashboard for telemetry visualization
   - Manages service lifecycle and configuration
+  - **MCP Inspector Integration**: Automatically starts the MCP Inspector in development mode for testing and debugging MCP tools
 
 ### 2. Modified Projects
 
@@ -115,7 +116,8 @@ dotnet run
 ```bash
 cd src/RoslynStone.AppHost
 dotnet run
-# Dashboard available at http://localhost:18888
+# Aspire dashboard available at http://localhost:18888
+# MCP Inspector UI available at http://localhost:6274
 ```
 
 ### Docker Compose
@@ -147,6 +149,33 @@ All existing tests continue to pass:
 - 4 tests skipped (slow network operations)
 - 0 failures
 - Build succeeds without warnings
+
+### MCP Inspector Integration
+
+The AppHost includes automatic MCP Inspector integration for development mode:
+
+**Features:**
+- Automatically starts when running `dotnet run` from AppHost in development
+- Provides interactive web UI at `http://localhost:6274`
+- Test MCP tools without writing code
+- View real-time request/response data
+- Export server configurations for Claude Desktop and other clients
+
+**Ports:**
+- `6274`: Inspector UI (web interface)
+- `6277`: MCP Proxy (protocol bridge)
+
+**Environment Detection:**
+The inspector only starts when:
+- `ASPNETCORE_ENVIRONMENT` or `DOTNET_ENVIRONMENT` is set to `Development`
+- Or when no environment is specified (defaults to development)
+
+**Benefits:**
+- Seamless testing experience alongside Aspire dashboard
+- No manual setup required
+- Automatically connects to the MCP server
+- Visual feedback on tool execution
+- Easy configuration export
 
 ## Compatibility
 

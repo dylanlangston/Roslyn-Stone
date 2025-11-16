@@ -93,7 +93,12 @@ cd src/RoslynStone.AppHost
 dotnet run
 ```
 
-This will start the Aspire dashboard at `http://localhost:18888` where you can view logs, metrics, and traces.
+This will start:
+- **Aspire Dashboard** at `http://localhost:18888` - View logs, metrics, and traces
+- **MCP Inspector UI** at `http://localhost:6274` - Interactive tool testing interface (development mode only)
+- **MCP Proxy** at `http://localhost:6277` - Protocol bridge for the inspector
+
+The MCP Inspector is automatically started in development mode, providing a web-based interface to test and debug MCP tools in real-time.
 
 #### Docker Compose (Containerized)
 
@@ -496,6 +501,96 @@ public class MyTools
     }
 }
 ```
+
+### Testing and Debugging with MCP Inspector
+
+The [MCP Inspector](https://github.com/modelcontextprotocol/inspector) is an interactive developer tool for testing and debugging MCP servers. It provides a web-based UI to explore available tools, test requests, and view responses in real-time.
+
+#### Integrated with Aspire (Recommended)
+
+When running with Aspire, the MCP Inspector is automatically started in development mode:
+
+```bash
+cd src/RoslynStone.AppHost
+dotnet run
+```
+
+The inspector will be available at:
+- **Inspector UI**: `http://localhost:6274` - Interactive web interface
+- **Aspire Dashboard**: `http://localhost:18888` - Observability and logs
+
+This provides a seamless development experience with both testing and observability in one place.
+
+#### Standalone Inspector
+
+To inspect the server without Aspire, use npx to run the inspector directly:
+
+```bash
+# From the repository root, run the compiled server through the inspector
+npx @modelcontextprotocol/inspector dotnet run --project src/RoslynStone.Api/RoslynStone.Api.csproj
+```
+
+The inspector will start two services:
+- **MCP Inspector UI** at `http://localhost:6274` - Interactive web interface
+- **MCP Proxy** at `http://localhost:6277` - Protocol bridge
+
+#### Using the Inspector
+
+1. Open `http://localhost:6274` in your browser
+2. The server connection is automatically established
+3. Explore available tools in the left sidebar
+4. Test tools by clicking them and providing parameters
+5. View responses, including return values and output
+6. Export server configuration for Claude Desktop or other clients
+
+#### Inspecting with Environment Variables
+
+Pass environment variables to configure the server:
+
+```bash
+npx @modelcontextprotocol/inspector \
+  -e DOTNET_ENVIRONMENT=Development \
+  -e OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317 \
+  dotnet run --project src/RoslynStone.Api/RoslynStone.Api.csproj
+```
+
+#### Inspecting the Container
+
+You can also inspect the containerized version:
+
+```bash
+# Inspect the container image
+npx @modelcontextprotocol/inspector docker run -i --rm ghcr.io/dylanlangston/roslyn-stone:latest
+```
+
+#### Custom Ports
+
+If you need to use different ports:
+
+```bash
+CLIENT_PORT=8080 SERVER_PORT=9000 npx @modelcontextprotocol/inspector \
+  dotnet run --project src/RoslynStone.Api/RoslynStone.Api.csproj
+```
+
+#### Exporting Configuration
+
+The inspector provides buttons to export server configurations:
+
+- **Server Entry**: Copies the launch configuration to clipboard for use in `mcp.json`
+- Compatible with Claude Desktop, Cursor, Claude Code, and other MCP clients
+
+Example exported configuration:
+```json
+{
+  "command": "dotnet",
+  "args": ["run", "--project", "/path/to/Roslyn-Stone/src/RoslynStone.Api/RoslynStone.Api.csproj"],
+  "env": {
+    "DOTNET_ENVIRONMENT": "Development"
+  }
+}
+```
+
+For more details, see the [MCP Inspector documentation](https://modelcontextprotocol.io/docs/tools/inspector).
 
 ## Security Considerations
 
