@@ -1,0 +1,50 @@
+{
+  "name": "Roslyn-Stone Development Container",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "..",
+    "args": {
+      "VARIANT": "10.0-noble"
+    }
+  },
+  
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest",
+      "moby": true,
+      "dockerDashComposeVersion": "v2"
+    },
+    "ghcr.io/devcontainers/features/git:1": {
+      "version": "latest"
+    }
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-dotnettools.csdevkit",
+        "ms-dotnettools.csharp",
+        "ms-dotnettools.vscode-dotnet-runtime",
+        "kreativ-software.csharpextensions",
+        "jchannon.csharpextensions",
+        "ms-azuretools.vscode-docker",
+        "eamodio.gitlens"
+      ],
+      "settings": {
+        "dotnet.defaultSolution": "RoslynStone.sln",
+        "omnisharp.enableEditorConfigSupport": true,
+        "omnisharp.enableRoslynAnalyzers": true
+      }
+    }
+  },
+
+  "forwardPorts": [],
+  
+  "postCreateCommand": "dotnet restore && dotnet build",
+  
+  "remoteUser": "ubuntu",
+  
+  "mounts": [
+    "source=/var/run/docker.sock,target=/var/run/docker-host.sock,type=bind"
+  ]
+}
