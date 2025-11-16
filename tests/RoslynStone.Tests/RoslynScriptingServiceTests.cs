@@ -69,7 +69,7 @@ public class RoslynScriptingServiceTests
     {
         // Arrange
         var service = new RoslynScriptingService(); // Use same instance for both calls
-        var code1 = "int x = 10; x";  // Return x to ensure success
+        var code1 = "int x = 10; x"; // Return x to ensure success
         var code2 = "x + 5";
 
         // Act
@@ -77,9 +77,15 @@ public class RoslynScriptingServiceTests
         var result2 = await service.ExecuteAsync(code2);
 
         // Assert
-        Assert.True(result1.Success, $"First execution failed: {string.Join(", ", result1.Errors.Select(e => e.Message))}");
+        Assert.True(
+            result1.Success,
+            $"First execution failed: {string.Join(", ", result1.Errors.Select(e => e.Message))}"
+        );
         Assert.Equal(10, result1.ReturnValue);
-        Assert.True(result2.Success, $"Second execution failed: {string.Join(", ", result2.Errors.Select(e => e.Message))}");
+        Assert.True(
+            result2.Success,
+            $"Second execution failed: {string.Join(", ", result2.Errors.Select(e => e.Message))}"
+        );
         Assert.Equal(15, result2.ReturnValue);
     }
 

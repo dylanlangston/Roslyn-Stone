@@ -17,15 +17,20 @@ public class LoadPackageCommandHandler : ICommandHandler<LoadPackageCommand, Pac
         _scriptingService = scriptingService;
     }
 
-    public Task<PackageReference> HandleAsync(LoadPackageCommand command, CancellationToken cancellationToken = default)
+    public Task<PackageReference> HandleAsync(
+        LoadPackageCommand command,
+        CancellationToken cancellationToken = default
+    )
     {
         _scriptingService.AddPackageReference(command.PackageName, command.Version);
 
-        return Task.FromResult(new PackageReference
-        {
-            Name = command.PackageName,
-            Version = command.Version,
-            IsLoaded = true
-        });
+        return Task.FromResult(
+            new PackageReference
+            {
+                Name = command.PackageName,
+                Version = command.Version,
+                IsLoaded = true,
+            }
+        );
     }
 }

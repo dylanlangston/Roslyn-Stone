@@ -17,22 +17,28 @@ public class DocumentationTools
     /// <param name="symbolName">The fully qualified name of the type or method (e.g., 'System.String', 'System.Linq.Enumerable.Select')</param>
     /// <returns>An object containing documentation information including summary, remarks, parameters, returns, exceptions, and examples</returns>
     [McpServerTool]
-    [Description("Get XML documentation for a .NET type, method, property, or other symbol including summary, remarks, parameters, and examples")]
+    [Description(
+        "Get XML documentation for a .NET type, method, property, or other symbol including summary, remarks, parameters, and examples"
+    )]
     public static object GetDocumentation(
         DocumentationService documentationService,
-        [Description("The fully qualified name of the type or method (e.g., 'System.String', 'System.Linq.Enumerable.Select')")] string symbolName)
+        [Description(
+            "The fully qualified name of the type or method (e.g., 'System.String', 'System.Linq.Enumerable.Select')"
+        )]
+            string symbolName
+    )
     {
         var doc = documentationService.GetDocumentation(symbolName);
-        
+
         if (doc == null)
         {
             return new
             {
                 found = false,
-                message = $"Documentation not found for symbol: {symbolName}"
+                message = $"Documentation not found for symbol: {symbolName}",
             };
         }
-        
+
         return new
         {
             found = true,
@@ -42,7 +48,7 @@ public class DocumentationTools
             parameters = doc.Parameters,
             returns = doc.Returns,
             exceptions = doc.Exceptions,
-            example = doc.Example
+            example = doc.Example,
         };
     }
 }

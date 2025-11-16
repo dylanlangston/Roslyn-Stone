@@ -18,14 +18,17 @@ public class ReplTools
     /// <param name="cancellationToken">Cancellation token for async operations</param>
     /// <returns>An object containing execution results, including success status, return value, output, errors, warnings, and execution time</returns>
     [McpServerTool]
-    [Description("Execute C# code in the REPL and return the result with compilation errors, warnings, and output")]
+    [Description(
+        "Execute C# code in the REPL and return the result with compilation errors, warnings, and output"
+    )]
     public static async Task<object> EvaluateCsharp(
         RoslynScriptingService scriptingService,
         [Description("C# code to execute")] string code,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
         var result = await scriptingService.ExecuteAsync(code, cancellationToken);
-        
+
         return new
         {
             success = result.Success,
@@ -37,7 +40,7 @@ public class ReplTools
                 message = e.Message,
                 severity = e.Severity,
                 line = e.Line,
-                column = e.Column
+                column = e.Column,
             }),
             warnings = result.Warnings.Select(w => new
             {
@@ -45,9 +48,9 @@ public class ReplTools
                 message = w.Message,
                 severity = w.Severity,
                 line = w.Line,
-                column = w.Column
+                column = w.Column,
             }),
-            executionTime = result.ExecutionTime.TotalMilliseconds
+            executionTime = result.ExecutionTime.TotalMilliseconds,
         };
     }
 
@@ -59,48 +62,52 @@ public class ReplTools
     /// <param name="cancellationToken">Cancellation token for async operations</param>
     /// <returns>An object containing validation results with isValid flag and list of issues</returns>
     [McpServerTool]
-    [Description("Validate C# code and return compilation errors and warnings without executing the code")]
+    [Description(
+        "Validate C# code and return compilation errors and warnings without executing the code"
+    )]
     public static async Task<object> ValidateCsharp(
         RoslynScriptingService scriptingService,
         [Description("C# code to validate")] string code,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default
+    )
     {
         var script = Microsoft.CodeAnalysis.CSharp.Scripting.CSharpScript.Create(
-            code, 
-            scriptingService.ScriptOptions);
-        
+            code,
+            scriptingService.ScriptOptions
+        );
+
         var diagnostics = script.Compile(cancellationToken);
-        
+
         var issues = new List<object>();
         var errorCount = 0;
-        
+
         foreach (var diagnostic in diagnostics)
         {
             var severity = diagnostic.Severity;
-            if (severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error ||
-                severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Warning)
+            if (
+                severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error
+                || severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Warning
+            )
             {
                 if (severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
                 {
                     errorCount++;
                 }
-                
-                issues.Add(new
-                {
-                    code = diagnostic.Id,
-                    message = diagnostic.GetMessage(),
-                    severity = severity.ToString(),
-                    line = diagnostic.Location.GetLineSpan().StartLinePosition.Line + 1,
-                    column = diagnostic.Location.GetLineSpan().StartLinePosition.Character + 1
-                });
+
+                issues.Add(
+                    new
+                    {
+                        code = diagnostic.Id,
+                        message = diagnostic.GetMessage(),
+                        severity = severity.ToString(),
+                        line = diagnostic.Location.GetLineSpan().StartLinePosition.Line + 1,
+                        column = diagnostic.Location.GetLineSpan().StartLinePosition.Character + 1,
+                    }
+                );
             }
         }
-        
-        return new
-        {
-            isValid = errorCount == 0,
-            issues = issues
-        };
+
+        return new { isValid = errorCount == 0, issues = issues };
     }
 
     /// <summary>

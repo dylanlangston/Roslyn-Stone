@@ -1,6 +1,6 @@
-using RoslynStone.Core.Models;
 using System.Reflection;
 using System.Xml.Linq;
+using RoslynStone.Core.Models;
 
 namespace RoslynStone.Infrastructure.Services;
 
@@ -30,7 +30,8 @@ public class DocumentationService
 
             // Extract documentation
             var memberName = GetMemberName(type, symbolName);
-            var memberElement = xmlDoc.Descendants("member")
+            var memberElement = xmlDoc
+                .Descendants("member")
                 .FirstOrDefault(m => m.Attribute("name")?.Value == memberName);
 
             if (memberElement == null)
@@ -45,7 +46,7 @@ public class DocumentationService
                 Returns = GetElementValue(memberElement, "returns"),
                 Exceptions = GetExceptions(memberElement),
                 Example = GetElementValue(memberElement, "example"),
-                FullDocumentation = memberElement.ToString()
+                FullDocumentation = memberElement.ToString(),
             };
         }
         catch
@@ -66,10 +67,10 @@ public class DocumentationService
                     return type;
 
                 // Try searching for types with the name
-                var types = assembly.GetTypes().Where(t => 
-                    t.FullName?.Contains(symbolName) == true || 
-                    t.Name == symbolName);
-                
+                var types = assembly
+                    .GetTypes()
+                    .Where(t => t.FullName?.Contains(symbolName) == true || t.Name == symbolName);
+
                 if (types.Any())
                     return types.First();
             }
@@ -154,7 +155,8 @@ public class DocumentationService
 
     private List<string> GetExceptions(XElement memberElement)
     {
-        return memberElement.Elements("exception")
+        return memberElement
+            .Elements("exception")
             .Select(e => $"{e.Attribute("cref")?.Value}: {e.Value.Trim()}")
             .ToList();
     }

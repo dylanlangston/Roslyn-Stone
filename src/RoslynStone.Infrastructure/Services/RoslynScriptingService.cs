@@ -1,9 +1,9 @@
-using Microsoft.CodeAnalysis.CSharp.Scripting;
-using Microsoft.CodeAnalysis.Scripting;
-using RoslynStone.Core.Models;
 using System.Diagnostics;
 using System.Reflection;
 using System.Text;
+using Microsoft.CodeAnalysis.CSharp.Scripting;
+using Microsoft.CodeAnalysis.Scripting;
+using RoslynStone.Core.Models;
 
 namespace RoslynStone.Infrastructure.Services;
 
@@ -21,10 +21,10 @@ public class RoslynScriptingService
     public RoslynScriptingService()
     {
         _outputWriter = new StringWriter();
-        
+
         // Configure script options with common assemblies
-        _scriptOptions = ScriptOptions.Default
-            .WithReferences(
+        _scriptOptions = ScriptOptions
+            .Default.WithReferences(
                 typeof(object).Assembly,
                 typeof(Enumerable).Assembly,
                 typeof(Console).Assembly,
@@ -43,7 +43,10 @@ public class RoslynScriptingService
     /// <summary>
     /// Execute C# code and return the result
     /// </summary>
-    public async Task<ExecutionResult> ExecuteAsync(string code, CancellationToken cancellationToken = default)
+    public async Task<ExecutionResult> ExecuteAsync(
+        string code,
+        CancellationToken cancellationToken = default
+    )
     {
         var stopwatch = Stopwatch.StartNew();
         var errors = new List<CompilationError>();
@@ -60,18 +63,25 @@ public class RoslynScriptingService
                 // Continue from previous state or start new
                 if (_scriptState == null)
                 {
-                    _scriptState = await CSharpScript.RunAsync(code, _scriptOptions, cancellationToken: cancellationToken);
+                    _scriptState = await CSharpScript.RunAsync(
+                        code,
+                        _scriptOptions,
+                        cancellationToken: cancellationToken
+                    );
                 }
                 else
                 {
-                    _scriptState = await _scriptState.ContinueWithAsync(code, cancellationToken: cancellationToken);
+                    _scriptState = await _scriptState.ContinueWithAsync(
+                        code,
+                        cancellationToken: cancellationToken
+                    );
                 }
 
                 stopwatch.Stop();
 
                 // Get the current output
                 var output = _outputWriter.ToString();
-                
+
                 // Clear the buffer for next execution
                 var sb = _outputWriter.GetStringBuilder();
                 sb.Clear();
@@ -83,7 +93,7 @@ public class RoslynScriptingService
                     Output = output,
                     Errors = errors,
                     Warnings = warnings,
-                    ExecutionTime = stopwatch.Elapsed
+                    ExecutionTime = stopwatch.Elapsed,
                 };
             }
             finally
@@ -94,30 +104,32 @@ public class RoslynScriptingService
         catch (CompilationErrorException ex)
         {
             stopwatch.Stop();
-            
+
             foreach (var diagnostic in ex.Diagnostics)
             {
-                errors.Add(new CompilationError
-                {
-                    Code = diagnostic.Id,
-                    Message = diagnostic.GetMessage(),
-                    Severity = diagnostic.Severity.ToString(),
-                    Line = diagnostic.Location.GetLineSpan().StartLinePosition.Line + 1,
-                    Column = diagnostic.Location.GetLineSpan().StartLinePosition.Character + 1
-                });
+                errors.Add(
+                    new CompilationError
+                    {
+                        Code = diagnostic.Id,
+                        Message = diagnostic.GetMessage(),
+                        Severity = diagnostic.Severity.ToString(),
+                        Line = diagnostic.Location.GetLineSpan().StartLinePosition.Line + 1,
+                        Column = diagnostic.Location.GetLineSpan().StartLinePosition.Character + 1,
+                    }
+                );
             }
 
             return new ExecutionResult
             {
                 Success = false,
                 Errors = errors,
-                ExecutionTime = stopwatch.Elapsed
+                ExecutionTime = stopwatch.Elapsed,
             };
         }
         catch (Exception ex)
         {
             stopwatch.Stop();
-            
+
             return new ExecutionResult
             {
                 Success = false,
@@ -127,10 +139,10 @@ public class RoslynScriptingService
                     {
                         Code = "RUNTIME_ERROR",
                         Message = ex.Message,
-                        Severity = "Error"
-                    }
+                        Severity = "Error",
+                    },
                 },
-                ExecutionTime = stopwatch.Elapsed
+                ExecutionTime = stopwatch.Elapsed,
             };
         }
     }

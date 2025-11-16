@@ -1,6 +1,6 @@
+using System.Diagnostics;
 using RoslynStone.Core.Commands;
 using RoslynStone.Core.CQRS;
-using System.Diagnostics;
 
 namespace RoslynStone.Infrastructure.CommandHandlers;
 
@@ -9,7 +9,10 @@ namespace RoslynStone.Infrastructure.CommandHandlers;
 /// </summary>
 public class ExecuteFileCommandHandler : ICommandHandler<ExecuteFileCommand, string>
 {
-    public async Task<string> HandleAsync(ExecuteFileCommand command, CancellationToken cancellationToken = default)
+    public async Task<string> HandleAsync(
+        ExecuteFileCommand command,
+        CancellationToken cancellationToken = default
+    )
     {
         if (!File.Exists(command.FilePath))
         {
@@ -25,7 +28,7 @@ public class ExecuteFileCommandHandler : ICommandHandler<ExecuteFileCommand, str
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
-                CreateNoWindow = true
+                CreateNoWindow = true,
             };
 
             using var process = new Process { StartInfo = startInfo };

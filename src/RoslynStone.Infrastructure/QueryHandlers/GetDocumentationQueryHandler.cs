@@ -17,7 +17,10 @@ public class GetDocumentationQueryHandler : IQueryHandler<GetDocumentationQuery,
         _documentationService = documentationService;
     }
 
-    public Task<DocumentationInfo?> HandleAsync(GetDocumentationQuery query, CancellationToken cancellationToken = default)
+    public Task<DocumentationInfo?> HandleAsync(
+        GetDocumentationQuery query,
+        CancellationToken cancellationToken = default
+    )
     {
         var result = _documentationService.GetDocumentation(query.SymbolName);
         return Task.FromResult(result);

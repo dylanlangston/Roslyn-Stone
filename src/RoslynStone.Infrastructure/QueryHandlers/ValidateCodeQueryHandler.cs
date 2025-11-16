@@ -9,9 +9,13 @@ namespace RoslynStone.Infrastructure.QueryHandlers;
 /// <summary>
 /// Handler for validating C# code
 /// </summary>
-public class ValidateCodeQueryHandler : IQueryHandler<ValidateCodeQuery, IReadOnlyList<CompilationError>>
+public class ValidateCodeQueryHandler
+    : IQueryHandler<ValidateCodeQuery, IReadOnlyList<CompilationError>>
 {
-    public Task<IReadOnlyList<CompilationError>> HandleAsync(ValidateCodeQuery query, CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<CompilationError>> HandleAsync(
+        ValidateCodeQuery query,
+        CancellationToken cancellationToken = default
+    )
     {
         var errors = new List<CompilationError>();
 
@@ -28,11 +32,13 @@ public class ValidateCodeQueryHandler : IQueryHandler<ValidateCodeQuery, IReadOn
                     Message = diagnostic.GetMessage(),
                     Severity = diagnostic.Severity.ToString(),
                     Line = diagnostic.Location.GetLineSpan().StartLinePosition.Line + 1,
-                    Column = diagnostic.Location.GetLineSpan().StartLinePosition.Character + 1
+                    Column = diagnostic.Location.GetLineSpan().StartLinePosition.Character + 1,
                 };
 
-                if (diagnostic.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error ||
-                    diagnostic.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Warning)
+                if (
+                    diagnostic.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error
+                    || diagnostic.Severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Warning
+                )
                 {
                     errors.Add(error);
                 }
@@ -40,12 +46,14 @@ public class ValidateCodeQueryHandler : IQueryHandler<ValidateCodeQuery, IReadOn
         }
         catch (Exception ex)
         {
-            errors.Add(new CompilationError
-            {
-                Code = "VALIDATION_ERROR",
-                Message = ex.Message,
-                Severity = "Error"
-            });
+            errors.Add(
+                new CompilationError
+                {
+                    Code = "VALIDATION_ERROR",
+                    Message = ex.Message,
+                    Severity = "Error",
+                }
+            );
         }
 
         return Task.FromResult<IReadOnlyList<CompilationError>>(errors);

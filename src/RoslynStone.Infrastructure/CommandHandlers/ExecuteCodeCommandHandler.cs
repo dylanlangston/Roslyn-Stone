@@ -17,7 +17,10 @@ public class ExecuteCodeCommandHandler : ICommandHandler<ExecuteCodeCommand, Exe
         _scriptingService = scriptingService;
     }
 
-    public async Task<ExecutionResult> HandleAsync(ExecuteCodeCommand command, CancellationToken cancellationToken = default)
+    public async Task<ExecutionResult> HandleAsync(
+        ExecuteCodeCommand command,
+        CancellationToken cancellationToken = default
+    )
     {
         return await _scriptingService.ExecuteAsync(command.Code, cancellationToken);
     }
