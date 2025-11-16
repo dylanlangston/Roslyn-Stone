@@ -11,12 +11,17 @@ using RoslynStone.Infrastructure.Services;
 
 var builder = Host.CreateApplicationBuilder(args);
 
-// Configure logging to stderr to avoid interfering with stdio transport
+// Configure logging to stderr BEFORE adding service defaults to avoid interfering with stdio transport
+// This ensures MCP protocol integrity while preserving OpenTelemetry logging
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole(options =>
 {
     options.LogToStandardErrorThreshold = LogLevel.Trace;
 });
+
+// Add Aspire service defaults (OpenTelemetry, health checks, service discovery)
+// This adds OpenTelemetry logging provider which will also log to stderr
+builder.AddServiceDefaults();
 
 // Register services
 builder.Services.AddSingleton<RoslynScriptingService>();

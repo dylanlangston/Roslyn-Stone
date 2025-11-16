@@ -1,0 +1,17 @@
+<Project Sdk="Aspire.AppHost.Sdk/13.0.0">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UserSecretsId>9c3d7413-72a5-4b12-a417-e65956ff9904</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\RoslynStone.Api\RoslynStone.Api.csproj" />
+    <ProjectReference
+      Include="..\RoslynStone.ServiceDefaults\RoslynStone.ServiceDefaults.csproj"
+      IsAspireProjectResource="false"
+    />
+  </ItemGroup>
+</Project>

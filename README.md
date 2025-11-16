@@ -11,6 +11,8 @@ A developer- and LLM-friendly C# REPL service built with Roslyn and the Model Co
 🏗️ **CQRS Architecture** - Clean separation of commands and queries  
 🔌 **MCP Protocol** - Official ModelContextProtocol SDK with stdio transport  
 🤖 **AI-Friendly** - Designed for LLM interactions via Model Context Protocol  
+🐳 **Containerized** - Docker support with .NET Aspire orchestration  
+📊 **OpenTelemetry** - Built-in observability with logs, metrics, and traces  
 
 ## Architecture
 
@@ -21,7 +23,9 @@ RoslynStone/
 ├── src/
 │   ├── RoslynStone.Api/            # Console Host with MCP Server
 │   ├── RoslynStone.Core/           # Domain models, commands, queries, interfaces
-│   └── RoslynStone.Infrastructure/ # MCP Tools, Roslyn services, handlers
+│   ├── RoslynStone.Infrastructure/ # MCP Tools, Roslyn services, handlers
+│   ├── RoslynStone.ServiceDefaults/# OpenTelemetry and Aspire defaults
+│   └── RoslynStone.AppHost/        # Aspire orchestration
 └── tests/
     └── RoslynStone.Tests/          # xUnit tests
 ```
@@ -53,9 +57,11 @@ RoslynStone/
 
 ### Prerequisites
 
-- .NET 9.0 SDK or later
+- .NET 10.0 SDK or later
 - C# 13
-- Optional: Docker and VS Code with Dev Containers extension for containerized development
+- Docker (optional, for containerized deployment)
+- VS Code with Dev Containers extension (optional, for containerized development)
+- .NET Aspire workload (optional, for local orchestration)
 
 ### Build and Run
 
@@ -77,16 +83,30 @@ cd src/RoslynStone.Api
 dotnet run
 ```
 
+#### With Aspire (Orchestrated)
+
+```bash
+# Install Aspire workload (or skip if you don't need local orchestration)
+dotnet workload install aspire
+
+# Run with Aspire dashboard for observability
+cd src/RoslynStone.AppHost
+dotnet run
+```
+
+This will start:
+- **Aspire Dashboard** at `http://localhost:18888` - View logs, metrics, and traces
+- **MCP Inspector UI** at `http://localhost:6274` - Interactive tool testing interface (development mode only)
+- **MCP Proxy** at `http://localhost:6277` - Protocol bridge for the inspector
+
+The MCP Inspector is automatically started in development mode, providing a web-based interface to test and debug MCP tools in real-time.
+
 #### Development Container
 
 The repository includes a fully configured devcontainer with Docker-in-Docker support for isolated development:
 
 ```bash
-# Clone the repository
-git clone https://github.com/dylanlangston/Roslyn-Stone.git
-cd Roslyn-Stone
-
-# Open in VS Code
+# Open the repo in VS Code
 code .
 
 # Press F1 and select "Dev Containers: Reopen in Container"
@@ -95,11 +115,28 @@ code .
 
 See [`.devcontainer/README.md`](.devcontainer/README.md) for more details about the devcontainer setup and Docker-in-Docker testing.
 
+#### Docker Compose (Containerized)
+
+```bash
+# Build and run with Docker Compose
+docker-compose up --build
+
+# Access Aspire dashboard at http://localhost:18888 (if Aspire is enabled in the container)
+```
+
 The server uses stdio transport for MCP protocol communication. It reads JSON-RPC messages from stdin and writes responses to stdout, with logging to stderr.
+
+## Container Registry
+
+Pre-built container images are available from GitHub Container Registry:
+
+```bash
+docker pull ghcr.io/dylanlangston/roslyn-stone:latest
+```
 
 ## Usage with MCP Clients
 
-### Claude Desktop Configuration
+### Claude Desktop Configuration (Local)
 
 Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
 
@@ -112,6 +149,20 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
       "env": {
         "DOTNET_ENVIRONMENT": "Development"
       }
+    }
+  }
+}
+```
+
+### Claude Desktop Configuration (Docker)
+
+```json
+{
+  "mcpServers": {
+    "roslyn-stone": {
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "ghcr.io/dylanlangston/roslyn-stone:latest"],
+      "env": {}
     }
   }
 }
@@ -343,12 +394,65 @@ code: "using Newtonsoft.Json; var obj = new { Name = \"Test\" }; JsonConvert.Ser
 
 - **Model Context Protocol SDK** - MCP stdio transport
 - **Microsoft.Extensions.Hosting** - Host builder with DI
+- **.NET Aspire** - Cloud-native orchestration and observability
+  - `Aspire.Hosting` - Application orchestration
+  - Service Defaults - OpenTelemetry configuration
+- **OpenTelemetry** - Distributed tracing, metrics, and logging
+  - OTLP Exporter - Send telemetry to Aspire dashboard or other collectors
+  - ASP.NET Core Instrumentation - HTTP and runtime metrics
 - **Roslyn** - C# compiler and scripting APIs
   - `Microsoft.CodeAnalysis.CSharp.Scripting` - Script execution
   - `Microsoft.CodeAnalysis.CSharp.Workspaces` - Code analysis
 - **NuGet.Protocol** - NuGet package discovery and downloading
 - **xUnit** - Testing framework
 - **System.Reflection** - XML documentation lookup
+- **Docker** - Containerization and deployment
+
+## Observability with OpenTelemetry
+
+RoslynStone includes built-in OpenTelemetry support for comprehensive observability:
+
+### Telemetry Features
+
+- **Logs**: Structured logging with OpenTelemetry format
+- **Metrics**: Runtime metrics, HTTP client metrics, custom application metrics
+- **Traces**: Distributed tracing for request correlation
+
+### Aspire Dashboard
+
+When running with Aspire (`dotnet run` from AppHost), the dashboard provides:
+
+- Real-time log viewing with structured data
+- Metrics visualization (P50, P90, P99 percentiles)
+- Distributed trace visualization
+- Resource health monitoring
+
+Access the dashboard at `http://localhost:18888` when running with Aspire.
+
+### Environment Variables
+
+Configure OpenTelemetry export with environment variables:
+
+```bash
+# OTLP endpoint (default: Aspire dashboard)
+OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:18889
+
+# Service name
+OTEL_SERVICE_NAME=roslyn-stone-mcp
+
+# Additional resource attributes
+OTEL_RESOURCE_ATTRIBUTES=service.namespace=roslyn-stone,deployment.environment=production
+```
+
+### Production Deployment
+
+For production, configure the OTLP endpoint to send telemetry to your monitoring solution:
+
+- Azure Monitor / Application Insights
+- AWS CloudWatch
+- Google Cloud Operations
+- Grafana / Prometheus / Jaeger
+- Any OTLP-compatible collector
 
 ## Project Structure
 
@@ -413,6 +517,96 @@ public class MyTools
 }
 ```
 
+### Testing and Debugging with MCP Inspector
+
+The [MCP Inspector](https://github.com/modelcontextprotocol/inspector) is an interactive developer tool for testing and debugging MCP servers. It provides a web-based UI to explore available tools, test requests, and view responses in real-time.
+
+#### Integrated with Aspire (Recommended)
+
+When running with Aspire, the MCP Inspector is automatically started in development mode:
+
+```bash
+cd src/RoslynStone.AppHost
+dotnet run
+```
+
+The inspector will be available at:
+- **Inspector UI**: `http://localhost:6274` - Interactive web interface
+- **Aspire Dashboard**: `http://localhost:18888` - Observability and logs
+
+This provides a seamless development experience with both testing and observability in one place.
+
+#### Standalone Inspector
+
+To inspect the server without Aspire, use npx to run the inspector directly:
+
+```bash
+# From the repository root, run the compiled server through the inspector
+npx @modelcontextprotocol/inspector dotnet run --project src/RoslynStone.Api/RoslynStone.Api.csproj
+```
+
+The inspector will start two services:
+- **MCP Inspector UI** at `http://localhost:6274` - Interactive web interface
+- **MCP Proxy** at `http://localhost:6277` - Protocol bridge
+
+#### Using the Inspector
+
+1. Open `http://localhost:6274` in your browser
+2. The server connection is automatically established
+3. Explore available tools in the left sidebar
+4. Test tools by clicking them and providing parameters
+5. View responses, including return values and output
+6. Export server configuration for Claude Desktop or other clients
+
+#### Inspecting with Environment Variables
+
+Pass environment variables to configure the server:
+
+```bash
+npx @modelcontextprotocol/inspector \
+  -e DOTNET_ENVIRONMENT=Development \
+  -e OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317 \
+  dotnet run --project src/RoslynStone.Api/RoslynStone.Api.csproj
+```
+
+#### Inspecting the Container
+
+You can also inspect the containerized version:
+
+```bash
+# Inspect the container image
+npx @modelcontextprotocol/inspector docker run -i --rm ghcr.io/dylanlangston/roslyn-stone:latest
+```
+
+#### Custom Ports
+
+If you need to use different ports:
+
+```bash
+CLIENT_PORT=8080 SERVER_PORT=9000 npx @modelcontextprotocol/inspector \
+  dotnet run --project src/RoslynStone.Api/RoslynStone.Api.csproj
+```
+
+#### Exporting Configuration
+
+The inspector provides buttons to export server configurations:
+
+- **Server Entry**: Copies the launch configuration to clipboard for use in `mcp.json`
+- Compatible with Claude Desktop, Cursor, Claude Code, and other MCP clients
+
+Example exported configuration:
+```json
+{
+  "command": "dotnet",
+  "args": ["run", "--project", "/path/to/Roslyn-Stone/src/RoslynStone.Api/RoslynStone.Api.csproj"],
+  "env": {
+    "DOTNET_ENVIRONMENT": "Development"
+  }
+}
+```
+
+For more details, see the [MCP Inspector documentation](https://modelcontextprotocol.io/docs/tools/inspector).
+
 ## Security Considerations
 
 ⚠️ **Important**: This is a code execution service. Deploy with appropriate security measures:
@@ -427,13 +621,14 @@ public class MyTools
 ## Future Enhancements
 
 - [x] Full NuGet package resolution and loading
-- [x] Docker container support (devcontainer with Docker-in-Docker)
+- [x] Docker container support (including devcontainer with Docker-in-Docker)
+- [x] OpenTelemetry integration
 - [ ] Persistent REPL sessions with user isolation
 - [ ] Code snippet history and caching
 - [ ] Syntax highlighting and IntelliSense data
 - [ ] Performance metrics and profiling
 - [ ] WebSocket support for interactive sessions
-- [ ] OpenTelemetry integration
+- [ ] Multi-architecture container images (amd64, arm64)
 
 ## Contributing
 

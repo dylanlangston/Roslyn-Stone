@@ -16,5 +16,6 @@
   <ItemGroup>
     <ProjectReference Include="..\RoslynStone.Core\RoslynStone.Core.csproj" />
     <ProjectReference Include="..\RoslynStone.Infrastructure\RoslynStone.Infrastructure.csproj" />
+    <ProjectReference Include="..\RoslynStone.ServiceDefaults\RoslynStone.ServiceDefaults.csproj" />
   </ItemGroup>
 </Project>

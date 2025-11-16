@@ -1,9 +1,9 @@
-# Git
+### Git
 .git
 .gitignore
 .gitattributes
 
-# Build results
+### Build artifacts
 [Dd]ebug/
 [Dd]ebugPublic/
 [Rr]elease/
@@ -18,42 +18,64 @@ bld/
 [Oo]bj/
 [Ll]og/
 [Ll]ogs/
-
-# .NET Core
-project.lock.json
-project.fragment.lock.json
 artifacts/
 
-# NuGet Packages
+### .NET Core
+project.lock.json
+project.fragment.lock.json
+
+### NuGet packages
 *.nupkg
 *.snupkg
 
-# Test Results
+### Test Results
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*
 
-# Visual Studio cache/options
+### IDE / Editor
 .vs/
 .vscode/
-
-# IDE files
+**/.classpath
+**/.project
+**/.settings
 *.user
 *.suo
 *.userosscache
 *.sln.docstates
+**/*.*proj.user
 
-# MSBuild Binary and Structured Log
+### MSBuild and logs
 *.binlog
+*.dbmdl
+*.jfm
 
-# Misc
+### Misc
 *.swp
 *.*~
 ~$*
 *~
+LICENSE
 
-# Documentation
-*.md
+### Node / JS
+node_modules
+npm-debug.log
+
+### Docker/Compose
+docker-compose*
+Dockerfile*
+
+### Kubernetes / Helm (charts)
+charts/
+
+### Config / Secrets for development
+**/.env
+**/azds.yaml
+**/secrets.dev.yaml
+**/values.dev.yaml
+
+### Exclude CI/CD metadata
+.github/
+
+### Allow README.md to be included if needed
 !README.md
 
-# CI/CD
-.github/
