@@ -15,6 +15,8 @@ builder.Logging.AddConsole(options =>
 // Register services
 builder.Services.AddSingleton<RoslynScriptingService>();
 builder.Services.AddSingleton<DocumentationService>();
+builder.Services.AddSingleton<CompilationService>();
+builder.Services.AddSingleton<AssemblyExecutionService>();
 
 // Configure MCP server with stdio transport
 builder.Services.AddMcpServer().WithStdioServerTransport().WithToolsFromAssembly();
