@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
 using RoslynStone.Core.Models;
@@ -9,12 +10,14 @@ namespace RoslynStone.Infrastructure.Services;
 
 /// <summary>
 /// Service for executing C# code using Roslyn scripting engine
+/// Thread-safe singleton service for REPL state management
 /// </summary>
 public class RoslynScriptingService
 {
     private ScriptState? _scriptState;
     private readonly ScriptOptions _scriptOptions;
     private readonly StringWriter _outputWriter;
+    private readonly Lock _lock = new(); // C# 14 Lock object for thread safety
 
     public ScriptOptions ScriptOptions => _scriptOptions;
 
@@ -43,6 +46,9 @@ public class RoslynScriptingService
     /// <summary>
     /// Execute C# code and return the result
     /// </summary>
+    /// <param name="code">The C# code to execute</param>
+    /// <param name="cancellationToken">Cancellation token for async operations</param>
+    /// <returns>Execution result with return value, output, errors, and timing information</returns>
     public async Task<ExecutionResult> ExecuteAsync(
         string code,
         CancellationToken cancellationToken = default
@@ -52,104 +58,110 @@ public class RoslynScriptingService
         var errors = new List<CompilationError>();
         var warnings = new List<CompilationError>();
 
-        try
+        // Use C# 14 Lock for thread-safe execution
+        lock (_lock)
         {
-            // Capture console output
-            var originalOut = Console.Out;
-            Console.SetOut(_outputWriter);
-
             try
             {
-                // Continue from previous state or start new
-                if (_scriptState == null)
-                {
-                    _scriptState = await CSharpScript.RunAsync(
-                        code,
-                        _scriptOptions,
-                        cancellationToken: cancellationToken
-                    );
-                }
-                else
-                {
-                    _scriptState = await _scriptState.ContinueWithAsync(
-                        code,
-                        cancellationToken: cancellationToken
-                    );
-                }
+                // Capture console output
+                var originalOut = Console.Out;
+                Console.SetOut(_outputWriter);
 
+                try
+                {
+                    // Continue from previous state or start new
+                    if (_scriptState == null)
+                    {
+                        _scriptState = CSharpScript
+                            .RunAsync(code, _scriptOptions, cancellationToken: cancellationToken)
+                            .GetAwaiter()
+                            .GetResult();
+                    }
+                    else
+                    {
+                        _scriptState = _scriptState
+                            .ContinueWithAsync(code, cancellationToken: cancellationToken)
+                            .GetAwaiter()
+                            .GetResult();
+                    }
+
+                    stopwatch.Stop();
+
+                    // Get the current output
+                    var output = _outputWriter.ToString();
+
+                    // Clear the buffer for next execution
+                    var sb = _outputWriter.GetStringBuilder();
+                    sb.Clear();
+
+                    return new ExecutionResult
+                    {
+                        Success = true,
+                        ReturnValue = _scriptState.ReturnValue,
+                        Output = output,
+                        Errors = errors,
+                        Warnings = warnings,
+                        ExecutionTime = stopwatch.Elapsed,
+                    };
+                }
+                finally
+                {
+                    Console.SetOut(originalOut);
+                }
+            }
+            catch (CompilationErrorException ex)
+            {
                 stopwatch.Stop();
 
-                // Get the current output
-                var output = _outputWriter.ToString();
-
-                // Clear the buffer for next execution
-                var sb = _outputWriter.GetStringBuilder();
-                sb.Clear();
+                foreach (var diagnostic in ex.Diagnostics)
+                {
+                    errors.Add(
+                        new CompilationError
+                        {
+                            Code = diagnostic.Id,
+                            Message = diagnostic.GetMessage(),
+                            Severity = diagnostic.Severity.ToString(),
+                            Line = diagnostic.Location.GetLineSpan().StartLinePosition.Line + 1,
+                            Column =
+                                diagnostic.Location.GetLineSpan().StartLinePosition.Character + 1,
+                        }
+                    );
+                }
 
                 return new ExecutionResult
                 {
-                    Success = true,
-                    ReturnValue = _scriptState.ReturnValue,
-                    Output = output,
+                    Success = false,
                     Errors = errors,
-                    Warnings = warnings,
                     ExecutionTime = stopwatch.Elapsed,
                 };
             }
-            finally
+            catch (Exception ex)
             {
-                Console.SetOut(originalOut);
-            }
-        }
-        catch (CompilationErrorException ex)
-        {
-            stopwatch.Stop();
+                stopwatch.Stop();
 
-            foreach (var diagnostic in ex.Diagnostics)
-            {
-                errors.Add(
-                    new CompilationError
-                    {
-                        Code = diagnostic.Id,
-                        Message = diagnostic.GetMessage(),
-                        Severity = diagnostic.Severity.ToString(),
-                        Line = diagnostic.Location.GetLineSpan().StartLinePosition.Line + 1,
-                        Column = diagnostic.Location.GetLineSpan().StartLinePosition.Character + 1,
-                    }
-                );
-            }
-
-            return new ExecutionResult
-            {
-                Success = false,
-                Errors = errors,
-                ExecutionTime = stopwatch.Elapsed,
-            };
-        }
-        catch (Exception ex)
-        {
-            stopwatch.Stop();
-
-            return new ExecutionResult
-            {
-                Success = false,
-                Errors = new List<CompilationError>
+                return new ExecutionResult
                 {
-                    new CompilationError
-                    {
-                        Code = "RUNTIME_ERROR",
-                        Message = ex.Message,
-                        Severity = "Error",
-                    },
-                },
-                ExecutionTime = stopwatch.Elapsed,
-            };
+                    Success = false,
+                    Errors =
+                    [
+                        new CompilationError
+                        {
+                            Code = "RUNTIME_ERROR",
+                            Message = ex.Message,
+                            Severity = "Error",
+                        },
+                    ],
+                    ExecutionTime = stopwatch.Elapsed,
+                };
+            }
         }
     }
 
     /// <summary>
     /// Add a NuGet package reference to the script options
     /// </summary>
+    /// <param name="packageName">Name of the NuGet package</param>
+    /// <param name="version">Optional package version</param>
     public void AddPackageReference(string packageName, string? version = null)
     {
         // Note: For full NuGet support, we would need to integrate with NuGet.Protocol
@@ -162,7 +174,10 @@ public class RoslynScriptingService
     /// </summary>
     public void Reset()
     {
-        _scriptState = null;
-        _outputWriter.GetStringBuilder().Clear();
+        lock (_lock)
+        {
+            _scriptState = null;
+            _outputWriter.GetStringBuilder().Clear();
+        }
     }
 }
