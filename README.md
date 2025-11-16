@@ -102,7 +102,7 @@ Roslyn-Stone supports two MCP transport modes:
 - Best for remote access and web-based integrations
 - Accessible over the network via HTTP/SSE
 - Endpoint at `/mcp` (e.g., `http://localhost:8080/mcp`)
-- Can be exposed publicly with proper security
+- ⚠️ **WARNING**: Do not expose publicly without authentication, authorization, and network restrictions. This server can execute arbitrary C# code.
 
 To switch transport modes, set the `MCP_TRANSPORT` environment variable:
 ```bash
@@ -243,7 +243,7 @@ docker run -e MCP_TRANSPORT=http -e ASPNETCORE_URLS=http://+:8080 -p 8080:8080 g
 
 The HTTP endpoint supports:
 - **Server-Sent Events (SSE)** for streaming responses
-- **CORS** support for web-based clients (configure as needed)
+- **CORS** support for web-based clients - ⚠️ Configure strict origin allowlists in production. Never use wildcard (*) CORS for code execution endpoints.
 - **Standard MCP protocol** over HTTP
 
 See `.github/MCP_CONFIGURATION.md` for more configuration examples.

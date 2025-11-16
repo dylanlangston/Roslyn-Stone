@@ -6,7 +6,7 @@ services:
     build:
       context: .
       dockerfile: src/RoslynStone.Api/Dockerfile
-    image: roslyn-stone-mcp:latest
+    image: roslyn-stone-mcp:latest-stdio
     container_name: roslyn-stone-mcp-stdio
     environment:
       - DOTNET_ENVIRONMENT=Development
@@ -26,7 +26,7 @@ services:
     build:
       context: .
       dockerfile: src/RoslynStone.Api/Dockerfile
-    image: roslyn-stone-mcp:latest
+    image: roslyn-stone-mcp:latest-http
     container_name: roslyn-stone-mcp-http
     environment:
       - DOTNET_ENVIRONMENT=Development

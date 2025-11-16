@@ -13,62 +13,80 @@ using RoslynStone.Infrastructure.Tools;
 
 // Determine transport mode from environment variable
 // MCP_TRANSPORT: "stdio" (default) or "http"
-var transportMode = Environment.GetEnvironmentVariable("MCP_TRANSPORT")?.ToLowerInvariant() ?? "stdio";
+var transportMode =
+    Environment.GetEnvironmentVariable("MCP_TRANSPORT")?.ToLowerInvariant() ?? "stdio";
 var useHttpTransport = transportMode == "http";
+
+// Shared method to configure logging to stderr for both transport modes
+static void ConfigureLogging(ILoggingBuilder logging)
+{
+    logging.ClearProviders();
+    logging.AddConsole(options =>
+    {
+        options.LogToStandardErrorThreshold = LogLevel.Trace;
+    });
+}
+
+// Shared method to register all services, command handlers, and query handlers
+static void RegisterServices(IServiceCollection services)
+{
+    // Register services
+    services.AddSingleton<RoslynScriptingService>();
+    services.AddSingleton<DocumentationService>();
+    services.AddSingleton<CompilationService>();
+    services.AddSingleton<AssemblyExecutionService>();
+    services.AddSingleton<NuGetService>();
+
+    // Register command handlers
+    services.AddSingleton<
+        ICommandHandler<LoadPackageCommand, PackageReference>,
+        LoadPackageCommandHandler
+    >();
+
+    // Register query handlers
+    services.AddSingleton<
+        IQueryHandler<SearchPackagesQuery, PackageSearchResult>,
+        SearchPackagesQueryHandler
+    >();
+    services.AddSingleton<
+        IQueryHandler<GetPackageVersionsQuery, List<PackageVersion>>,
+        GetPackageVersionsQueryHandler
+    >();
+    services.AddSingleton<
+        IQueryHandler<GetPackageReadmeQuery, string?>,
+        GetPackageReadmeQueryHandler
+    >();
+}
 
 if (useHttpTransport)
 {
     // HTTP Transport Mode - Use WebApplication builder
     var builder = WebApplication.CreateBuilder(args);
 
-    // Configure logging to stderr to avoid interfering with stdout
-    builder.Logging.ClearProviders();
-    builder.Logging.AddConsole(options =>
-    {
-        options.LogToStandardErrorThreshold = LogLevel.Trace;
-    });
+    // Configure logging to stderr for consistency with stdio transport
+    // This is a best practice even in HTTP mode
+    ConfigureLogging(builder.Logging);
 
     // Add Aspire service defaults (OpenTelemetry, health checks, service discovery)
     builder.AddServiceDefaults();
 
-    // Register services
-    builder.Services.AddSingleton<RoslynScriptingService>();
-    builder.Services.AddSingleton<DocumentationService>();
-    builder.Services.AddSingleton<CompilationService>();
-    builder.Services.AddSingleton<AssemblyExecutionService>();
-    builder.Services.AddSingleton<NuGetService>();
+    // Register all services, command handlers, and query handlers
+    RegisterServices(builder.Services);
 
-    // Register command handlers
-    builder.Services.AddSingleton<
-        ICommandHandler<LoadPackageCommand, PackageReference>,
-        LoadPackageCommandHandler
-    >();
-
-    // Register query handlers
-    builder.Services.AddSingleton<
-        IQueryHandler<SearchPackagesQuery, PackageSearchResult>,
-        SearchPackagesQueryHandler
-    >();
-    builder.Services.AddSingleton<
-        IQueryHandler<GetPackageVersionsQuery, List<PackageVersion>>,
-        GetPackageVersionsQueryHandler
-    >();
-    builder.Services.AddSingleton<
-        IQueryHandler<GetPackageReadmeQuery, string?>,
-        GetPackageReadmeQueryHandler
-    >();
-
-    // Configure MCP server with HTTP transport
-    builder.Services
-        .AddMcpServer()
+    // WARNING: HTTP transport has no authentication by default.
+    // Configure authentication, CORS, and rate limiting before exposing publicly.
+    // This server can execute arbitrary C# code.
+    builder
+        .Services.AddMcpServer()
         .WithHttpTransport()
         .WithToolsFromAssembly(typeof(ReplTools).Assembly);
 
     var app = builder.Build();
 
-    // Map default health check endpoints (only in development)
+    // Map default health check endpoints for HTTP transport
     app.MapDefaultEndpoints();
 
+    // WARNING: This endpoint allows code execution. Add authentication before exposing publicly.
     // Map MCP HTTP endpoints at /mcp
     app.MapMcp("/mcp");
 
@@ -79,49 +97,21 @@ else
     // Stdio Transport Mode - Use generic Host builder
     var builder = Host.CreateApplicationBuilder(args);
 
-    // Configure logging to stderr BEFORE adding service defaults to avoid interfering with stdio transport
+    // Configure logging to stderr for consistency and to avoid interfering with stdio transport
     // This ensures MCP protocol integrity while preserving OpenTelemetry logging
-    builder.Logging.ClearProviders();
-    builder.Logging.AddConsole(options =>
-    {
-        options.LogToStandardErrorThreshold = LogLevel.Trace;
-    });
+    ConfigureLogging(builder.Logging);
 
     // Add Aspire service defaults (OpenTelemetry, health checks, service discovery)
     // This adds OpenTelemetry logging provider which will also log to stderr
     builder.AddServiceDefaults();
 
-    // Register services
-    builder.Services.AddSingleton<RoslynScriptingService>();
-    builder.Services.AddSingleton<DocumentationService>();
-    builder.Services.AddSingleton<CompilationService>();
-    builder.Services.AddSingleton<AssemblyExecutionService>();
-    builder.Services.AddSingleton<NuGetService>();
-
-    // Register command handlers
-    builder.Services.AddSingleton<
-        ICommandHandler<LoadPackageCommand, PackageReference>,
-        LoadPackageCommandHandler
-    >();
-
-    // Register query handlers
-    builder.Services.AddSingleton<
-        IQueryHandler<SearchPackagesQuery, PackageSearchResult>,
-        SearchPackagesQueryHandler
-    >();
-    builder.Services.AddSingleton<
-        IQueryHandler<GetPackageVersionsQuery, List<PackageVersion>>,
-        GetPackageVersionsQueryHandler
-    >();
-    builder.Services.AddSingleton<
-        IQueryHandler<GetPackageReadmeQuery, string?>,
-        GetPackageReadmeQueryHandler
-    >();
+    // Register all services, command handlers, and query handlers
+    RegisterServices(builder.Services);
 
     // Configure MCP server with stdio transport
     // Register tools from the Infrastructure assembly where the MCP tools are defined
-    builder.Services
-        .AddMcpServer()
+    builder
+        .Services.AddMcpServer()
         .WithStdioServerTransport()
         .WithToolsFromAssembly(typeof(ReplTools).Assembly);
 
