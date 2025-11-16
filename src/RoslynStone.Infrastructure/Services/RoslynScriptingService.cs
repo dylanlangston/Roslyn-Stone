@@ -18,8 +18,14 @@ public class RoslynScriptingService
     private readonly StringWriter _outputWriter;
     private readonly SemaphoreSlim _semaphore = new(1, 1); // Thread-safe async execution
 
+    /// <summary>
+    /// Gets the script options used for compilation
+    /// </summary>
     public ScriptOptions ScriptOptions => _scriptOptions;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RoslynScriptingService"/> class
+    /// </summary>
     public RoslynScriptingService()
     {
         _outputWriter = new StringWriter();

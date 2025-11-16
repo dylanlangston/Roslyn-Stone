@@ -15,6 +15,11 @@ public class ExecuteFileCommandHandler : ICommandHandler<ExecuteFileCommand, str
     private readonly AssemblyExecutionService _assemblyExecutionService;
     private readonly bool _useDotnetCli;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ExecuteFileCommandHandler"/> class
+    /// </summary>
+    /// <param name="assemblyExecutionService">The assembly execution service</param>
+    /// <param name="useDotnetCli">Whether to use dotnet CLI instead of AssemblyLoadContext</param>
     public ExecuteFileCommandHandler(
         AssemblyExecutionService assemblyExecutionService,
         bool useDotnetCli = false
@@ -24,6 +29,12 @@ public class ExecuteFileCommandHandler : ICommandHandler<ExecuteFileCommand, str
         _useDotnetCli = useDotnetCli;
     }
 
+    /// <summary>
+    /// Handles the execute file command
+    /// </summary>
+    /// <param name="command">The command containing the file path to execute</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>The execution output or error message</returns>
     public async Task<string> HandleAsync(
         ExecuteFileCommand command,
         CancellationToken cancellationToken = default

@@ -4,6 +4,7 @@
     <LangVersion>14</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     
     <!-- NuGet Package Metadata -->
     <PackageId>RoslynStone.Core</PackageId>

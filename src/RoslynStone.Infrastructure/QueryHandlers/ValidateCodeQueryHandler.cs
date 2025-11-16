@@ -12,6 +12,12 @@ namespace RoslynStone.Infrastructure.QueryHandlers;
 public class ValidateCodeQueryHandler
     : IQueryHandler<ValidateCodeQuery, IReadOnlyList<CompilationError>>
 {
+    /// <summary>
+    /// Handles the validate code query
+    /// </summary>
+    /// <param name="query">The query containing the code to validate</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>A list of compilation errors and warnings</returns>
     public Task<IReadOnlyList<CompilationError>> HandleAsync(
         ValidateCodeQuery query,
         CancellationToken cancellationToken = default

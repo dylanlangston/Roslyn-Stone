@@ -11,6 +11,10 @@ public class AssemblyExecutionService
 {
     private readonly CompilationService _compilationService;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AssemblyExecutionService"/> class
+    /// </summary>
+    /// <param name="compilationService">The compilation service</param>
     public AssemblyExecutionService(CompilationService compilationService)
     {
         _compilationService = compilationService;
@@ -225,10 +229,33 @@ public class AssemblyExecutionService
 /// </summary>
 public class AssemblyExecutionResult
 {
+    /// <summary>
+    /// Gets or sets a value indicating whether the execution was successful
+    /// </summary>
     public bool Success { get; set; }
+
+    /// <summary>
+    /// Gets or sets the console output from execution
+    /// </summary>
     public string? Output { get; set; }
+
+    /// <summary>
+    /// Gets or sets the return value from the entry point
+    /// </summary>
     public object? ReturnValue { get; set; }
+
+    /// <summary>
+    /// Gets or sets the error message if execution failed
+    /// </summary>
     public string? ErrorMessage { get; set; }
+
+    /// <summary>
+    /// Gets or sets the compilation errors if any
+    /// </summary>
     public List<string>? CompilationErrors { get; set; }
+
+    /// <summary>
+    /// Gets or sets the exception that occurred during execution
+    /// </summary>
     public Exception? Exception { get; set; }
 }
