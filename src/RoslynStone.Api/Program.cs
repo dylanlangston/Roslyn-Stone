@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -10,53 +11,110 @@ using RoslynStone.Infrastructure.QueryHandlers;
 using RoslynStone.Infrastructure.Services;
 using RoslynStone.Infrastructure.Tools;
 
-var builder = Host.CreateApplicationBuilder(args);
+// Determine transport mode from environment variable
+// MCP_TRANSPORT: "stdio" (default) or "http"
+var transportMode =
+    Environment.GetEnvironmentVariable("MCP_TRANSPORT")?.ToLowerInvariant() ?? "stdio";
+var useHttpTransport = transportMode == "http";
 
-// Configure logging to stderr BEFORE adding service defaults to avoid interfering with stdio transport
-// This ensures MCP protocol integrity while preserving OpenTelemetry logging
-builder.Logging.ClearProviders();
-builder.Logging.AddConsole(options =>
+// Shared method to configure logging to stderr for both transport modes
+static void ConfigureLogging(ILoggingBuilder logging)
 {
-    options.LogToStandardErrorThreshold = LogLevel.Trace;
-});
+    logging.ClearProviders();
+    logging.AddConsole(options =>
+    {
+        options.LogToStandardErrorThreshold = LogLevel.Trace;
+    });
+}
 
-// Add Aspire service defaults (OpenTelemetry, health checks, service discovery)
-// This adds OpenTelemetry logging provider which will also log to stderr
-builder.AddServiceDefaults();
+// Shared method to register all services, command handlers, and query handlers
+static void RegisterServices(IServiceCollection services)
+{
+    // Register services
+    services.AddSingleton<RoslynScriptingService>();
+    services.AddSingleton<DocumentationService>();
+    services.AddSingleton<CompilationService>();
+    services.AddSingleton<AssemblyExecutionService>();
+    services.AddSingleton<NuGetService>();
 
-// Register services
-builder.Services.AddSingleton<RoslynScriptingService>();
-builder.Services.AddSingleton<DocumentationService>();
-builder.Services.AddSingleton<CompilationService>();
-builder.Services.AddSingleton<AssemblyExecutionService>();
-builder.Services.AddSingleton<NuGetService>();
+    // Register command handlers
+    services.AddSingleton<
+        ICommandHandler<LoadPackageCommand, PackageReference>,
+        LoadPackageCommandHandler
+    >();
 
-// Register command handlers
-builder.Services.AddSingleton<
-    ICommandHandler<LoadPackageCommand, PackageReference>,
-    LoadPackageCommandHandler
->();
+    // Register query handlers
+    services.AddSingleton<
+        IQueryHandler<SearchPackagesQuery, PackageSearchResult>,
+        SearchPackagesQueryHandler
+    >();
+    services.AddSingleton<
+        IQueryHandler<GetPackageVersionsQuery, List<PackageVersion>>,
+        GetPackageVersionsQueryHandler
+    >();
+    services.AddSingleton<
+        IQueryHandler<GetPackageReadmeQuery, string?>,
+        GetPackageReadmeQueryHandler
+    >();
+}
 
-// Register query handlers
-builder.Services.AddSingleton<
-    IQueryHandler<SearchPackagesQuery, PackageSearchResult>,
-    SearchPackagesQueryHandler
->();
-builder.Services.AddSingleton<
-    IQueryHandler<GetPackageVersionsQuery, List<PackageVersion>>,
-    GetPackageVersionsQueryHandler
->();
-builder.Services.AddSingleton<
-    IQueryHandler<GetPackageReadmeQuery, string?>,
-    GetPackageReadmeQueryHandler
->();
+if (useHttpTransport)
+{
+    // HTTP Transport Mode - Use WebApplication builder
+    var builder = WebApplication.CreateBuilder(args);
 
-// Configure MCP server with stdio transport
-// Register tools from the Infrastructure assembly where the MCP tools are defined
-builder.Services
-    .AddMcpServer()
-    .WithStdioServerTransport()
-    .WithToolsFromAssembly(typeof(ReplTools).Assembly);
+    // Configure logging to stderr for consistency with stdio transport
+    // This is a best practice even in HTTP mode
+    ConfigureLogging(builder.Logging);
 
-// Build and run the host
-await builder.Build().RunAsync();
+    // Add Aspire service defaults (OpenTelemetry, health checks, service discovery)
+    builder.AddServiceDefaults();
+
+    // Register all services, command handlers, and query handlers
+    RegisterServices(builder.Services);
+
+    // WARNING: HTTP transport has no authentication by default.
+    // Configure authentication, CORS, and rate limiting before exposing publicly.
+    // This server can execute arbitrary C# code.
+    builder
+        .Services.AddMcpServer()
+        .WithHttpTransport()
+        .WithToolsFromAssembly(typeof(ReplTools).Assembly);
+
+    var app = builder.Build();
+
+    // Map default health check endpoints for HTTP transport
+    app.MapDefaultEndpoints();
+
+    // WARNING: This endpoint allows code execution. Add authentication before exposing publicly.
+    // Map MCP HTTP endpoints at /mcp
+    app.MapMcp("/mcp");
+
+    await app.RunAsync();
+}
+else
+{
+    // Stdio Transport Mode - Use generic Host builder
+    var builder = Host.CreateApplicationBuilder(args);
+
+    // Configure logging to stderr for consistency and to avoid interfering with stdio transport
+    // This ensures MCP protocol integrity while preserving OpenTelemetry logging
+    ConfigureLogging(builder.Logging);
+
+    // Add Aspire service defaults (OpenTelemetry, health checks, service discovery)
+    // This adds OpenTelemetry logging provider which will also log to stderr
+    builder.AddServiceDefaults();
+
+    // Register all services, command handlers, and query handlers
+    RegisterServices(builder.Services);
+
+    // Configure MCP server with stdio transport
+    // Register tools from the Infrastructure assembly where the MCP tools are defined
+    builder
+        .Services.AddMcpServer()
+        .WithStdioServerTransport()
+        .WithToolsFromAssembly(typeof(ReplTools).Assembly);
+
+    // Build and run the host
+    await builder.Build().RunAsync();
+}

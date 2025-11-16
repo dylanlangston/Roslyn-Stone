@@ -1,6 +1,6 @@
 # Roslyn-Stone
 
-A developer- and LLM-friendly C# REPL service built with Roslyn and the Model Context Protocol (MCP) SDK. Execute C# code, validate syntax, and lookup documentation through MCP stdio transport for seamless AI integration.
+A developer- and LLM-friendly C# REPL service built with Roslyn and the Model Context Protocol (MCP) SDK. Execute C# code, validate syntax, and lookup documentation through MCP stdio or HTTP transport for seamless AI integration.
 
 ## Features
 
@@ -9,7 +9,8 @@ A developer- and LLM-friendly C# REPL service built with Roslyn and the Model Co
 📚 **XML Documentation Lookup** - Query .NET type/method documentation via reflection  
 📦 **NuGet Package Support** - Search, discover, and load NuGet packages dynamically  
 🏗️ **CQRS Architecture** - Clean separation of commands and queries  
-🔌 **MCP Protocol** - Official ModelContextProtocol SDK with stdio transport  
+🔌 **MCP Protocol** - Official ModelContextProtocol SDK with stdio and HTTP transports  
+🌐 **Dual Transport** - Support for both stdio (local) and HTTP (remote) MCP connections  
 🤖 **AI-Friendly** - Designed for LLM interactions via Model Context Protocol  
 🐳 **Containerized** - Docker support with .NET Aspire orchestration  
 📊 **OpenTelemetry** - Built-in observability with logs, metrics, and traces  
@@ -78,9 +79,38 @@ dotnet build
 # Run tests
 dotnet test
 
-# Run the MCP server (stdio transport)
+# Run the MCP server (stdio transport - default)
 cd src/RoslynStone.Api
 dotnet run
+
+# Run the MCP server with HTTP transport
+cd src/RoslynStone.Api
+MCP_TRANSPORT=http dotnet run --urls "http://localhost:8080"
+```
+
+#### Transport Modes
+
+Roslyn-Stone supports two MCP transport modes:
+
+**Stdio Transport (Default)**
+- Best for local, single-machine integrations
+- Used by Claude Desktop and other local MCP clients
+- Communication via stdin/stdout
+- No network ports required
+
+**HTTP Transport**
+- Best for remote access and web-based integrations
+- Accessible over the network via HTTP/SSE
+- Endpoint at `/mcp` (e.g., `http://localhost:8080/mcp`)
+- ⚠️ **WARNING**: Do not expose publicly without authentication, authorization, and network restrictions. This server can execute arbitrary C# code.
+
+To switch transport modes, set the `MCP_TRANSPORT` environment variable:
+```bash
+# Stdio (default)
+MCP_TRANSPORT=stdio dotnet run
+
+# HTTP
+MCP_TRANSPORT=http dotnet run --urls "http://localhost:8080"
 ```
 
 #### With Aspire (Orchestrated)
@@ -98,6 +128,8 @@ This will start:
 - **Aspire Dashboard** at `http://localhost:18888` - View logs, metrics, and traces
 - **MCP Inspector UI** at `http://localhost:6274` - Interactive tool testing interface (development mode only)
 - **MCP Proxy** at `http://localhost:6277` - Protocol bridge for the inspector
+- **MCP Server (stdio)** - Stdio transport instance for local testing
+- **MCP Server (HTTP)** at `http://localhost:8080/mcp` - HTTP transport instance for remote access
 
 The MCP Inspector is automatically started in development mode, providing a web-based interface to test and debug MCP tools in real-time.
 
@@ -118,13 +150,22 @@ See [`.devcontainer/README.md`](.devcontainer/README.md) for more details about 
 #### Docker Compose (Containerized)
 
 ```bash
-# Build and run with Docker Compose
+# Build and run both stdio and HTTP variants with Docker Compose
 docker-compose up --build
 
-# Access Aspire dashboard at http://localhost:18888 (if Aspire is enabled in the container)
+# Run only the stdio variant
+docker-compose up roslyn-stone-mcp-stdio
+
+# Run only the HTTP variant
+docker-compose up roslyn-stone-mcp-http
+
+# Access Aspire dashboard at http://localhost:18888
+# Access HTTP MCP endpoint at http://localhost:8080/mcp
 ```
 
-The server uses stdio transport for MCP protocol communication. It reads JSON-RPC messages from stdin and writes responses to stdout, with logging to stderr.
+The server supports both stdio and HTTP transport modes:
+- **Stdio transport**: Reads JSON-RPC messages from stdin and writes responses to stdout, with logging to stderr
+- **HTTP transport**: Exposes MCP endpoints via HTTP/SSE for remote access at `/mcp`
 
 ## Container Registry
 
@@ -136,7 +177,7 @@ docker pull ghcr.io/dylanlangston/roslyn-stone:latest
 
 ## Usage with MCP Clients
 
-### Claude Desktop Configuration (Local)
+### Claude Desktop Configuration (Stdio - Local)
 
 Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
 
@@ -147,14 +188,15 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
       "command": "dotnet",
       "args": ["run", "--project", "/path/to/Roslyn-Stone/src/RoslynStone.Api"],
       "env": {
-        "DOTNET_ENVIRONMENT": "Development"
+        "DOTNET_ENVIRONMENT": "Development",
+        "MCP_TRANSPORT": "stdio"
       }
     }
   }
 }
 ```
 
-### Claude Desktop Configuration (Docker)
+### Claude Desktop Configuration (Stdio - Docker)
 
 ```json
 {
@@ -162,11 +204,47 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
     "roslyn-stone": {
       "command": "docker",
       "args": ["run", "-i", "--rm", "ghcr.io/dylanlangston/roslyn-stone:latest"],
-      "env": {}
+      "env": {
+        "MCP_TRANSPORT": "stdio"
+      }
     }
   }
 }
 ```
+
+### HTTP Transport Configuration
+
+For remote MCP servers or web-based integrations, use HTTP transport:
+
+**Local HTTP Server:**
+```bash
+# Start the server with HTTP transport
+cd src/RoslynStone.Api
+MCP_TRANSPORT=http ASPNETCORE_URLS=http://localhost:8080 dotnet run
+```
+
+**Docker HTTP Server:**
+```bash
+# Run with HTTP transport
+docker run -e MCP_TRANSPORT=http -e ASPNETCORE_URLS=http://+:8080 -p 8080:8080 ghcr.io/dylanlangston/roslyn-stone:latest
+```
+
+**MCP Client Configuration (HTTP):**
+```json
+{
+  "mcpServers": {
+    "roslyn-stone-http": {
+      "type": "http",
+      "url": "http://localhost:8080/mcp"
+    }
+  }
+}
+```
+
+The HTTP endpoint supports:
+- **Server-Sent Events (SSE)** for streaming responses
+- **CORS** support for web-based clients - ⚠️ Configure strict origin allowlists in production. Never use wildcard (*) CORS for code execution endpoints.
+- **Standard MCP protocol** over HTTP
 
 See `.github/MCP_CONFIGURATION.md` for more configuration examples.
 

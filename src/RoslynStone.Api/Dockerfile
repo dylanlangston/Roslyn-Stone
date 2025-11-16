@@ -47,15 +47,25 @@ COPY --from=publish /app/publish .
 RUN chown -R appuser:appuser /app
 
 # Set environment variables for MCP server
+# MCP_TRANSPORT: "stdio" (default) or "http"
+# When using HTTP transport, set ASPNETCORE_URLS to configure listening address
 ENV DOTNET_ENVIRONMENT=Production \
+    MCP_TRANSPORT=stdio \
     ASPNETCORE_URLS= \
     DOTNET_EnableDiagnostics=0
 
 # Switch to non-root user
 USER appuser
 
-# The MCP server uses stdio transport, so we expose no HTTP ports
+# The MCP server supports both stdio and HTTP transports
+# - Stdio (default): Set MCP_TRANSPORT=stdio, no ports exposed
+# - HTTP: Set MCP_TRANSPORT=http and ASPNETCORE_URLS=http://+:8080, then EXPOSE 8080
 # Telemetry will be sent to the OTEL endpoint configured via environment variables
+
+# Example for HTTP mode:
+# ENV MCP_TRANSPORT=http
+# ENV ASPNETCORE_URLS=http://+:8080
+# EXPOSE 8080
 
 ENTRYPOINT ["dotnet", "RoslynStone.Api.dll"]
 
