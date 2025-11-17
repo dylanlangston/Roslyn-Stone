@@ -148,7 +148,6 @@ public class NuGetTools
     /// </summary>
     /// <param name="scriptingService">The Roslyn scripting service</param>
     /// <param name="nugetService">The NuGet service for package operations</param>
-    /// <param name="logger">Logger for diagnostics</param>
     /// <param name="packageName">The package name to load</param>
     /// <param name="version">Optional specific version (uses latest stable if not specified)</param>
     /// <param name="cancellationToken">Cancellation token for async operations</param>
@@ -160,7 +159,6 @@ public class NuGetTools
     public static async Task<object> LoadNuGetPackage(
         RoslynScriptingService scriptingService,
         NuGetService nugetService,
-        Microsoft.Extensions.Logging.ILogger logger,
         [Description(
             "The exact package name to load. Examples: 'Newtonsoft.Json', 'Flurl.Http', 'CsvHelper'. Must match the package ID from search results. Case-insensitive."
         )]
@@ -192,13 +190,6 @@ public class NuGetTools
         }
         catch (InvalidOperationException ex)
         {
-            logger.LogError(
-                ex,
-                "Package '{PackageName}' version '{Version}' not found or could not be downloaded",
-                packageName,
-                version ?? "latest"
-            );
-
             return new
             {
                 packageName,
@@ -209,13 +200,6 @@ public class NuGetTools
         }
         catch (IOException ex)
         {
-            logger.LogError(
-                ex,
-                "Failed to access package files for '{PackageName}' version '{Version}'",
-                packageName,
-                version ?? "latest"
-            );
-
             return new
             {
                 packageName,
@@ -226,13 +210,6 @@ public class NuGetTools
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            logger.LogError(
-                ex,
-                "Unexpected error loading package '{PackageName}' version '{Version}'",
-                packageName,
-                version ?? "latest"
-            );
-
             return new
             {
                 packageName,
