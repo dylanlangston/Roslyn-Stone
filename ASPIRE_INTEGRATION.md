@@ -21,10 +21,18 @@ This document summarizes the changes made to containerize the Roslyn-Stone MCP s
 - **Purpose**: Aspire orchestration host for local development
 - **Location**: `src/RoslynStone.AppHost/`
 - **Key Components**:
-  - AppHost.cs: Configures MCP server as a containerized resource
+  - AppHost.cs: Configures MCP server as a containerized resource with HTTP transport
   - Provides Aspire dashboard for telemetry visualization
   - Manages service lifecycle and configuration
-  - **MCP Inspector Integration**: Automatically starts the MCP Inspector in development mode for testing and debugging MCP tools
+  - **MCP Inspector Integration**: Automatically starts the MCP Inspector in development mode, configured to connect to the HTTP endpoint via SSE transport
+
+#### RoslynStone.AppHost.Tests
+- **Purpose**: Integration tests for Aspire configuration
+- **Location**: `tests/RoslynStone.AppHost.Tests/`
+- **Key Components**:
+  - AppHostTests.cs: 7 tests verifying AppHost configuration
+  - Tests verify HTTP transport, environment variables, resource setup, and inspector configuration
+  - Fast-running tests that don't require Docker or DCP
 
 ### 2. Modified Projects
 
@@ -32,8 +40,22 @@ This document summarizes the changes made to containerize the Roslyn-Stone MCP s
 - **Changes**:
   - Added reference to ServiceDefaults project
   - Integrated `AddServiceDefaults()` in Program.cs
-  - Maintains existing stdio transport for MCP protocol
-  - Logging still configured to stderr to avoid protocol interference
+  - Supports both stdio and HTTP transport modes via `MCP_TRANSPORT` environment variable
+  - HTTP transport mode provides REST endpoints for MCP protocol
+  - Logging configured to stderr to avoid protocol interference
+
+### 3. Transport Configuration
+
+#### HTTP Transport (Default for Aspire)
+- **Port**: Configurable via `MCP_HTTP_PORT` environment variable (default: 8080)
+- **Endpoints**: `/mcp` for MCP HTTP protocol, `/health` for health checks
+- **Usage**: Designed for container deployment and testing with tools like MCP Inspector
+- **Security**: No authentication by default - configure before public exposure
+
+#### Stdio Transport
+- **Removed from AppHost**: Stdio transport configuration removed from Aspire AppHost
+- **Still Available**: Can still be used by running the API directly with `MCP_TRANSPORT=stdio`
+- **Use Case**: Direct execution, Claude Desktop integration, local development
 
 ### 3. Containerization
 
@@ -108,8 +130,13 @@ Configured via environment variables:
 
 ### Local Development (Direct)
 ```bash
+# Stdio transport (for Claude Desktop, etc.)
 cd src/RoslynStone.Api
 dotnet run
+
+# HTTP transport
+cd src/RoslynStone.Api
+MCP_TRANSPORT=http dotnet run
 ```
 
 ### Local Development (Aspire)
@@ -117,13 +144,37 @@ dotnet run
 cd src/RoslynStone.AppHost
 dotnet run
 # Aspire dashboard available at http://localhost:18888
-# MCP Inspector UI available at http://localhost:6274
+# MCP server HTTP endpoint available on configured port (default: 8080)
+# MCP Inspector UI automatically starts at http://localhost:6274
+```
+
+### Using MCP Inspector
+
+The MCP Inspector is automatically launched when running the AppHost in development mode and is pre-configured to connect to the HTTP MCP server via SSE transport.
+
+**Automatic Configuration:**
+- Inspector UI: http://localhost:6274
+- Inspector Proxy: http://localhost:6277
+- Automatically connects to: http://localhost:8080/mcp/sse (or configured port)
+
+**Usage:**
+1. Start the Aspire AppHost: `cd src/RoslynStone.AppHost && dotnet run`
+2. Open the Inspector UI at http://localhost:6274
+3. The inspector is already configured to connect to your MCP server
+4. Test MCP tools through the visual interface
+5. Export server configurations for Claude Desktop or other MCP clients
+
+**Manual Configuration (if needed):**
+```bash
+# Run inspector separately with custom configuration
+npx @modelcontextprotocol/inspector -t sse -u http://localhost:8080/mcp/sse
 ```
 
 ### Docker Compose
 ```bash
 docker-compose up --build
 # Dashboard available at http://localhost:18888
+# MCP server available via HTTP transport
 ```
 
 ### Production Container
@@ -144,18 +195,37 @@ docker run -i --rm \
 
 ## Testing
 
+### Unit and Integration Tests
 All existing tests continue to pass:
-- 43 tests passing
-- 4 tests skipped (slow network operations)
+- 101 tests passing
+- 1 test skipped (slow network operations)
 - 0 failures
 - Build succeeds without warnings
 
+### Aspire Integration Tests
+The `RoslynStone.AppHost.Tests` project provides integration tests for the Aspire configuration:
+- 7 tests verifying AppHost setup and configuration
+- Tests verify HTTP transport configuration
+- Tests verify environment variables
+- Tests verify resource endpoints
+- Tests verify MCP Inspector integration
+- Fast-running tests that don't require Docker or DCP
+
+```bash
+# Run Aspire tests
+dotnet test tests/RoslynStone.AppHost.Tests
+
+# Run all tests
+dotnet test
+```
+
 ### MCP Inspector Integration
 
-The AppHost includes automatic MCP Inspector integration for development mode:
+The MCP Inspector is automatically launched by the AppHost in development mode and pre-configured to connect to the HTTP MCP server:
 
 **Features:**
 - Automatically starts when running `dotnet run` from AppHost in development
+- Pre-configured to connect via SSE transport to the HTTP endpoint
 - Provides interactive web UI at `http://localhost:6274`
 - Test MCP tools without writing code
 - View real-time request/response data
@@ -172,8 +242,8 @@ The inspector only starts when:
 
 **Benefits:**
 - Seamless testing experience alongside Aspire dashboard
-- No manual setup required
-- Automatically connects to the MCP server
+- No manual setup or configuration required
+- Automatically connects to the MCP server via runtime endpoint resolution
 - Visual feedback on tool execution
 - Easy configuration export
 

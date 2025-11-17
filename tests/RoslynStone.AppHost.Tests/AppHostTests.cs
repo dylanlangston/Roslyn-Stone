@@ -85,4 +85,35 @@ public class AppHostTests
         Assert.Single(mcpServers);
         Assert.Equal("roslyn-stone-mcp", mcpServers[0].Name);
     }
+
+    [Fact]
+    public async Task McpInspector_IsConfiguredInDevelopment()
+    {
+        // Arrange
+        var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.RoslynStone_AppHost>();
+
+        // Act
+        var inspector = appHost.Resources.FirstOrDefault(r => r.Name == "mcp-inspector");
+
+        // Assert - inspector should be present in development mode (default for tests)
+        Assert.NotNull(inspector);
+        Assert.IsAssignableFrom<ExecutableResource>(inspector);
+    }
+
+    [Fact]
+    public async Task McpInspector_HasUiAndProxyEndpoints()
+    {
+        // Arrange
+        var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.RoslynStone_AppHost>();
+
+        // Act
+        var inspector = appHost.Resources.OfType<IResourceWithEndpoints>()
+            .FirstOrDefault(r => r.Name == "mcp-inspector");
+
+        // Assert
+        Assert.NotNull(inspector);
+        var endpoints = inspector.GetEndpoints();
+        Assert.Contains(endpoints, e => e.EndpointName == "ui");
+        Assert.Contains(endpoints, e => e.EndpointName == "proxy");
+    }
 }
