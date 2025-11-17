@@ -10,7 +10,10 @@ var mcpServer = builder
     .AddProject<Projects.RoslynStone_Api>("roslyn-stone-mcp")
     .WithEnvironment("MCP_TRANSPORT", "http")
     .WithEnvironment("OTEL_SERVICE_NAME", "roslyn-stone-mcp")
-    .WithHttpEndpoint(port: mcpHttpPort, name: "mcp")
+    // Add both a named 'mcp' endpoint (used by tests) and a default 'http' endpoint
+    // so that the CommunityToolkit inspector can find the expected 'http' endpoint.
+    // Create the standard 'http' endpoint for MCP servers (inspector expects endpoint name 'http')
+    .WithHttpEndpoint(port: mcpHttpPort, name: "http")
     .WithExternalHttpEndpoints()
     .PublishAsDockerFile();
 
@@ -36,26 +39,19 @@ if (
     // Get the MCP server endpoint reference
     var mcpEndpoint = mcpServer.GetEndpoint("mcp");
 
-    _ = builder
-        .AddExecutable(
-            "mcp-inspector",
-            "npx",
-            ".",
-            "@modelcontextprotocol/inspector",
-            "-t",
-            "sse"
-        )
-        .WithEnvironment(context =>
-        {
-            // Pass the MCP server SSE endpoint URL to the inspector
-            // This will be resolved at runtime when the endpoint is allocated
-            context.EnvironmentVariables["MCP_SERVER_URL"] = mcpEndpoint.Property(EndpointProperty.Url);
-        })
-        .WithArgs("-u", "{MCP_SERVER_URL}/mcp/sse")
-        .WithHttpEndpoint(port: inspectorUiPort, name: "ui")
-        .WithHttpEndpoint(port: inspectorProxyPort, name: "proxy")
-        .WithExternalHttpEndpoints()
-        .ExcludeFromManifest(); // Don't include in deployment manifest
+    // Add the MCP Inspector as a managed AppHost resource instead of launching the JS inspector via npx.
+    // Use server and client ports from configuration and attach to the MCP server created above.
+    var inspector = builder.AddMcpInspector("mcp-inspector", options =>
+    {
+        options.ClientPort = inspectorUiPort;
+        options.ServerPort = inspectorProxyPort;
+        // Default inspector version will be used; override with InspectorVersion if needed.
+    })
+    // Connect the Inspector to the MCP server resource
+    .WithMcpServer(mcpServer)
+    // Expose the inspector's HTTP endpoints and mark it as a development-only resource
+    .WithExternalHttpEndpoints()
+    .ExcludeFromManifest();
 }
 
 builder.Build().Run();

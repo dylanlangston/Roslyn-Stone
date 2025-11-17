@@ -35,7 +35,8 @@ public class AppHostTests
         // Assert
         Assert.NotNull(mcpServer);
         var endpoints = mcpServer.GetEndpoints();
-        Assert.Contains(endpoints, e => e.EndpointName == "mcp");
+        // The MCP server uses the default 'http' endpoint; ensure it's present.
+        Assert.Contains(endpoints, e => e.EndpointName == "http");
     }
 
     [Fact]
@@ -113,7 +114,7 @@ public class AppHostTests
         // Assert
         Assert.NotNull(inspector);
         var endpoints = inspector.GetEndpoints();
-        Assert.Contains(endpoints, e => e.EndpointName == "ui");
-        Assert.Contains(endpoints, e => e.EndpointName == "proxy");
+        Assert.Contains(endpoints, e => e.EndpointName == "client");
+        Assert.Contains(endpoints, e => e.EndpointName == "server-proxy");
     }
 }
