@@ -129,7 +129,11 @@ public class LoadTester
 
             var successCount = roundResults.Count(r => r.Success);
             var failureCount = roundResults.Count(r => !r.Success);
-            var avgResponseTime = roundResults.Where(r => r.Success).Average(r => r.ResponseTimeMs);
+            var avgResponseTime = roundResults
+                .Where(r => r.Success)
+                .Select(r => r.ResponseTimeMs)
+                .DefaultIfEmpty(0)
+                .Average();
 
             scenarioResults.AddRound(
                 round,
@@ -148,7 +152,11 @@ public class LoadTester
         var sw = Stopwatch.StartNew();
         try
         {
-            var content = new StringContent(requestContent, Encoding.UTF8, "application/json");
+            using var content = new StringContent(
+                requestContent,
+                Encoding.UTF8,
+                "application/json"
+            );
             var response = await _client.PostAsync("/mcp", content);
             sw.Stop();
 

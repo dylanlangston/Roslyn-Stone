@@ -159,7 +159,7 @@ public class RoslynScriptingServiceTests
         // Arrange
         var service = new RoslynScriptingService();
         var code = "System.Threading.Thread.Sleep(5000);";
-        var cts = new CancellationTokenSource();
+        using var cts = new CancellationTokenSource();
         cts.Cancel(); // Cancel immediately
 
         // Act & Assert - TaskCanceledException is a subclass of OperationCanceledException
@@ -316,8 +316,7 @@ Console.Write(""Line2"");
         // Act
         await service.AddPackageReferenceAsync("TestPackage", "1.0.0", null);
 
-        // Assert
-        Assert.True(true); // Should not throw
+        // Assert - Should not throw
     }
 
     [Fact]

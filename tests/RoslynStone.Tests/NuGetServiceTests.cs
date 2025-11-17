@@ -246,7 +246,7 @@ public class NuGetServiceTests
     {
         // Arrange
         var query = "logging";
-        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
         // Act
         var result = await _service.SearchPackagesAsync(query, 0, 5, cts.Token);
@@ -261,7 +261,7 @@ public class NuGetServiceTests
     {
         // Arrange
         var packageId = "Newtonsoft.Json";
-        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
         // Act
         var result = await _service.GetPackageVersionsAsync(packageId, cts.Token);

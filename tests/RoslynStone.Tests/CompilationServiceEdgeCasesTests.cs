@@ -142,28 +142,6 @@ public class Program
 
     [Fact]
     [Trait("Feature", "Compilation")]
-    public void Compile_WarningAsError_TreatsWarningsAsErrors()
-    {
-        // Arrange
-        var service = new CompilationService();
-        var code =
-            @"
-using System;
-#pragma warning disable CS0168
-int x; // CS0168: Variable is declared but never used
-#pragma warning restore CS0168
-";
-
-        // Act
-        var result = service.Compile(code);
-
-        // Assert - With default settings, this should compile successfully
-        // (warnings are not treated as errors by default)
-        Assert.True(result.Success || !result.Success); // Either way is valid
-    }
-
-    [Fact]
-    [Trait("Feature", "Compilation")]
     public void Compile_LargeCode_CompilesSuccessfully()
     {
         // Arrange

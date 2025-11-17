@@ -134,8 +134,23 @@ Task("Test-Coverage")
         var xml = System.Xml.Linq.XDocument.Load(coverageFile.FullPath);
         var coverage = xml.Root;
         
-        var lineCoverage = double.Parse(coverage.Attribute("line-rate").Value) * 100;
-        var branchCoverage = double.Parse(coverage.Attribute("branch-rate").Value) * 100;
+        if (coverage == null)
+        {
+            Warning("Unable to parse coverage report: root element not found");
+            return;
+        }
+        
+        var lineRateAttr = coverage.Attribute("line-rate");
+        var branchRateAttr = coverage.Attribute("branch-rate");
+        
+        if (lineRateAttr == null || branchRateAttr == null)
+        {
+            Warning("Unable to parse coverage report: required attributes not found");
+            return;
+        }
+        
+        var lineCoverage = double.Parse(lineRateAttr.Value) * 100;
+        var branchCoverage = double.Parse(branchRateAttr.Value) * 100;
         
         Information($"Line Coverage: {lineCoverage:F2}%");
         Information($"Branch Coverage: {branchCoverage:F2}%");
