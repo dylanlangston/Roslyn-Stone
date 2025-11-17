@@ -49,6 +49,7 @@ if (useHttpTransport)
     builder
         .Services.AddMcpServer()
         .WithHttpTransport()
+        .WithPromptsFromAssembly(typeof(GuidancePrompts).Assembly)
         .WithToolsFromAssembly(typeof(ReplTools).Assembly);
 
     var app = builder.Build();
@@ -83,6 +84,7 @@ else
     builder
         .Services.AddMcpServer()
         .WithStdioServerTransport()
+        .WithPromptsFromAssembly(typeof(GuidancePrompts).Assembly)
         .WithToolsFromAssembly(typeof(ReplTools).Assembly);
 
     // Build and run the host
