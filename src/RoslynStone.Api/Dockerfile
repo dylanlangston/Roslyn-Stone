@@ -18,9 +18,9 @@ COPY . .
 
 # Build the application
 WORKDIR "/src/src/RoslynStone.Api"
+# Build into the standard bin/$(Configuration)/$(TargetFramework) output which publish expects
 RUN dotnet build "RoslynStone.Api.csproj" \
     -c $BUILD_CONFIGURATION \
-    -o /app/build \
     --no-restore
 
 # Publish stage
