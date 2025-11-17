@@ -19,19 +19,26 @@ A developer- and LLM-friendly C# REPL service built with Roslyn and the Model Co
 
 ## Architecture
 
-The solution follows clean architecture principles with CQRS pattern and MCP integration. It implements best practices for dynamic code compilation and execution, including proper AssemblyLoadContext usage for memory management. See `DYNAMIC_COMPILATION_BEST_PRACTICES.md` for details.
+The solution follows clean architecture principles with functional programming patterns and MCP integration. It implements best practices for dynamic code compilation and execution, including proper AssemblyLoadContext usage for memory management. See `DYNAMIC_COMPILATION_BEST_PRACTICES.md` for details.
 
 ```
 RoslynStone/
 ├── src/
 │   ├── RoslynStone.Api/            # Console Host with MCP Server
-│   ├── RoslynStone.Core/           # Domain models, commands, queries, interfaces
-│   ├── RoslynStone.Infrastructure/ # MCP Tools, Roslyn services, handlers
+│   ├── RoslynStone.Core/           # Domain models (ExecutionResult, PackageMetadata, etc.)
+│   ├── RoslynStone.Infrastructure/ # MCP Tools, Roslyn services, functional helpers
 │   ├── RoslynStone.ServiceDefaults/# OpenTelemetry and Aspire defaults
 │   └── RoslynStone.AppHost/        # Aspire orchestration
 └── tests/
     └── RoslynStone.Tests/          # xUnit tests
 ```
+
+### Architecture Principles
+
+- **Functional Programming**: Leverages LINQ, pure functions, and functional composition
+- **Direct Service Calls**: MCP Tools call services directly without abstraction layers
+- **Thread Safety**: Static and instance-level synchronization for reliable parallel execution
+- **Immutable Models**: Uses records and readonly properties where appropriate
 
 ### MCP Tools
 
@@ -61,12 +68,7 @@ Roslyn-Stone includes built-in prompts to help LLMs use the REPL effectively:
 
 These prompts provide detailed guidance on how to use the REPL, including examples, common patterns, and tips for success.
 
-### CQRS Pattern
-
-- **Commands**: Operations that change state (ExecuteCode, LoadPackage, ExecuteFile)
-- **Queries**: Read-only operations (GetDocumentation, ValidateCode, SearchPackages, GetPackageVersions, GetPackageReadme)
-- **Handlers**: Implement business logic for commands and queries
-- **No MediatR**: Direct dependency injection for simplicity and transparency
+### Service Layer
 
 ## Getting Started
 
@@ -585,19 +587,18 @@ For production, configure the OTLP endpoint to send telemetry to your monitoring
 ## Project Structure
 
 ### Core (Domain Layer)
-- **CQRS**: Interfaces for commands, queries, and handlers
-- **Commands**: ExecuteCodeCommand, LoadPackageCommand, ExecuteFileCommand
-- **Queries**: GetDocumentationQuery, ValidateCodeQuery, SearchPackagesQuery, GetPackageVersionsQuery, GetPackageReadmeQuery
 - **Models**: ExecutionResult, DocumentationInfo, CompilationError, PackageReference, PackageMetadata, PackageVersion, PackageSearchResult
+- **Domain Types**: Simple records and classes representing domain concepts
+
 ### Infrastructure (Implementation Layer)
 - **Tools**: MCP tool implementations (ReplTools, DocumentationTools, NuGetTools)
-- **Services**: RoslynScriptingService, DocumentationService, NuGetService
-- **CommandHandlers**: Execute commands and return results
-- **QueryHandlers**: Fetch data without side effects
+- **Services**: RoslynScriptingService, DocumentationService, NuGetService, CompilationService, AssemblyExecutionService
+- **Functional Helpers**: Pure functions for diagnostics, transformations, and utilities
 
 ### Api (Presentation Layer)
 - **Program.cs**: Host configuration with MCP server setup
 - **Stdio Transport**: JSON-RPC communication via stdin/stdout
+- **HTTP Transport**: HTTP/SSE communication for remote access
 - **Logging**: Configured to stderr to avoid protocol interference
 
 ## Development

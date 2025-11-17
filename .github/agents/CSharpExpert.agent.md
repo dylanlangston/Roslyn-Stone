@@ -9,10 +9,76 @@ When invoked:
 - Understand the user's .NET task and context
 - Propose clean, organized solutions that follow .NET conventions
 - Cover security (authentication, authorization, data protection)
-- Use and explain patterns: Async/Await, Dependency Injection, Unit of Work, CQRS, Gang of Four
+- Use and explain patterns: Async/Await, Dependency Injection, Functional Programming, Gang of Four
 - Apply SOLID principles
+- **Prefer functional programming patterns over heavy OOP abstractions**
 - Plan and write tests (TDD/BDD) with xUnit, NUnit, or MSTest
 - Improve performance (memory, async code, data access)
+
+# Roslyn-Stone Specific Guidelines
+
+## Architecture Principles
+
+This project follows **functional programming patterns** to reduce complexity:
+
+- **No CQRS pattern**: MCP Tools call services directly (`Tool → Service`), not through Command/Query/Handler layers
+- **LINQ over loops**: Use functional composition with Select, Where, OrderBy, MaxBy, etc.
+- **Pure functions**: Create functional helpers for transformations (see `Infrastructure/Functional/`)
+- **Direct service calls**: Avoid unnecessary abstraction layers
+- **Expression-bodied members**: Use where appropriate for concise code
+- **Records**: Prefer for immutable data models
+
+## Functional Programming Patterns
+
+## Functional Programming Patterns
+
+**Use LINQ for data transformations:**
+```csharp
+// Good: Functional composition
+var packages = results
+    .Select(r => new PackageMetadata { Id = r.Identity.Id, ... })
+    .OrderByDescending(p => p.DownloadCount)
+    .ToList();
+
+// Avoid: Imperative loops
+var packages = new List<PackageMetadata>();
+foreach (var r in results) {
+    packages.Add(new PackageMetadata { Id = r.Identity.Id, ... });
+}
+packages.Sort((a, b) => b.DownloadCount.CompareTo(a.DownloadCount));
+```
+
+**Create pure helper functions:**
+```csharp
+// Good: Pure function with no side effects
+public static class DiagnosticHelpers
+{
+    public static CompilationError ToCompilationError(this Diagnostic d) =>
+        new() {
+            Code = d.Id,
+            Message = d.GetMessage(),
+            Severity = d.Severity.ToString(),
+            Line = d.Location.GetLineSpan().StartLinePosition.Line + 1,
+            Column = d.Location.GetLineSpan().StartLinePosition.Character + 1,
+        };
+}
+```
+
+**Direct service calls from MCP Tools:**
+```csharp
+// Good: Tool calls service directly
+[McpServerTool]
+public static async Task<object> SearchPackages(
+    NuGetService service,  // Inject service directly
+    string query,
+    CancellationToken ct)
+{
+    var result = await service.SearchPackagesAsync(query, 0, 20, ct);
+    return new { packages = result.Packages.Select(p => new { ... }) };
+}
+
+// Avoid: Unnecessary Command/Query/Handler pattern
+```
 
 # General C# Development
 
@@ -35,7 +101,8 @@ When invoked:
 
 ## Error Handling & Edge Cases
 - **Null checks**: use `ArgumentNullException.ThrowIfNull(x)`; for strings use `string.IsNullOrWhiteSpace(x)`; guard early. Avoid blanket `!`.
-- **Exceptions**: choose precise types (e.g., `ArgumentException`, `InvalidOperationException`); don't throw or catch base Exception.
+- **Exceptions**: choose precise types (e.g., `ArgumentException`, `InvalidOperationException`, `IOException`); don't throw or catch base Exception.
+- **Specific catches**: Use specific exception types instead of `catch (Exception)`. Filter generic catches: `catch (Exception ex) when (ex is not OperationCanceledException)`.
 - **No silent catches**: don't swallow errors; log and rethrow or let them bubble.
 
 

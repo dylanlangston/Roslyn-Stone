@@ -42,10 +42,55 @@ dotnet test
 - Prefer async/await patterns for I/O operations
 - Include XML documentation comments for public APIs
 
+### Functional Programming Patterns
+
+This project favors **functional programming patterns over heavy OOP abstractions**:
+
+**Prefer:**
+- **LINQ functional composition** over imperative loops
+  ```csharp
+  // Good: Functional with LINQ
+  var results = items.Select(x => Transform(x)).Where(x => x.IsValid).ToList();
+  
+  // Avoid: Imperative with loops
+  var results = new List<Result>();
+  foreach (var item in items) {
+      var transformed = Transform(item);
+      if (transformed.IsValid) results.Add(transformed);
+  }
+  ```
+
+- **Pure functions** for transformations and utilities
+  ```csharp
+  // Good: Pure function with no side effects
+  public static CompilationError ToCompilationError(this Diagnostic diagnostic) =>
+      new() { Code = diagnostic.Id, Message = diagnostic.GetMessage(), ... };
+  ```
+
+- **Direct service calls** from MCP Tools
+  ```csharp
+  // Good: Direct call
+  var result = await nugetService.SearchPackagesAsync(query, skip, take, ct);
+  
+  // Avoid: Unnecessary abstraction layers (Commands/Queries/Handlers)
+  ```
+
+- **Expression-bodied members** and **pattern matching**
+- **Records** for immutable data models where appropriate
+- **Extension methods** for functional helpers
+
+**Architecture:**
+- MCP Tools call services directly: `Tool → Service`
+- No CQRS pattern (Commands/Queries/Handlers removed)
+- Services use LINQ and functional composition
+- Functional helpers in `Infrastructure/Functional/` for pure utilities
+
 ### Error Handling
 - Provide actionable error messages that LLMs can understand and act upon
 - Include context in error messages (what was attempted, why it failed, how to fix)
 - Use structured error responses when possible
+- **Use specific exception types** instead of generic `catch (Exception)`
+- Filter out `OperationCanceledException` from generic catches: `catch (Exception ex) when (ex is not OperationCanceledException)`
 
 ### Code Quality
 - Write clean, readable code with minimal complexity

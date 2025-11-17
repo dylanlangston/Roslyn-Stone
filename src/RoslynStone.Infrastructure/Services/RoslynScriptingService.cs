@@ -3,19 +3,29 @@ using System.Reflection;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
 using RoslynStone.Core.Models;
+using RoslynStone.Infrastructure.Functional;
 
 namespace RoslynStone.Infrastructure.Services;
 
 /// <summary>
 /// Service for executing C# code using Roslyn scripting engine
 /// Thread-safe singleton service for REPL state management
+///
+/// Locking Strategy:
+/// - Uses a static semaphore to serialize all code execution across instances
+/// - This prevents Console.SetOut() interference between parallel tests
+/// - Individual methods that don't use Console.SetOut() use instance lock only
 /// </summary>
 public class RoslynScriptingService
 {
+    // Static semaphore to serialize code execution across all instances
+    // This prevents Console.SetOut() interference in parallel tests
+    private static readonly SemaphoreSlim _executionLock = new(1, 1);
+
     private ScriptState? _scriptState;
     private ScriptOptions _scriptOptions;
     private readonly StringWriter _outputWriter;
-    private readonly SemaphoreSlim _semaphore = new(1, 1); // Thread-safe async execution
+    private readonly SemaphoreSlim _stateLock = new(1, 1); // Protects instance state
 
     /// <summary>
     /// Gets the script options used for compilation
@@ -62,8 +72,9 @@ public class RoslynScriptingService
         var errors = new List<CompilationError>();
         var warnings = new List<CompilationError>();
 
-        // Use SemaphoreSlim for thread-safe async execution
-        await _semaphore.WaitAsync(cancellationToken);
+        // Use static execution lock to prevent Console.SetOut() interference
+        // This serializes all code execution across instances for test safety
+        await _executionLock.WaitAsync(cancellationToken);
         try
         {
             // Capture console output
@@ -116,24 +127,10 @@ public class RoslynScriptingService
         {
             stopwatch.Stop();
 
-            foreach (var diagnostic in ex.Diagnostics)
-            {
-                errors.Add(
-                    new CompilationError
-                    {
-                        Code = diagnostic.Id,
-                        Message = diagnostic.GetMessage(),
-                        Severity = diagnostic.Severity.ToString(),
-                        Line = diagnostic.Location.GetLineSpan().StartLinePosition.Line + 1,
-                        Column = diagnostic.Location.GetLineSpan().StartLinePosition.Character + 1,
-                    }
-                );
-            }
-
             return new ExecutionResult
             {
                 Success = false,
-                Errors = errors,
+                Errors = ex.Diagnostics.ToCompilationErrors(),
                 ExecutionTime = stopwatch.Elapsed,
             };
         }
@@ -158,7 +155,7 @@ public class RoslynScriptingService
         }
         finally
         {
-            _semaphore.Release();
+            _executionLock.Release();
         }
     }
 
@@ -174,7 +171,7 @@ public class RoslynScriptingService
         List<string>? assemblyPaths = null
     )
     {
-        await _semaphore.WaitAsync();
+        await _stateLock.WaitAsync();
         try
         {
             if (assemblyPaths != null && assemblyPaths.Count > 0)
@@ -191,7 +188,7 @@ public class RoslynScriptingService
         }
         finally
         {
-            _semaphore.Release();
+            _stateLock.Release();
         }
     }
 
@@ -200,7 +197,7 @@ public class RoslynScriptingService
     /// </summary>
     public void Reset()
     {
-        _semaphore.Wait();
+        _stateLock.Wait();
         try
         {
             _scriptState = null;
@@ -208,7 +205,7 @@ public class RoslynScriptingService
         }
         finally
         {
-            _semaphore.Release();
+            _stateLock.Release();
         }
     }
 }
