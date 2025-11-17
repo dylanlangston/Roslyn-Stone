@@ -29,14 +29,12 @@ docker --version
 # Run a test container
 docker run --rm hello-world
 
-# Build a test image (example)
+# Build and run a test image
 echo 'FROM alpine:latest' > /tmp/Dockerfile.test
-echo 'CMD ["echo", "DinD works!"]' >> /tmp/Dockerfile.test
+echo 'CMD ["echo", "Docker-in-Docker is working!"]' >> /tmp/Dockerfile.test
 docker build -t dind-test -f /tmp/Dockerfile.test /tmp
 docker run --rm dind-test
-
-# Or use the provided test script
-/workspace/.devcontainer/test-dind.sh
+docker rmi dind-test
 ```
 
 ## Quick Start
