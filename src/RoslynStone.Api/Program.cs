@@ -1,5 +1,6 @@
 using RoslynStone.Infrastructure.Services;
 using RoslynStone.Infrastructure.Tools;
+using RoslynStone.Infrastructure.Resources;
 
 // Determine transport mode from environment variable
 // MCP_TRANSPORT: "stdio" (default) or "http"
@@ -50,7 +51,8 @@ if (useHttpTransport)
         .Services.AddMcpServer()
         .WithHttpTransport()
         .WithPromptsFromAssembly(typeof(GuidancePrompts).Assembly)
-        .WithToolsFromAssembly(typeof(ReplTools).Assembly);
+        .WithToolsFromAssembly(typeof(ReplTools).Assembly)
+        .WithResourcesFromAssembly(typeof(DocumentationResource).Assembly);
 
     var app = builder.Build();
 
@@ -85,7 +87,8 @@ else
         .Services.AddMcpServer()
         .WithStdioServerTransport()
         .WithPromptsFromAssembly(typeof(GuidancePrompts).Assembly)
-        .WithToolsFromAssembly(typeof(ReplTools).Assembly);
+        .WithToolsFromAssembly(typeof(ReplTools).Assembly)
+        .WithResourcesFromAssembly(typeof(DocumentationResource).Assembly);
 
     // Build and run the host
     await builder.Build().RunAsync();
