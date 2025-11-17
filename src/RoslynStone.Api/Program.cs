@@ -27,6 +27,7 @@ static void RegisterServices(IServiceCollection services)
     services.AddSingleton<CompilationService>();
     services.AddSingleton<AssemblyExecutionService>();
     services.AddSingleton<NuGetService>();
+    services.AddSingleton<IReplContextManager, ReplContextManager>();
 }
 
 if (useHttpTransport)
