@@ -220,10 +220,91 @@ Search for NuGet packages. Use this to:
 
 ## Testing Guidelines
 
+The project has comprehensive testing infrastructure with coverage reporting, benchmarks, and load tests.
+
+### Test Coverage Requirements
+
+- **Line Coverage**: Target > 80% (currently 86.67%)
+- **Branch Coverage**: Target > 75% (currently 62.98%)
 - Write unit tests for new functionality
 - Ensure tests are deterministic and isolated
 - Test error conditions and edge cases
 - Mock external dependencies appropriately
+
+### Running Tests
+
+```bash
+# Run all tests
+dotnet test
+
+# Run tests with coverage
+dotnet cake --target=Test-Coverage
+
+# Generate HTML coverage report
+dotnet cake --target=Test-Coverage-Report
+
+# Run specific test category
+dotnet test --filter "Category=Unit"
+dotnet test --filter "Component=REPL"
+```
+
+### Test Projects
+
+1. **RoslynStone.Tests** - Unit and integration tests (xUnit)
+   - 102 tests covering core functionality
+   - Uses xUnit with AAA pattern
+   - Test traits: Category, Component, Feature
+
+2. **RoslynStone.Benchmarks** - Performance benchmarks (BenchmarkDotNet)
+   - Benchmarks for RoslynScriptingService, CompilationService, NuGetService
+   - Run with: `dotnet cake --target=Benchmark`
+   - Results saved to `./artifacts/benchmarks/`
+
+3. **RoslynStone.LoadTests** - HTTP server load tests
+   - Tests 300 concurrent requests across 10 rounds
+   - Validates scalability and performance
+   - Run with: `dotnet cake --target=Load-Test`
+   - Requires server running in HTTP mode
+
+### Writing Tests
+
+Follow xUnit patterns and AAA structure:
+```csharp
+[Fact]
+[Trait("Category", "Unit")]
+[Trait("Component", "REPL")]
+public async Task MethodName_Scenario_ExpectedBehavior()
+{
+    // Arrange
+    var service = new Service();
+    
+    // Act
+    var result = await service.MethodAsync();
+    
+    // Assert
+    Assert.NotNull(result);
+    Assert.True(result.Success);
+}
+```
+
+### Resource Disposal
+
+Always use `using` statements for disposable resources:
+```csharp
+using var cts = new CancellationTokenSource();
+using var client = new HttpClient();
+```
+
+### Best Practices
+
+- Test names: `MethodName_Scenario_ExpectedBehavior`
+- One logical assertion per test
+- Fast unit tests (< 100ms)
+- Independent tests that can run in any order
+- Use `DefaultIfEmpty()` when averaging to prevent exceptions on empty sequences
+- Avoid meaningless assertions like `Assert.True(true)` - tests fail automatically on exceptions
+
+See `.github/instructions/testing.instructions.md` for detailed testing guidelines.
 
 ## MCP Integration
 
@@ -278,3 +359,42 @@ This repository has a CSharpExpert custom agent (`.github/agents/CSharpExpert.ag
 - Performance-critical code paths
 
 Delegate to the CSharpExpert agent when working on core C# functionality.
+
+## Updating These Instructions
+
+These instructions should be updated when significant changes are made to the project that would help Copilot be more productive. Consider updating when:
+
+### Code Quality & Standards
+- **Linting/Formatting**: New tools added (e.g., ReSharper, CSharpier, ESLint)
+- **Code style guidelines**: New patterns or anti-patterns established
+- **Build process**: New build steps, targets, or CI requirements
+- **Dependencies**: Major framework upgrades or new package requirements
+
+### Testing Infrastructure
+- **Test frameworks**: New testing tools or patterns introduced (e.g., BenchmarkDotNet, load tests)
+- **Coverage requirements**: Changes to coverage thresholds or metrics
+- **Test categories**: New test organization or classification schemes
+- **Test commands**: New ways to run or filter tests
+
+### Architecture & Patterns
+- **Design patterns**: New architectural patterns adopted project-wide
+- **Service organization**: Changes to how services, tools, or components are structured
+- **Domain-specific guidelines**: New patterns for specific areas (MCP tools, REPL, etc.)
+
+### Development Workflow
+- **Custom agents**: New specialized agents added for specific tasks
+- **MCP tools**: New dogfooding tools available for development
+- **Development commands**: New scripts, cake tasks, or automation
+
+### Project Structure
+- **Directory reorganization**: Significant changes to project layout
+- **New projects**: Addition of new projects to the solution
+- **Module boundaries**: Changes to how modules or layers interact
+
+**Best Practice**: Update instructions immediately after:
+- Adding new testing infrastructure (✅ Done for benchmarks and load tests)
+- Introducing new linting or formatting tools (✅ Done for ReSharper and CSharpier)
+- Establishing new architectural patterns
+- Adding custom agents or development tools
+
+This ensures Copilot has the latest context to provide accurate and helpful assistance.
