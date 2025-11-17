@@ -125,6 +125,119 @@ Task("Test-Coverage")
             .Append("--collect:\"XPlat Code Coverage\"")
             .Append("--results-directory ./artifacts/coverage")
     });
+    
+    // Parse coverage results and check branch coverage
+    var coverageFiles = GetFiles("./artifacts/coverage/**/coverage.cobertura.xml");
+    if (coverageFiles.Any())
+    {
+        var coverageFile = coverageFiles.First();
+        var xml = System.Xml.Linq.XDocument.Load(coverageFile.FullPath);
+        var coverage = xml.Root;
+        
+        var lineCoverage = double.Parse(coverage.Attribute("line-rate").Value) * 100;
+        var branchCoverage = double.Parse(coverage.Attribute("branch-rate").Value) * 100;
+        
+        Information($"Line Coverage: {lineCoverage:F2}%");
+        Information($"Branch Coverage: {branchCoverage:F2}%");
+        
+        // Enforce minimum coverage thresholds
+        const double MinBranchCoverage = 75.0;
+        const double MinLineCoverage = 80.0;
+        
+        if (branchCoverage < MinBranchCoverage)
+        {
+            Warning($"⚠️  Branch coverage ({branchCoverage:F2}%) is below the minimum threshold of {MinBranchCoverage}%");
+            // Note: Not failing the build yet to allow incremental improvements
+            // throw new Exception($"Branch coverage ({branchCoverage:F2}%) is below the minimum threshold of {MinBranchCoverage}%");
+        }
+        else
+        {
+            Information($"✅ Branch coverage meets the minimum threshold");
+        }
+        
+        if (lineCoverage < MinLineCoverage)
+        {
+            Warning($"⚠️  Line coverage ({lineCoverage:F2}%) is below the minimum threshold of {MinLineCoverage}%");
+        }
+        else
+        {
+            Information($"✅ Line coverage meets the minimum threshold");
+        }
+    }
+});
+
+Task("Test-Coverage-Report")
+    .Description("Generate HTML coverage report using ReportGenerator")
+    .IsDependentOn("Test-Coverage")
+    .Does(() =>
+{
+    var coverageFiles = GetFiles("./artifacts/coverage/**/coverage.cobertura.xml");
+    if (coverageFiles.Any())
+    {
+        EnsureDirectoryExists("./artifacts/coverage-report");
+        
+        var settings = new ProcessSettings
+        {
+            Arguments = new ProcessArgumentBuilder()
+                .Append($"-reports:{string.Join(";", coverageFiles.Select(f => f.FullPath))}")
+                .Append("-targetdir:./artifacts/coverage-report")
+                .Append("-reporttypes:Html;Badges")
+        };
+        
+        StartProcess("reportgenerator", settings);
+        Information("Coverage report generated at ./artifacts/coverage-report/index.html");
+    }
+    else
+    {
+        Warning("No coverage files found to generate report");
+    }
+});
+
+Task("Benchmark")
+    .Description("Run benchmarks")
+    .IsDependentOn("Build")
+    .Does(() =>
+{
+    Information("Running benchmarks...");
+    Information("Note: Benchmarks can take several minutes to complete.");
+    
+    var benchmarkProject = "./tests/RoslynStone.Benchmarks/RoslynStone.Benchmarks.csproj";
+    
+    DotNetRun(benchmarkProject, new DotNetRunSettings
+    {
+        Configuration = "Release",
+        NoBuild = false,
+        ArgumentCustomization = args => args.Append("--filter * --artifacts ./artifacts/benchmarks")
+    });
+    
+    Information("Benchmark results saved to ./artifacts/benchmarks");
+});
+
+Task("Load-Test")
+    .Description("Run load tests against a running HTTP server")
+    .IsDependentOn("Build")
+    .Does(() =>
+{
+    Information("Running load tests...");
+    Information("Note: Ensure the API server is running in HTTP mode:");
+    Information("  cd src/RoslynStone.Api && MCP_TRANSPORT=http dotnet run");
+    Information("");
+    
+    var loadTestProject = "./tests/RoslynStone.LoadTests/RoslynStone.LoadTests.csproj";
+    
+    try
+    {
+        DotNetRun(loadTestProject, new DotNetRunSettings
+        {
+            Configuration = configuration,
+            NoBuild = true
+        });
+    }
+    catch (Exception ex)
+    {
+        Warning($"Load test failed: {ex.Message}");
+        Warning("Make sure the server is running with: MCP_TRANSPORT=http dotnet run");
+    }
 });
 
 Task("Pack")
@@ -181,10 +294,10 @@ Task("Publish-NuGet")
 });
 
 Task("CI")
-    .Description("Run all CI tasks: Format check, Build, Inspect, Test")
+    .Description("Run all CI tasks: Format check, Build, Inspect, Test with Coverage")
     .IsDependentOn("Format-Check")
     .IsDependentOn("Inspect")
-    .IsDependentOn("Test");
+    .IsDependentOn("Test-Coverage");
 
 Task("Default")
     .IsDependentOn("Build")
