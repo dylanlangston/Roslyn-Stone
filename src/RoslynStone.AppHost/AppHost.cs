@@ -1,30 +1,22 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
-// Add the MCP server with stdio transport (default)
-// The MCP server uses stdio transport by default and doesn't expose HTTP endpoints
-// We'll configure it to be containerized with OpenTelemetry support
-_ = builder
-    .AddProject<Projects.RoslynStone_Api>("roslyn-stone-mcp-stdio")
-    .WithEnvironment("MCP_TRANSPORT", "stdio")
-    .WithEnvironment("OTEL_SERVICE_NAME", "roslyn-stone-mcp-stdio")
-    .PublishAsDockerFile();
-
 // Add the MCP server with HTTP transport
 // This variant exposes HTTP endpoints for MCP protocol communication
 // Make MCP HTTP endpoint port configurable via MCP_HTTP_PORT environment variable (default: 8080)
 var mcpHttpPort = int.TryParse(builder.Configuration["MCP_HTTP_PORT"], out var httpPort)
     ? httpPort
     : 8080;
-_ = builder
-    .AddProject<Projects.RoslynStone_Api>("roslyn-stone-mcp-http")
+var mcpServer = builder
+    .AddProject<Projects.RoslynStone_Api>("roslyn-stone-mcp")
     .WithEnvironment("MCP_TRANSPORT", "http")
-    .WithEnvironment("OTEL_SERVICE_NAME", "roslyn-stone-mcp-http")
-    .WithHttpEndpoint(port: mcpHttpPort, name: "mcp")
+    .WithEnvironment("OTEL_SERVICE_NAME", "roslyn-stone-mcp")
+    // Create the standard 'http' endpoint for MCP servers (inspector expects endpoint name 'http')
+    .WithHttpEndpoint(port: mcpHttpPort, name: "http")
     .WithExternalHttpEndpoints()
     .PublishAsDockerFile();
 
 // Add MCP Inspector for development/testing (only in development mode)
-// The inspector provides a web UI for testing MCP tools
+// The inspector provides a web UI for testing MCP tools via SSE transport
 // Ports can be configured via environment variables: INSPECTOR_UI_PORT and INSPECTOR_PROXY_PORT
 if (
     builder.Configuration["ASPNETCORE_ENVIRONMENT"] == "Development"
@@ -42,21 +34,23 @@ if (
         ? proxyPort
         : 6277;
 
-    _ = builder
-        .AddExecutable(
+    // Add the MCP Inspector as a managed AppHost resource instead of launching the JS inspector via npx.
+    // Use server and client ports from configuration and attach to the MCP server created above.
+    var inspector = builder
+        .AddMcpInspector(
             "mcp-inspector",
-            "npx",
-            ".",
-            "@modelcontextprotocol/inspector",
-            "dotnet",
-            "run",
-            "--project",
-            "src/RoslynStone.Api/RoslynStone.Api.csproj"
+            options =>
+            {
+                options.ClientPort = inspectorUiPort;
+                options.ServerPort = inspectorProxyPort;
+                // Default inspector version will be used; override with InspectorVersion if needed.
+            }
         )
-        .WithHttpEndpoint(port: inspectorUiPort, name: "ui")
-        .WithHttpEndpoint(port: inspectorProxyPort, name: "proxy")
+        // Connect the Inspector to the MCP server resource
+        .WithMcpServer(mcpServer)
+        // Expose the inspector's HTTP endpoints and mark it as a development-only resource
         .WithExternalHttpEndpoints()
-        .ExcludeFromManifest(); // Don't include in deployment manifest
+        .ExcludeFromManifest();
 }
 
 builder.Build().Run();

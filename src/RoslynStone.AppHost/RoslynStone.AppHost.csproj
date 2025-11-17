@@ -13,5 +13,6 @@
       Include="..\RoslynStone.ServiceDefaults\RoslynStone.ServiceDefaults.csproj"
       IsAspireProjectResource="false"
     />
+    <PackageReference Include="CommunityToolkit.Aspire.Hosting.McpInspector" Version="9.7.1" />
   </ItemGroup>
 </Project>
