@@ -99,4 +99,330 @@ public class RoslynScriptingServiceTests
         Assert.True(result.Success);
         // Unused variables might generate warnings
     }
+
+    [Fact]
+    [Trait("Feature", "RuntimeError")]
+    public async Task ExecuteAsync_RuntimeException_ReturnsRuntimeError()
+    {
+        // Arrange
+        var service = new RoslynScriptingService();
+        var code = "throw new System.InvalidOperationException(\"Test exception\");";
+
+        // Act
+        var result = await service.ExecuteAsync(code);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.NotEmpty(result.Errors);
+        Assert.Contains(result.Errors, e => e.Code == "RUNTIME_ERROR");
+        Assert.Contains(result.Errors, e => e.Message.Contains("Test exception"));
+    }
+
+    [Fact]
+    [Trait("Feature", "RuntimeError")]
+    public async Task ExecuteAsync_DivideByZero_ReturnsRuntimeError()
+    {
+        // Arrange
+        var service = new RoslynScriptingService();
+        var code = "int x = 10; int y = 0; int z = x / y;";
+
+        // Act
+        var result = await service.ExecuteAsync(code);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.NotEmpty(result.Errors);
+        Assert.Contains(result.Errors, e => e.Code == "RUNTIME_ERROR");
+    }
+
+    [Fact]
+    [Trait("Feature", "RuntimeError")]
+    public async Task ExecuteAsync_NullReferenceException_ReturnsRuntimeError()
+    {
+        // Arrange
+        var service = new RoslynScriptingService();
+        var code = "string s = null; var length = s.Length;";
+
+        // Act
+        var result = await service.ExecuteAsync(code);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.NotEmpty(result.Errors);
+        Assert.Contains(result.Errors, e => e.Code == "RUNTIME_ERROR");
+    }
+
+    [Fact]
+    [Trait("Feature", "Cancellation")]
+    public async Task ExecuteAsync_CancellationRequested_ThrowsTaskCanceledException()
+    {
+        // Arrange
+        var service = new RoslynScriptingService();
+        var code = "System.Threading.Thread.Sleep(5000);";
+        using var cts = new CancellationTokenSource();
+        cts.Cancel(); // Cancel immediately
+
+        // Act & Assert - TaskCanceledException is a subclass of OperationCanceledException
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
+            await service.ExecuteAsync(code, cts.Token)
+        );
+    }
+
+    [Fact]
+    [Trait("Feature", "Reset")]
+    public async Task Reset_AfterExecution_ClearsState()
+    {
+        // Arrange
+        var service = new RoslynScriptingService();
+        var code1 = "int x = 10;";
+
+        // Act
+        await service.ExecuteAsync(code1);
+        service.Reset();
+        var result = await service.ExecuteAsync("x");
+
+        // Assert - x should no longer exist after reset
+        Assert.False(result.Success);
+        Assert.NotEmpty(result.Errors);
+    }
+
+    [Fact]
+    [Trait("Feature", "Reset")]
+    public async Task Reset_ClearsConsoleOutput()
+    {
+        // Arrange
+        var service = new RoslynScriptingService();
+        await service.ExecuteAsync("Console.WriteLine(\"Test\");");
+
+        // Act
+        service.Reset();
+        var result = await service.ExecuteAsync("Console.WriteLine(\"After reset\");");
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.DoesNotContain("Test", result.Output);
+        Assert.Contains("After reset", result.Output);
+    }
+
+    [Fact]
+    [Trait("Feature", "State")]
+    public async Task ExecuteAsync_FirstExecution_CreatesNewScriptState()
+    {
+        // Arrange
+        var service = new RoslynScriptingService();
+        var code = "var greeting = \"Hello\";";
+
+        // Act
+        var result = await service.ExecuteAsync(code);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Empty(result.Errors);
+    }
+
+    [Fact]
+    [Trait("Feature", "State")]
+    public async Task ExecuteAsync_ContinuedExecution_UsesExistingState()
+    {
+        // Arrange
+        var service = new RoslynScriptingService();
+        await service.ExecuteAsync("var greeting = \"Hello\";");
+
+        // Act - Continue with existing state
+        var result = await service.ExecuteAsync("greeting + \" World\"");
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Equal("Hello World", result.ReturnValue);
+    }
+
+    [Fact]
+    [Trait("Feature", "ExecutionTime")]
+    public async Task ExecuteAsync_TracksExecutionTime()
+    {
+        // Arrange
+        var service = new RoslynScriptingService();
+        var code = "1 + 1";
+
+        // Act
+        var result = await service.ExecuteAsync(code);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.True(result.ExecutionTime.TotalMilliseconds >= 0);
+    }
+
+    [Fact]
+    [Trait("Feature", "ExecutionTime")]
+    public async Task ExecuteAsync_CompilationError_TracksExecutionTime()
+    {
+        // Arrange
+        var service = new RoslynScriptingService();
+        var code = "invalid code";
+
+        // Act
+        var result = await service.ExecuteAsync(code);
+
+        // Assert
+        Assert.False(result.Success);
+        Assert.True(result.ExecutionTime.TotalMilliseconds >= 0);
+    }
+
+    [Fact]
+    [Trait("Feature", "Output")]
+    public async Task ExecuteAsync_MultipleConsoleWrites_CapturesAllOutput()
+    {
+        // Arrange
+        var service = new RoslynScriptingService();
+        var code =
+            @"
+Console.Write(""Line1"");
+Console.WriteLine();
+Console.Write(""Line2"");
+";
+
+        // Act
+        var result = await service.ExecuteAsync(code);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Contains("Line1", result.Output);
+        Assert.Contains("Line2", result.Output);
+    }
+
+    [Fact]
+    [Trait("Feature", "Output")]
+    public async Task ExecuteAsync_EmptyOutput_ReturnsEmptyString()
+    {
+        // Arrange
+        var service = new RoslynScriptingService();
+        var code = "1 + 1"; // No console output
+
+        // Act
+        var result = await service.ExecuteAsync(code);
+
+        // Assert
+        Assert.True(result.Success);
+        Assert.Equal(string.Empty, result.Output);
+    }
+
+    [Fact]
+    [Trait("Feature", "PackageReference")]
+    public async Task AddPackageReferenceAsync_WithNullAssemblyPaths_DoesNotThrow()
+    {
+        // Arrange
+        var service = new RoslynScriptingService();
+
+        // Act
+        await service.AddPackageReferenceAsync("TestPackage", "1.0.0", null);
+
+        // Assert - Should not throw
+    }
+
+    [Fact]
+    [Trait("Feature", "PackageReference")]
+    public async Task AddPackageReferenceAsync_WithEmptyAssemblyPaths_DoesNotThrow()
+    {
+        // Arrange
+        var service = new RoslynScriptingService();
+
+        // Act
+        await service.AddPackageReferenceAsync("TestPackage", "1.0.0", new List<string>());
+
+        // Assert - Should not throw
+        // If an exception is thrown, the test will fail automatically.
+    }
+
+    [Fact]
+    [Trait("Feature", "PackageReference")]
+    public async Task AddPackageReferenceAsync_WithInvalidPaths_SkipsNonexistentFiles()
+    {
+        // Arrange
+        var service = new RoslynScriptingService();
+        var invalidPaths = new List<string> { "/nonexistent/path/assembly.dll" };
+
+        // Act
+        await service.AddPackageReferenceAsync("TestPackage", "1.0.0", invalidPaths);
+
+        // Assert - Test passes if no exception is thrown and method completes successfully.
+    }
+
+    [Fact]
+    [Trait("Feature", "PackageReference")]
+    public async Task AddPackageReferenceAsync_WithValidAssemblyPath_AddsReference()
+    {
+        // Arrange
+        var service = new RoslynScriptingService();
+
+        // Use System.Linq assembly which is available
+        var linqAssembly = typeof(Enumerable).Assembly;
+        var linqPath = linqAssembly.Location;
+
+        // Only test if the path is accessible
+        if (File.Exists(linqPath))
+        {
+            var validPaths = new List<string> { linqPath };
+
+            // Act
+            await service.AddPackageReferenceAsync("System.Linq", null, validPaths);
+
+            // Execute code that uses LINQ
+            var result = await service.ExecuteAsync("new[] { 1, 2, 3 }.Sum()");
+
+            // Assert
+            Assert.True(result.Success);
+            Assert.Equal(6, result.ReturnValue);
+        }
+        else
+        {
+            // Skip: Assembly path not accessible in test environment.
+        }
+    }
+
+    [Fact]
+    [Trait("Feature", "PackageReference")]
+    public async Task AddPackageReferenceAsync_ResetsScriptState()
+    {
+        // Arrange
+        var service = new RoslynScriptingService();
+        await service.ExecuteAsync("int x = 42;");
+
+        // Use System.Linq assembly
+        var linqAssembly = typeof(Enumerable).Assembly;
+        var linqPath = linqAssembly.Location;
+
+        if (File.Exists(linqPath))
+        {
+            var validPaths = new List<string> { linqPath };
+
+            // Act
+            await service.AddPackageReferenceAsync("System.Linq", null, validPaths);
+
+            // Try to access x - should fail because state was reset
+            var result = await service.ExecuteAsync("x");
+
+            // Assert - x should no longer be defined
+            Assert.False(result.Success);
+        }
+        else
+        {
+            // Skip: Assembly path not accessible in test environment.
+        }
+    }
+
+    [Fact]
+    [Trait("Feature", "ScriptOptions")]
+    public void ScriptOptions_ReturnsConfiguredOptions()
+    {
+        // Arrange
+        var service = new RoslynScriptingService();
+
+        // Act
+        var options = service.ScriptOptions;
+
+        // Assert
+        Assert.NotNull(options);
+        Assert.NotEmpty(options.MetadataReferences);
+        Assert.NotEmpty(options.Imports);
+    }
 }

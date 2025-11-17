@@ -310,8 +310,8 @@ Use appropriate assertions:
 ## Test Coverage
 
 Aim for:
-- **Line Coverage**: > 80%
-- **Branch Coverage**: > 70%
+- **Line Coverage**: > 80% (currently 86.67%)
+- **Branch Coverage**: > 75% (currently 62.98%)
 - **Critical Paths**: 100%
 
 Focus on testing:
@@ -320,6 +320,32 @@ Focus on testing:
 - Edge cases and boundaries
 - Security-sensitive code
 - Complex business logic
+
+### Running Coverage Reports
+
+```bash
+# Run tests with coverage
+dotnet cake --target=Test-Coverage
+
+# Generate HTML coverage report
+dotnet cake --target=Test-Coverage-Report
+# Opens at ./artifacts/coverage-report/index.html
+```
+
+The coverage task:
+- Runs all tests with code coverage collection
+- Validates line and branch coverage thresholds
+- Generates Cobertura XML reports
+- Displays coverage percentages in CI output
+- Warns if coverage falls below thresholds (80% line, 75% branch)
+
+### Coverage Best Practices
+
+- Write tests that exercise different code paths (branches)
+- Test both success and error scenarios
+- Test edge cases and boundary conditions
+- Use `DefaultIfEmpty()` before `Average()` to handle empty sequences
+- Proper resource disposal with `using` statements improves coverage accuracy
 
 ## Performance Testing
 
@@ -352,3 +378,173 @@ public async Task Method_Completes_WithinTimeLimit()
 6. **AAA Pattern**: Arrange, Act, Assert structure
 7. **One Assertion**: Focus each test on one logical assertion
 8. **Test Names**: Use descriptive names that explain the test
+9. **Resource Disposal**: Always use `using` for IDisposable (CancellationTokenSource, HttpClient, etc.)
+10. **Avoid Code Smells**: No `Assert.True(true)` or tautology assertions
+
+## Benchmarking (BenchmarkDotNet)
+
+The `RoslynStone.Benchmarks` project tracks performance of critical operations.
+
+### Available Benchmarks
+
+- **RoslynScriptingServiceBenchmarks**: REPL execution performance (5 scenarios)
+  - Simple expressions, variable assignments, LINQ queries, complex operations, string manipulation
+- **CompilationServiceBenchmarks**: Code compilation performance (4 scenarios)
+  - Simple class compilation, complex code, error handling, multiple classes
+- **NuGetServiceBenchmarks**: Package operations performance (3 scenarios)
+  - Package search, version lookup, README retrieval
+
+### Running Benchmarks
+
+```bash
+# Run all benchmarks in Release mode
+dotnet cake --target=Benchmark
+
+# Run specific benchmark class
+dotnet run --project tests/RoslynStone.Benchmarks --configuration Release -- --filter *RoslynScriptingService*
+
+# Run with custom BenchmarkDotNet options
+dotnet run --project tests/RoslynStone.Benchmarks --configuration Release -- --job short
+```
+
+### Benchmark Best Practices
+
+- Always run in **Release** configuration
+- Close other applications to minimize interference
+- Run multiple iterations for statistical significance
+- Use `[MemoryDiagnoser]` to track allocations
+- Add `[GlobalSetup]` and `[GlobalCleanup]` for resource management
+- Results saved to `./artifacts/benchmarks/`
+
+### Adding New Benchmarks
+
+```csharp
+[MemoryDiagnoser]
+[MinColumn, MaxColumn, MeanColumn, MedianColumn]
+public class MyServiceBenchmarks
+{
+    private MyService _service = null!;
+
+    [GlobalSetup]
+    public void Setup()
+    {
+        _service = new MyService();
+    }
+
+    [Benchmark]
+    public async Task<ResultType> BenchmarkOperation()
+    {
+        return await _service.OperationAsync();
+    }
+    
+    [GlobalCleanup]
+    public void Cleanup()
+    {
+        _service?.Dispose();
+    }
+}
+```
+
+## Load Testing
+
+The `RoslynStone.LoadTests` project validates HTTP MCP server scalability.
+
+### Load Test Configuration
+
+- **Default concurrency**: 300 concurrent requests per round
+- **Default rounds**: 10 rounds per scenario
+- **Test scenarios**: 4 (expressions, LINQ, variable assignments, NuGet search)
+- **Total requests**: 12,000 (300 × 10 × 4)
+- **Metrics**: Throughput, latency, success rate, response times
+
+### Running Load Tests
+
+```bash
+# 1. Start the server in HTTP mode
+cd src/RoslynStone.Api
+MCP_TRANSPORT=http dotnet run
+
+# 2. In another terminal, run load tests
+cd /path/to/repo
+dotnet cake --target=Load-Test
+
+# Or with custom configuration
+dotnet run --project tests/RoslynStone.LoadTests -- http://localhost:7071 300 10
+# Arguments: [baseUrl] [concurrency] [rounds]
+```
+
+### Expected Performance
+
+A healthy server should achieve:
+- ✅ Success rate > 99%
+- ✅ Average response time < 100ms for simple operations
+- ✅ Throughput > 1000 requests/second
+
+### Load Test Metrics
+
+The tool reports for each scenario:
+- **Average Round Time**: Time to complete all concurrent requests
+- **Average Response Time**: Per-request response time
+- **Success Rate**: Percentage of successful requests
+- **Throughput**: Requests per second
+- **Total Success/Failures**: Request counts
+
+### Adding Load Test Scenarios
+
+```csharp
+private static string CreateNewScenarioRequest()
+{
+    var request = new
+    {
+        jsonrpc = "2.0",
+        method = "tools/call",
+        @params = new
+        {
+            name = "ToolName",
+            arguments = new { param = "value" }
+        },
+        id = 1
+    };
+    return JsonSerializer.Serialize(request);
+}
+```
+
+## CI Integration
+
+All test infrastructure is integrated with CI:
+
+```bash
+# Full CI pipeline (includes coverage validation)
+dotnet cake --target=CI
+
+# Individual tasks
+dotnet cake --target=Format-Check    # CSharpier formatting
+dotnet cake --target=Inspect         # ReSharper analysis
+dotnet cake --target=Build           # Build solution
+dotnet cake --target=Test-Coverage   # Tests with coverage
+```
+
+### CI Artifacts
+
+- Test results (`.trx` files)
+- Coverage reports (Cobertura XML)
+- ReSharper inspection reports
+- Build logs
+
+## Test Organization
+
+```
+tests/
+├── RoslynStone.Tests/          # Unit & integration tests (xUnit)
+│   ├── *ServiceTests.cs        # Service-level unit tests
+│   ├── *IntegrationTests.cs    # Integration test suites
+│   ├── DiagnosticHelpersTests.cs
+│   └── CompilationServiceEdgeCasesTests.cs
+├── RoslynStone.Benchmarks/     # Performance benchmarks
+│   ├── *ServiceBenchmarks.cs
+│   ├── Program.cs
+│   └── README.md
+└── RoslynStone.LoadTests/      # Load & concurrency tests
+    ├── Program.cs
+    └── README.md
+```

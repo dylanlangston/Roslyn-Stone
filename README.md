@@ -30,7 +30,9 @@ RoslynStone/
 │   ├── RoslynStone.ServiceDefaults/# OpenTelemetry and Aspire defaults
 │   └── RoslynStone.AppHost/        # Aspire orchestration
 └── tests/
-    └── RoslynStone.Tests/          # xUnit tests
+    ├── RoslynStone.Tests/          # xUnit unit and integration tests
+    ├── RoslynStone.Benchmarks/     # BenchmarkDotNet performance tests
+    └── RoslynStone.LoadTests/      # HTTP load and concurrency tests
 ```
 
 ### Architecture Principles
@@ -613,6 +615,145 @@ dotnet test --filter "Category=Unit"
 # Run tests by component
 dotnet test --filter "Component=REPL"
 ```
+
+### Test Coverage
+
+The project maintains high test coverage with automated reporting in CI:
+
+- **Line Coverage**: >86% (target: 80%)
+- **Branch Coverage**: >62% (target: 75%)
+- **Total Tests**: 103+ tests
+
+#### Run Tests with Coverage
+
+```bash
+# Using Cake build script (recommended)
+dotnet cake --target=Test-Coverage
+
+# Using dotnet CLI
+dotnet test --collect:"XPlat Code Coverage"
+```
+
+Coverage reports are generated in `./artifacts/coverage/` with detailed metrics including:
+- Line coverage percentage
+- Branch coverage percentage
+- Per-file coverage analysis
+- Uncovered code locations
+
+#### Generate HTML Coverage Report
+
+```bash
+dotnet cake --target=Test-Coverage-Report
+```
+
+Opens a detailed HTML report at `./artifacts/coverage-report/index.html` with:
+- Interactive file browser
+- Line-by-line coverage visualization
+- Coverage badges
+- Historical trends
+
+### Benchmarks
+
+Performance benchmarks using [BenchmarkDotNet](https://benchmarkdotnet.org/) to track and optimize critical operations:
+
+#### Available Benchmarks
+
+- **RoslynScriptingService** - REPL execution performance
+  - Simple expressions
+  - Variable assignments
+  - LINQ queries
+  - Complex operations
+- **CompilationService** - Code compilation performance
+  - Simple class compilation
+  - Complex code compilation
+  - Error handling
+- **NuGetService** - Package operations performance
+  - Package search
+  - Version lookup
+  - README retrieval
+
+#### Run Benchmarks
+
+```bash
+# Run all benchmarks (Release configuration)
+dotnet cake --target=Benchmark
+
+# Run specific benchmark
+dotnet run --project tests/RoslynStone.Benchmarks --configuration Release -- --filter *RoslynScriptingService*
+```
+
+Results are saved to `./artifacts/benchmarks/` with:
+- Execution times (Min, Max, Mean, Median)
+- Memory allocations
+- Statistical analysis
+
+See [tests/RoslynStone.Benchmarks/README.md](tests/RoslynStone.Benchmarks/README.md) for detailed documentation.
+
+### Load Tests
+
+Load tests validate the server can handle concurrent requests at scale:
+
+#### Test Configuration
+
+- **Concurrency**: 300 concurrent requests per round
+- **Rounds**: 10 rounds per scenario
+- **Scenarios**: Expression evaluation, LINQ queries, NuGet search
+- **Total Requests**: 12,000 (300 × 10 × 4 scenarios)
+
+#### Prerequisites
+
+Start the server in HTTP mode:
+
+```bash
+cd src/RoslynStone.Api
+MCP_TRANSPORT=http dotnet run
+```
+
+#### Run Load Tests
+
+```bash
+# Using Cake build script
+dotnet cake --target=Load-Test
+
+# Using dotnet CLI with custom configuration
+dotnet run --project tests/RoslynStone.LoadTests -- http://localhost:7071 300 10
+```
+
+Arguments:
+1. Base URL (default: `http://localhost:7071`)
+2. Concurrency (default: 300)
+3. Rounds (default: 10)
+
+#### Expected Results
+
+A healthy server should achieve:
+- ✅ Success rate > 99%
+- ✅ Average response time < 100ms
+- ✅ Throughput > 1000 req/sec
+
+See [tests/RoslynStone.LoadTests/README.md](tests/RoslynStone.LoadTests/README.md) for detailed documentation.
+
+### Continuous Integration
+
+The CI pipeline runs on every push and pull request:
+
+```bash
+# Run full CI pipeline locally
+dotnet cake --target=CI
+```
+
+CI includes:
+1. ✅ Code formatting check (CSharpier)
+2. ✅ Code quality analysis (ReSharper)
+3. ✅ Build verification
+4. ✅ Test execution with coverage
+5. ✅ Coverage threshold validation
+
+Artifacts generated:
+- Test results (`.trx` files)
+- Coverage reports (Cobertura XML)
+- ReSharper inspection reports
+- Build logs
 
 ### Adding New MCP Tools
 
