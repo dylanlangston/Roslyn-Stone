@@ -29,8 +29,7 @@ public static class DiagnosticHelpers
     ) =>
         diagnostics
             .Where(d =>
-                d.Severity == DiagnosticSeverity.Error
-                || d.Severity == DiagnosticSeverity.Warning
+                d.Severity == DiagnosticSeverity.Error || d.Severity == DiagnosticSeverity.Warning
             )
             .Select(ToCompilationError)
             .ToList();
@@ -38,9 +37,10 @@ public static class DiagnosticHelpers
     /// <summary>
     /// Partition diagnostics into errors and warnings
     /// </summary>
-    public static (IReadOnlyList<CompilationError> Errors, IReadOnlyList<CompilationError> Warnings) PartitionDiagnostics(
-        this IEnumerable<Diagnostic> diagnostics
-    )
+    public static (
+        IReadOnlyList<CompilationError> Errors,
+        IReadOnlyList<CompilationError> Warnings
+    ) PartitionDiagnostics(this IEnumerable<Diagnostic> diagnostics)
     {
         var errors = new List<CompilationError>();
         var warnings = new List<CompilationError>();

@@ -81,8 +81,9 @@ public class ReplTools
     {
         var script = CSharpScript.Create(code, scriptingService.ScriptOptions);
         var diagnostics = script.Compile(cancellationToken);
-        
-        var issues = diagnostics.ToCompilationErrors()
+
+        var issues = diagnostics
+            .ToCompilationErrors()
             .Select(e => new
             {
                 code = e.Code,

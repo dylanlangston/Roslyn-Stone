@@ -246,12 +246,12 @@ public class NuGetService : IDisposable
         );
 
         var metadataList = metadata.ToList();
-        
+
         var packageMetadata = string.IsNullOrEmpty(version)
             ? metadataList
                 .Where(m => !m.Identity.Version.IsPrerelease)
                 .MaxBy(m => m.Identity.Version)
-              ?? metadataList.MaxBy(m => m.Identity.Version)
+            ?? metadataList.MaxBy(m => m.Identity.Version)
             : metadataList.FirstOrDefault(m => m.Identity.Version == NuGetVersion.Parse(version));
 
         if (packageMetadata == null)
@@ -315,8 +315,8 @@ public class NuGetService : IDisposable
             );
 
             assemblies.AddRange(
-                targetFramework.Items
-                    .Where(f =>
+                targetFramework
+                    .Items.Where(f =>
                         f.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)
                         && !f.Replace('\\', '/').Contains("/ref/")
                     )

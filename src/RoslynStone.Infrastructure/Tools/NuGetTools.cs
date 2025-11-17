@@ -41,7 +41,12 @@ public class NuGetTools
         CancellationToken cancellationToken = default
     )
     {
-        var result = await nugetService.SearchPackagesAsync(query, skip, Math.Min(take, 100), cancellationToken);
+        var result = await nugetService.SearchPackagesAsync(
+            query,
+            skip,
+            Math.Min(take, 100),
+            cancellationToken
+        );
 
         return new
         {
@@ -123,7 +128,11 @@ public class NuGetTools
         CancellationToken cancellationToken = default
     )
     {
-        var readme = await nugetService.GetPackageReadmeAsync(packageId, version, cancellationToken);
+        var readme = await nugetService.GetPackageReadmeAsync(
+            packageId,
+            version,
+            cancellationToken
+        );
 
         return new
         {
@@ -171,11 +180,7 @@ public class NuGetTools
                 cancellationToken
             );
 
-            await scriptingService.AddPackageReferenceAsync(
-                packageName,
-                version,
-                assemblyPaths
-            );
+            await scriptingService.AddPackageReferenceAsync(packageName, version, assemblyPaths);
 
             return new
             {
