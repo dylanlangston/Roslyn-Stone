@@ -59,24 +59,20 @@ public class NuGetService : IDisposable
             cancellationToken
         );
 
-        var packages = new List<PackageMetadata>();
-        foreach (var result in results)
-        {
-            packages.Add(
-                new PackageMetadata
-                {
-                    Id = result.Identity.Id,
-                    Title = result.Title,
-                    Description = result.Description,
-                    Authors = result.Authors,
-                    LatestVersion = result.Identity.Version.ToString(),
-                    DownloadCount = result.DownloadCount,
-                    IconUrl = result.IconUrl?.ToString(),
-                    ProjectUrl = result.ProjectUrl?.ToString(),
-                    Tags = result.Tags,
-                }
-            );
-        }
+        var packages = results
+            .Select(result => new PackageMetadata
+            {
+                Id = result.Identity.Id,
+                Title = result.Title,
+                Description = result.Description,
+                Authors = result.Authors,
+                LatestVersion = result.Identity.Version.ToString(),
+                DownloadCount = result.DownloadCount,
+                IconUrl = result.IconUrl?.ToString(),
+                ProjectUrl = result.ProjectUrl?.ToString(),
+                Tags = result.Tags,
+            })
+            .ToList();
 
         return new PackageSearchResult
         {
@@ -110,31 +106,16 @@ public class NuGetService : IDisposable
             cancellationToken
         );
 
-        var versions = new List<PackageVersion>();
-        foreach (var item in metadata)
-        {
-            versions.Add(
-                new PackageVersion
-                {
-                    Version = item.Identity.Version.ToString(),
-                    DownloadCount = item.DownloadCount,
-                    IsPrerelease = item.Identity.Version.IsPrerelease,
-                    IsDeprecated = !item.IsListed,
-                }
-            );
-        }
-
-        // Sort versions in descending order (newest first)
-        versions.Sort(
-            (a, b) =>
+        return metadata
+            .Select(item => new PackageVersion
             {
-                var versionA = NuGetVersion.Parse(a.Version);
-                var versionB = NuGetVersion.Parse(b.Version);
-                return versionB.CompareTo(versionA);
-            }
-        );
-
-        return versions;
+                Version = item.Identity.Version.ToString(),
+                DownloadCount = item.DownloadCount,
+                IsPrerelease = item.Identity.Version.IsPrerelease,
+                IsDeprecated = !item.IsListed,
+            })
+            .OrderByDescending(v => NuGetVersion.Parse(v.Version))
+            .ToList();
     }
 
     /// <summary>
@@ -265,23 +246,13 @@ public class NuGetService : IDisposable
         );
 
         var metadataList = metadata.ToList();
-        IPackageSearchMetadata? packageMetadata;
-        if (string.IsNullOrEmpty(version))
-        {
-            // Get the latest stable version or latest prerelease if no stable exists
-            packageMetadata =
-                metadataList
-                    .Where(m => !m.Identity.Version.IsPrerelease)
-                    .OrderByDescending(m => m.Identity.Version)
-                    .FirstOrDefault()
-                ?? metadataList.OrderByDescending(m => m.Identity.Version).FirstOrDefault();
-        }
-        else
-        {
-            // Find specific version
-            var targetVersion = NuGetVersion.Parse(version);
-            packageMetadata = metadataList.FirstOrDefault(m => m.Identity.Version == targetVersion);
-        }
+        
+        var packageMetadata = string.IsNullOrEmpty(version)
+            ? metadataList
+                .Where(m => !m.Identity.Version.IsPrerelease)
+                .MaxBy(m => m.Identity.Version)
+              ?? metadataList.MaxBy(m => m.Identity.Version)
+            : metadataList.FirstOrDefault(m => m.Identity.Version == NuGetVersion.Parse(version));
 
         if (packageMetadata == null)
         {
@@ -343,19 +314,15 @@ public class NuGetService : IDisposable
                 packageMetadata.Identity.Version.ToNormalizedString()
             );
 
-            foreach (
-                var file in targetFramework.Items.Where(f =>
-                    f.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)
-                    && !f.Replace('\\', '/').Contains("/ref/")
-                )
-            )
-            {
-                var fullPath = Path.Combine(packagePath, file);
-                if (File.Exists(fullPath))
-                {
-                    assemblies.Add(fullPath);
-                }
-            }
+            assemblies.AddRange(
+                targetFramework.Items
+                    .Where(f =>
+                        f.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)
+                        && !f.Replace('\\', '/').Contains("/ref/")
+                    )
+                    .Select(file => Path.Combine(packagePath, file))
+                    .Where(File.Exists)
+            );
         }
 
         return assemblies;
