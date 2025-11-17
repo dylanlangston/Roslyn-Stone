@@ -1,9 +1,3 @@
-using RoslynStone.Core.Commands;
-using RoslynStone.Core.CQRS;
-using RoslynStone.Core.Models;
-using RoslynStone.Core.Queries;
-using RoslynStone.Infrastructure.CommandHandlers;
-using RoslynStone.Infrastructure.QueryHandlers;
 using RoslynStone.Infrastructure.Services;
 using RoslynStone.Infrastructure.Tools;
 
@@ -23,7 +17,7 @@ static void ConfigureLogging(ILoggingBuilder logging)
     });
 }
 
-// Shared method to register all services, command handlers, and query handlers
+// Shared method to register all services
 static void RegisterServices(IServiceCollection services)
 {
     // Register services
@@ -32,26 +26,6 @@ static void RegisterServices(IServiceCollection services)
     services.AddSingleton<CompilationService>();
     services.AddSingleton<AssemblyExecutionService>();
     services.AddSingleton<NuGetService>();
-
-    // Register command handlers
-    services.AddSingleton<
-        ICommandHandler<LoadPackageCommand, PackageReference>,
-        LoadPackageCommandHandler
-    >();
-
-    // Register query handlers
-    services.AddSingleton<
-        IQueryHandler<SearchPackagesQuery, PackageSearchResult>,
-        SearchPackagesQueryHandler
-    >();
-    services.AddSingleton<
-        IQueryHandler<GetPackageVersionsQuery, List<PackageVersion>>,
-        GetPackageVersionsQueryHandler
-    >();
-    services.AddSingleton<
-        IQueryHandler<GetPackageReadmeQuery, string?>,
-        GetPackageReadmeQueryHandler
-    >();
 }
 
 if (useHttpTransport)

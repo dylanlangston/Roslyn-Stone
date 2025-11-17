@@ -1,5 +1,7 @@
 using System.ComponentModel;
+using Microsoft.CodeAnalysis.CSharp.Scripting;
 using ModelContextProtocol.Server;
+using RoslynStone.Infrastructure.Functional;
 using RoslynStone.Infrastructure.Services;
 
 namespace RoslynStone.Infrastructure.Tools;
@@ -77,43 +79,21 @@ public class ReplTools
         CancellationToken cancellationToken = default
     )
     {
-        var script = Microsoft.CodeAnalysis.CSharp.Scripting.CSharpScript.Create(
-            code,
-            scriptingService.ScriptOptions
-        );
-
+        var script = CSharpScript.Create(code, scriptingService.ScriptOptions);
         var diagnostics = script.Compile(cancellationToken);
-
-        var issues = new List<object>();
-        var errorCount = 0;
-
-        foreach (var diagnostic in diagnostics)
-        {
-            var severity = diagnostic.Severity;
-            if (
-                severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error
-                || severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Warning
-            )
+        
+        var issues = diagnostics.ToCompilationErrors()
+            .Select(e => new
             {
-                if (severity == Microsoft.CodeAnalysis.DiagnosticSeverity.Error)
-                {
-                    errorCount++;
-                }
+                code = e.Code,
+                message = e.Message,
+                severity = e.Severity,
+                line = e.Line,
+                column = e.Column,
+            })
+            .ToList();
 
-                issues.Add(
-                    new
-                    {
-                        code = diagnostic.Id,
-                        message = diagnostic.GetMessage(),
-                        severity = severity.ToString(),
-                        line = diagnostic.Location.GetLineSpan().StartLinePosition.Line + 1,
-                        column = diagnostic.Location.GetLineSpan().StartLinePosition.Character + 1,
-                    }
-                );
-            }
-        }
-
-        return Task.FromResult<object>(new { isValid = errorCount == 0, issues });
+        return Task.FromResult<object>(new { isValid = !diagnostics.HasErrors(), issues });
     }
 
     /// <summary>

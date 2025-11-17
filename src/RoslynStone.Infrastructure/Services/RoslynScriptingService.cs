@@ -3,6 +3,7 @@ using System.Reflection;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
 using RoslynStone.Core.Models;
+using RoslynStone.Infrastructure.Functional;
 
 namespace RoslynStone.Infrastructure.Services;
 
@@ -116,24 +117,10 @@ public class RoslynScriptingService
         {
             stopwatch.Stop();
 
-            foreach (var diagnostic in ex.Diagnostics)
-            {
-                errors.Add(
-                    new CompilationError
-                    {
-                        Code = diagnostic.Id,
-                        Message = diagnostic.GetMessage(),
-                        Severity = diagnostic.Severity.ToString(),
-                        Line = diagnostic.Location.GetLineSpan().StartLinePosition.Line + 1,
-                        Column = diagnostic.Location.GetLineSpan().StartLinePosition.Character + 1,
-                    }
-                );
-            }
-
             return new ExecutionResult
             {
                 Success = false,
-                Errors = errors,
+                Errors = ex.Diagnostics.ToCompilationErrors(),
                 ExecutionTime = stopwatch.Elapsed,
             };
         }
