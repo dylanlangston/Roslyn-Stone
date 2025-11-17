@@ -14,20 +14,35 @@ public class ReplStateResource
     /// Get current REPL environment information as a resource
     /// </summary>
     /// <param name="scriptingService">The Roslyn scripting service</param>
-    /// <param name="uri">The resource URI: repl://state or repl://info</param>
+    /// <param name="uri">The resource URI: repl://state, repl://info, or repl://sessions/{contextId}/state</param>
     /// <returns>Information about current REPL state</returns>
     [McpServerResource]
     [Description(
-        "Access current REPL environment state and capabilities. Returns information about framework version, available namespaces, loaded assemblies, imported NuGet packages, current variables in scope, and REPL capabilities. Use this to understand what's available, check the current state, and get oriented in a session."
+        "Access current REPL environment state and capabilities. Returns information about framework version, available namespaces, loaded assemblies, imported NuGet packages, current variables in scope, and REPL capabilities. Use this to understand what's available, check the current state, and get oriented in a session. For session-specific state, use 'repl://sessions/{contextId}/state'."
     )]
     public static object GetReplState(
         RoslynScriptingService scriptingService,
         [Description(
-            "Resource URI. Use 'repl://state' or 'repl://info' to access current REPL environment information."
+            "Resource URI. Use 'repl://state' or 'repl://info' for general info, or 'repl://sessions/{contextId}/state' for session-specific state."
         )]
             string uri
     )
     {
+        // Check if this is a session-specific state request
+        var isSessionSpecific = uri.Contains("/sessions/", StringComparison.OrdinalIgnoreCase);
+        string? contextId = null;
+
+        if (isSessionSpecific)
+        {
+            // Extract context ID from URI: repl://sessions/{contextId}/state
+            var parts = uri.Split('/');
+            var sessionIndex = Array.FindIndex(parts, p => p.Equals("sessions", StringComparison.OrdinalIgnoreCase));
+            if (sessionIndex >= 0 && sessionIndex + 1 < parts.Length)
+            {
+                contextId = parts[sessionIndex + 1];
+            }
+        }
+
         var imports = new[]
         {
             "System",
@@ -37,13 +52,15 @@ public class ReplStateResource
             "System.Threading.Tasks",
         };
 
-        return new
+        var baseResponse = new
         {
             uri,
             mimeType = "application/json",
             frameworkVersion = ".NET 10.0",
             language = "C# 14",
             state = "Ready",
+            contextId = contextId, // Will be null for general queries, populated for session-specific
+            isSessionSpecific = isSessionSpecific,
             defaultImports = imports,
             capabilities = new
             {
@@ -74,5 +91,15 @@ public class ReplStateResource
                 consoleOutput = "Console.WriteLine(\"Debug\"); return \"Result\"",
             },
         };
+
+        // TODO: When ReplContextManager is implemented (Phase 2), retrieve actual session state here
+        // if (isSessionSpecific && !string.IsNullOrEmpty(contextId))
+        // {
+        //     var contextManager = ...; // Get from DI
+        //     var sessionState = contextManager.GetSessionState(contextId);
+        //     return new { ...baseResponse, sessionState };
+        // }
+
+        return baseResponse;
     }
 }

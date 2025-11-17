@@ -236,4 +236,26 @@ public class ResourceTests
         Assert.True(resultDict.ContainsKey("uri"));
         Assert.Equal(uri, resultDict["uri"].GetString());
     }
+
+    [Fact]
+    [Trait("Feature", "REPL")]
+    public void ReplStateResource_GetReplState_SessionSpecificUri_ReturnsSessionState()
+    {
+        // Arrange
+        var uri = "repl://sessions/test-context-123/state";
+
+        // Act
+        var result = ReplStateResource.GetReplState(_scriptingService, uri);
+        var json = JsonSerializer.Serialize(result);
+        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+
+        // Assert
+        Assert.NotNull(resultDict);
+        Assert.True(resultDict.ContainsKey("uri"));
+        Assert.Equal(uri, resultDict["uri"].GetString());
+        Assert.True(resultDict.ContainsKey("isSessionSpecific"));
+        Assert.True(resultDict["isSessionSpecific"].GetBoolean());
+        Assert.True(resultDict.ContainsKey("contextId"));
+        Assert.Equal("test-context-123", resultDict["contextId"].GetString());
+    }
 }
