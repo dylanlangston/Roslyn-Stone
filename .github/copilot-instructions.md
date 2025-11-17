@@ -83,6 +83,96 @@ dotnet test
 # 4. Then commit via report_progress
 ```
 
+## Using Roslyn-Stone MCP Tools (Dogfooding)
+
+**IMPORTANT**: When working on this repository, you have access to the roslyn-stone MCP server tools. Use these tools to validate C# code, test expressions, and look up documentation whenever possible.
+
+### Available MCP Tools
+
+#### EvaluateCsharp
+Execute C# code in a stateful REPL. Use this to:
+- Test C# expressions and validate they work as expected
+- Verify code snippets before adding them to the codebase
+- Experiment with .NET APIs and library methods
+- Check return values and side effects of code
+- Validate that refactorings produce the same results
+
+Example usage:
+```
+EvaluateCsharp: { code: "var x = 10; x * 2" }
+// Returns: { success: true, returnValue: 20, ... }
+```
+
+#### ValidateCsharp
+Validate C# syntax without executing. Use this to:
+- Check syntax before executing potentially problematic code
+- Validate code snippets in documentation or comments
+- Verify that code will compile before adding it
+- Understand compilation errors with detailed diagnostics
+
+Example usage:
+```
+ValidateCsharp: { code: "int x = 10; x * 2" }
+// Returns: { isValid: true, issues: [] }
+```
+
+#### GetDocumentation
+Look up XML documentation for .NET types and methods. Use this to:
+- Understand .NET API behavior and parameters
+- Find correct method signatures
+- Learn about available overloads and extensions
+- Get usage examples from XML docs
+
+Example usage:
+```
+GetDocumentation: { symbolName: "System.String" }
+// Returns comprehensive documentation with summary, parameters, examples
+```
+
+#### GetReplInfo
+Get information about the REPL environment. Use this to:
+- Understand what namespaces are available
+- Learn about REPL capabilities
+- Check the framework version
+- Get tips and examples
+
+#### LoadNuGetPackage
+Dynamically load NuGet packages. Use this to:
+- Test package APIs before adding dependencies
+- Experiment with different package versions
+- Validate package compatibility
+
+#### SearchNuGetPackages
+Search for NuGet packages. Use this to:
+- Find packages for specific functionality
+- Compare available options
+- Check package metadata and download counts
+
+### When to Use These Tools
+
+**ALWAYS** use these tools when:
+- Writing or modifying C# code to validate it works correctly
+- Testing expressions or algorithms to ensure correctness
+- Looking up .NET API documentation to understand behavior
+- Validating that refactoring preserves behavior
+- Checking syntax of complex expressions
+- Experimenting with different approaches to a problem
+
+**Example workflow**:
+1. Write a C# code change
+2. Use ValidateCsharp to check syntax
+3. Use EvaluateCsharp to test the logic works as expected
+4. Use GetDocumentation to verify API usage is correct
+5. Add the validated code to the codebase
+
+### Benefits of Using MCP Tools
+
+- **Faster iteration**: Test code without building the entire solution
+- **Higher confidence**: Validate changes work before committing
+- **Better understanding**: Use GetDocumentation to learn APIs
+- **Fewer bugs**: Catch errors early with ValidateCsharp
+- **Dogfooding**: Use the very tools we're building to build them
+
 ## Testing Guidelines
 
 - Write unit tests for new functionality

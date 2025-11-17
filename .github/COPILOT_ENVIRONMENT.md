@@ -8,6 +8,18 @@ The custom environment is configured through the `.github/workflows/copilot-setu
 
 ## Installed Tools
 
+### Roslyn-Stone MCP Server (Dogfooding)
+- **Purpose**: C# REPL and documentation tools for validating code changes
+- **Usage**: Test C# expressions, validate syntax, look up .NET documentation
+- **Tools Available**:
+  - `EvaluateCsharp` - Execute C# code in a stateful REPL
+  - `ValidateCsharp` - Validate C# syntax without execution
+  - `GetDocumentation` - Look up XML documentation for .NET types
+  - `GetReplInfo` - Get REPL environment information
+  - `LoadNuGetPackage` - Dynamically load NuGet packages
+  - `SearchNuGetPackages` - Search for NuGet packages
+- **Recommendation**: Use these tools to validate C# code changes before committing
+
 ### .NET 10 SDK
 - **Version**: 10.0.x (latest)
 - **Purpose**: Provides the latest C# features and runtime

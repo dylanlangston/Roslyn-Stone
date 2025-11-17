@@ -5,6 +5,14 @@ applyTo: '**/*.cs, **/*.csproj'
 
 # C# MCP Server Development
 
+## Dogfooding: Using Roslyn-Stone MCP Tools
+
+When working on this MCP server project, **ALWAYS** use the roslyn-stone MCP tools to validate your C# code:
+- Use `ValidateCsharp` to check syntax before committing
+- Use `EvaluateCsharp` to test code snippets and verify behavior
+- Use `GetDocumentation` to look up .NET API documentation
+- This validates our own tools while building them (dogfooding)
+
 ## Instructions
 
 - Use the **ModelContextProtocol** NuGet package (prerelease) for most projects: `dotnet add package ModelContextProtocol --prerelease`
