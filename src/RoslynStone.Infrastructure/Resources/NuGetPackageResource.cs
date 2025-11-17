@@ -1,5 +1,5 @@
 using System.ComponentModel;
-using System.Text.Encodings.Web;
+using Microsoft.AspNetCore.WebUtilities;
 using ModelContextProtocol.Server;
 using RoslynStone.Infrastructure.Services;
 
@@ -106,8 +106,8 @@ public class NuGetPackageResource
             };
         }
 
-        var query = ParseQueryString(uriObj.Query);
-        var version = query.TryGetValue("version", out var v) ? v : null;
+        var query = QueryHelpers.ParseQuery(uriObj.Query);
+        var version = query.TryGetValue("version", out var v) ? v.ToString() : null;
 
         var readme = await nugetService.GetPackageReadmeAsync(
             packageId,
@@ -124,26 +124,5 @@ public class NuGetPackageResource
             version = version ?? "latest",
             content = readme ?? "README not found",
         };
-    }
-
-    /// <summary>
-    /// Parse query string into dictionary using URL decoding
-    /// </summary>
-    private static Dictionary<string, string> ParseQueryString(string query)
-    {
-        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        if (string.IsNullOrWhiteSpace(query))
-            return result;
-
-        query = query.TrimStart('?');
-        foreach (var pair in query.Split('&'))
-        {
-            var parts = pair.Split('=', 2);
-            if (parts.Length == 2)
-            {
-                result[Uri.UnescapeDataString(parts[0])] = Uri.UnescapeDataString(parts[1]);
-            }
-        }
-        return result;
     }
 }

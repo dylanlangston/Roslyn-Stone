@@ -1,5 +1,5 @@
 using System.ComponentModel;
-using System.Text.Encodings.Web;
+using Microsoft.AspNetCore.WebUtilities;
 using ModelContextProtocol.Server;
 using RoslynStone.Infrastructure.Services;
 
@@ -36,8 +36,8 @@ public class NuGetSearchResource
             ? uri
             : $"nuget://{uri}");
 
-        var query = ParseQueryString(uriObj.Query);
-        var searchQuery = query.TryGetValue("q", out var q) ? q : "";
+        var query = QueryHelpers.ParseQuery(uriObj.Query);
+        var searchQuery = query.TryGetValue("q", out var q) ? q.ToString() : "";
         var skip = query.TryGetValue("skip", out var skipStr) && int.TryParse(skipStr, out var s) ? s : 0;
         var take = query.TryGetValue("take", out var takeStr) && int.TryParse(takeStr, out var t) ? Math.Min(t, 100) : 20;
 
@@ -69,26 +69,5 @@ public class NuGetSearchResource
             skip,
             take,
         };
-    }
-
-    /// <summary>
-    /// Parse query string into dictionary using URL decoding
-    /// </summary>
-    private static Dictionary<string, string> ParseQueryString(string query)
-    {
-        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        if (string.IsNullOrWhiteSpace(query))
-            return result;
-
-        query = query.TrimStart('?');
-        foreach (var pair in query.Split('&'))
-        {
-            var parts = pair.Split('=', 2);
-            if (parts.Length == 2)
-            {
-                result[Uri.UnescapeDataString(parts[0])] = Uri.UnescapeDataString(parts[1]);
-            }
-        }
-        return result;
     }
 }
