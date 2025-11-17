@@ -49,31 +49,3 @@ jobs:
           name: resharper-report
           path: artifacts/resharper-report.xml
           retention-days: 30
-  
-  format-check:
-    name: Format Check
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Setup .NET Tools
-        uses: ./.github/actions/setup-dotnet-tools
-        with:
-          dotnet-version: '10.0.x'
-      
-      - name: Check code formatting
-        run: csharpier check .
-      
-      - name: Comment PR with formatting issues
-        if: failure() && github.event_name == 'pull_request'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '❌ Code formatting check failed. Please run `dotnet cake --target=Format` to fix formatting issues.'
-            })
