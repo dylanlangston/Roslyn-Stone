@@ -67,11 +67,12 @@ Instructions for writing and maintaining tests:
 Directory containing custom agent definitions for specialized tasks.
 
 #### `CSharpExpert.agent.md`
-Custom agent definition for C# and .NET expertise. This agent should be delegated to for:
+Custom agent definition for C# and .NET expertise with functional programming focus. This agent should be delegated to for:
 - Complex C# code changes
 - Roslyn-specific implementations
 - .NET framework integrations
 - Performance-critical code paths
+- Functional programming refactorings (LINQ, pure functions, etc.)
 
 ### `/chatmodes/`
 Directory containing chat mode definitions for specialized conversational contexts.
