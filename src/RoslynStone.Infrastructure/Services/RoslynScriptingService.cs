@@ -10,11 +10,17 @@ namespace RoslynStone.Infrastructure.Services;
 /// <summary>
 /// Service for executing C# code using Roslyn scripting engine
 /// Thread-safe singleton service for REPL state management
+///
+/// Locking Strategy:
+/// - Uses a static semaphore to serialize all code execution across instances
+/// - This prevents Console.SetOut() interference between parallel tests
+/// - Individual methods that don't use Console.SetOut() use instance lock only
 /// </summary>
 public class RoslynScriptingService
 {
-    // Static semaphore to protect Console.SetOut across all instances (prevents parallel test interference)
-    private static readonly SemaphoreSlim _consoleOutputLock = new(1, 1);
+    // Static semaphore to serialize code execution across all instances
+    // This prevents Console.SetOut() interference in parallel tests
+    private static readonly SemaphoreSlim _executionLock = new(1, 1);
 
     private ScriptState? _scriptState;
     private ScriptOptions _scriptOptions;
@@ -66,64 +72,55 @@ public class RoslynScriptingService
         var errors = new List<CompilationError>();
         var warnings = new List<CompilationError>();
 
-        // Use static semaphore to prevent parallel console output capture across all instances
-        // This is critical for test isolation when multiple tests run in parallel
-        await _consoleOutputLock.WaitAsync(cancellationToken);
+        // Use static execution lock to prevent Console.SetOut() interference
+        // This serializes all code execution across instances for test safety
+        await _executionLock.WaitAsync(cancellationToken);
         try
         {
-            // Use instance semaphore to protect this instance's script state
-            await _stateLock.WaitAsync(cancellationToken);
+            // Capture console output
+            var originalOut = Console.Out;
+            Console.SetOut(_outputWriter);
+
             try
             {
-                // Capture console output
-                var originalOut = Console.Out;
-                Console.SetOut(_outputWriter);
+                // Continue from previous state or start new
+                _scriptState =
+                    _scriptState == null
+                        ? await CSharpScript.RunAsync(
+                            code,
+                            _scriptOptions,
+                            cancellationToken: cancellationToken
+                        )
+                        : await _scriptState.ContinueWithAsync(
+                            code,
+                            cancellationToken: cancellationToken
+                        );
 
-                try
+                stopwatch.Stop();
+
+                // Ensure all output is flushed
+                await Console.Out.FlushAsync();
+
+                // Get the current output
+                var output = _outputWriter.ToString();
+
+                // Clear the buffer for next execution
+                var sb = _outputWriter.GetStringBuilder();
+                sb.Clear();
+
+                return new ExecutionResult
                 {
-                    // Continue from previous state or start new
-                    _scriptState =
-                        _scriptState == null
-                            ? await CSharpScript.RunAsync(
-                                code,
-                                _scriptOptions,
-                                cancellationToken: cancellationToken
-                            )
-                            : await _scriptState.ContinueWithAsync(
-                                code,
-                                cancellationToken: cancellationToken
-                            );
-
-                    stopwatch.Stop();
-
-                    // Ensure all output is flushed
-                    await Console.Out.FlushAsync();
-
-                    // Get the current output
-                    var output = _outputWriter.ToString();
-
-                    // Clear the buffer for next execution
-                    var sb = _outputWriter.GetStringBuilder();
-                    sb.Clear();
-
-                    return new ExecutionResult
-                    {
-                        Success = true,
-                        ReturnValue = _scriptState.ReturnValue,
-                        Output = output,
-                        Errors = errors,
-                        Warnings = warnings,
-                        ExecutionTime = stopwatch.Elapsed,
-                    };
-                }
-                finally
-                {
-                    Console.SetOut(originalOut);
-                }
+                    Success = true,
+                    ReturnValue = _scriptState.ReturnValue,
+                    Output = output,
+                    Errors = errors,
+                    Warnings = warnings,
+                    ExecutionTime = stopwatch.Elapsed,
+                };
             }
             finally
             {
-                _stateLock.Release();
+                Console.SetOut(originalOut);
             }
         }
         catch (CompilationErrorException ex)
@@ -158,7 +155,7 @@ public class RoslynScriptingService
         }
         finally
         {
-            _consoleOutputLock.Release();
+            _executionLock.Release();
         }
     }
 

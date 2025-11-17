@@ -190,14 +190,13 @@ public class NuGetTools
                 message = $"Package '{packageName}' version '{version ?? "latest"}' loaded successfully",
             };
         }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
         {
             logger.LogError(
                 ex,
-                "Failed to load package '{PackageName}' version '{Version}': {ErrorMessage}",
+                "Package '{PackageName}' version '{Version}' not found or could not be downloaded",
                 packageName,
-                version ?? "latest",
-                ex.Message
+                version ?? "latest"
             );
 
             return new
@@ -205,7 +204,41 @@ public class NuGetTools
                 packageName,
                 version = version ?? "unspecified",
                 isLoaded = false,
-                message = $"Failed to load package '{packageName}': {ex.Message}",
+                message = $"Package not found: {ex.Message}",
+            };
+        }
+        catch (IOException ex)
+        {
+            logger.LogError(
+                ex,
+                "Failed to access package files for '{PackageName}' version '{Version}'",
+                packageName,
+                version ?? "latest"
+            );
+
+            return new
+            {
+                packageName,
+                version = version ?? "unspecified",
+                isLoaded = false,
+                message = $"File access error: {ex.Message}",
+            };
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogError(
+                ex,
+                "Unexpected error loading package '{PackageName}' version '{Version}'",
+                packageName,
+                version ?? "latest"
+            );
+
+            return new
+            {
+                packageName,
+                version = version ?? "unspecified",
+                isLoaded = false,
+                message = $"Failed to load package: {ex.Message}",
             };
         }
     }
