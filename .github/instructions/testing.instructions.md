@@ -11,6 +11,14 @@ scope:
 
 # Testing Instructions
 
+## Using MCP Tools for Test Development
+
+When writing tests, use the roslyn-stone MCP tools to validate test code:
+- Use `ValidateCsharp` to check test code syntax
+- Use `EvaluateCsharp` to verify test assertions and expected behavior
+- Use `GetDocumentation` to look up xUnit attributes and .NET testing APIs
+- This ensures test code is correct before running the full test suite
+
 ## Testing Framework
 
 Use xUnit as the primary testing framework for consistency with .NET conventions.
