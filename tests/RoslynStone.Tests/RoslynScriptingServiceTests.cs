@@ -329,8 +329,8 @@ Console.Write(""Line2"");
         // Act
         await service.AddPackageReferenceAsync("TestPackage", "1.0.0", new List<string>());
 
-        // Assert
-        Assert.True(true); // Should not throw
+        // Assert - Should not throw
+        // If an exception is thrown, the test will fail automatically.
     }
 
     [Fact]
@@ -344,8 +344,7 @@ Console.Write(""Line2"");
         // Act
         await service.AddPackageReferenceAsync("TestPackage", "1.0.0", invalidPaths);
 
-        // Assert
-        Assert.True(true); // Should skip nonexistent files without throwing
+        // Assert - Test passes if no exception is thrown and method completes successfully.
     }
 
     [Fact]
@@ -376,8 +375,7 @@ Console.Write(""Line2"");
         }
         else
         {
-            // Skip if assembly path is not accessible
-            Assert.True(true, "Assembly path not accessible in test environment");
+            // Skip: Assembly path not accessible in test environment.
         }
     }
 
@@ -408,8 +406,7 @@ Console.Write(""Line2"");
         }
         else
         {
-            // Skip if assembly path is not accessible
-            Assert.True(true, "Assembly path not accessible in test environment");
+            // Skip: Assembly path not accessible in test environment.
         }
     }
 

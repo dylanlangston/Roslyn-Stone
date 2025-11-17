@@ -130,10 +130,10 @@ public class NuGetServiceTests
             Assert.NotEmpty(assemblyPaths);
             Assert.All(assemblyPaths, path => Assert.EndsWith(".dll", path));
         }
-        catch (InvalidOperationException ex)
+        catch (InvalidOperationException)
         {
-            // Download may fail in CI environment
-            Assert.True(true, $"Package download skipped: {ex.Message}");
+            // Download may fail in CI environment (e.g., no network or NuGet unavailable).
+            // Test is allowed to pass in this case.
         }
     }
 
@@ -169,8 +169,8 @@ public class NuGetServiceTests
         }
         catch (InvalidOperationException)
         {
-            // Package download may fail in test environment
-            Assert.True(true, "Package download failed in test environment");
+            // Package download may fail in test environment.
+            // Test passes if method completes without throwing unexpected exceptions.
         }
     }
 
@@ -192,8 +192,8 @@ public class NuGetServiceTests
         }
         catch (InvalidOperationException)
         {
-            // Package download may fail in test environment
-            Assert.True(true, "Package download failed in test environment");
+            // Package download may fail in test environment.
+            // Test passes if method completes without throwing unexpected exceptions.
         }
     }
 
