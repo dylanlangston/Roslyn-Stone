@@ -63,6 +63,8 @@ npm-debug.log
 ### Docker/Compose
 docker-compose*
 Dockerfile*
+**/bin/
+**/obj/
 
 ### Kubernetes / Helm (charts)
 charts/
