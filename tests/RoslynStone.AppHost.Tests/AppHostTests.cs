@@ -10,6 +10,8 @@ namespace RoslynStone.AppHost.Tests;
 /// These tests verify that the distributed application starts correctly and
 /// that the MCP server HTTP endpoint is accessible.
 /// </summary>
+[Trait("Category", "Integration")]
+[Trait("Component", "Aspire")]
 public class AppHostTests
 {
     [Fact]
@@ -60,10 +62,10 @@ public class AppHostTests
             DistributedApplicationOperation.Publish
         );
 
-        Assert.True(env.ContainsKey("MCP_TRANSPORT"));
-        Assert.Equal("http", env["MCP_TRANSPORT"]);
-        Assert.True(env.ContainsKey("OTEL_SERVICE_NAME"));
-        Assert.Equal("roslyn-stone-mcp", env["OTEL_SERVICE_NAME"]);
+        Assert.True(env.TryGetValue("MCP_TRANSPORT", out var mcpTransport));
+        Assert.Equal("http", mcpTransport);
+        Assert.True(env.TryGetValue("OTEL_SERVICE_NAME", out var otelServiceName));
+        Assert.Equal("roslyn-stone-mcp", otelServiceName);
     }
 
     [Fact]

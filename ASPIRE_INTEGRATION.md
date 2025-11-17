@@ -57,7 +57,7 @@ This document summarizes the changes made to containerize the Roslyn-Stone MCP s
 - **Still Available**: Can still be used by running the API directly with `MCP_TRANSPORT=stdio`
 - **Use Case**: Direct execution, Claude Desktop integration, local development
 
-### 3. Containerization
+### 4. Containerization
 
 #### Dockerfile
 - **Location**: `src/RoslynStone.Api/Dockerfile`
@@ -82,7 +82,7 @@ This document summarizes the changes made to containerize the Roslyn-Stone MCP s
   - OTLP endpoint configuration
   - Dashboard accessible at http://localhost:18888
 
-### 4. CI/CD
+### 5. CI/CD
 
 #### .github/workflows/container.yml
 - **Purpose**: Build and publish container images to GHCR
@@ -94,7 +94,7 @@ This document summarizes the changes made to containerize the Roslyn-Stone MCP s
   - Artifact attestation
   - Only pushes on non-PR events
 
-### 5. Documentation
+### 6. Documentation
 
 #### README.md
 - **Updates**:
