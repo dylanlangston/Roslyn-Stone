@@ -13,10 +13,13 @@ namespace RoslynStone.Infrastructure.Services;
 /// </summary>
 public class RoslynScriptingService
 {
+    // Static semaphore to protect Console.SetOut across all instances (prevents parallel test interference)
+    private static readonly SemaphoreSlim _consoleOutputLock = new(1, 1);
+
     private ScriptState? _scriptState;
     private ScriptOptions _scriptOptions;
     private readonly StringWriter _outputWriter;
-    private readonly SemaphoreSlim _semaphore = new(1, 1); // Thread-safe async execution
+    private readonly SemaphoreSlim _stateLock = new(1, 1); // Protects instance state
 
     /// <summary>
     /// Gets the script options used for compilation
@@ -63,54 +66,64 @@ public class RoslynScriptingService
         var errors = new List<CompilationError>();
         var warnings = new List<CompilationError>();
 
-        // Use SemaphoreSlim for thread-safe async execution
-        await _semaphore.WaitAsync(cancellationToken);
+        // Use static semaphore to prevent parallel console output capture across all instances
+        // This is critical for test isolation when multiple tests run in parallel
+        await _consoleOutputLock.WaitAsync(cancellationToken);
         try
         {
-            // Capture console output
-            var originalOut = Console.Out;
-            Console.SetOut(_outputWriter);
-
+            // Use instance semaphore to protect this instance's script state
+            await _stateLock.WaitAsync(cancellationToken);
             try
             {
-                // Continue from previous state or start new
-                _scriptState =
-                    _scriptState == null
-                        ? await CSharpScript.RunAsync(
-                            code,
-                            _scriptOptions,
-                            cancellationToken: cancellationToken
-                        )
-                        : await _scriptState.ContinueWithAsync(
-                            code,
-                            cancellationToken: cancellationToken
-                        );
+                // Capture console output
+                var originalOut = Console.Out;
+                Console.SetOut(_outputWriter);
 
-                stopwatch.Stop();
-
-                // Ensure all output is flushed
-                await Console.Out.FlushAsync();
-
-                // Get the current output
-                var output = _outputWriter.ToString();
-
-                // Clear the buffer for next execution
-                var sb = _outputWriter.GetStringBuilder();
-                sb.Clear();
-
-                return new ExecutionResult
+                try
                 {
-                    Success = true,
-                    ReturnValue = _scriptState.ReturnValue,
-                    Output = output,
-                    Errors = errors,
-                    Warnings = warnings,
-                    ExecutionTime = stopwatch.Elapsed,
-                };
+                    // Continue from previous state or start new
+                    _scriptState =
+                        _scriptState == null
+                            ? await CSharpScript.RunAsync(
+                                code,
+                                _scriptOptions,
+                                cancellationToken: cancellationToken
+                            )
+                            : await _scriptState.ContinueWithAsync(
+                                code,
+                                cancellationToken: cancellationToken
+                            );
+
+                    stopwatch.Stop();
+
+                    // Ensure all output is flushed
+                    await Console.Out.FlushAsync();
+
+                    // Get the current output
+                    var output = _outputWriter.ToString();
+
+                    // Clear the buffer for next execution
+                    var sb = _outputWriter.GetStringBuilder();
+                    sb.Clear();
+
+                    return new ExecutionResult
+                    {
+                        Success = true,
+                        ReturnValue = _scriptState.ReturnValue,
+                        Output = output,
+                        Errors = errors,
+                        Warnings = warnings,
+                        ExecutionTime = stopwatch.Elapsed,
+                    };
+                }
+                finally
+                {
+                    Console.SetOut(originalOut);
+                }
             }
             finally
             {
-                Console.SetOut(originalOut);
+                _stateLock.Release();
             }
         }
         catch (CompilationErrorException ex)
@@ -145,7 +158,7 @@ public class RoslynScriptingService
         }
         finally
         {
-            _semaphore.Release();
+            _consoleOutputLock.Release();
         }
     }
 
@@ -161,7 +174,7 @@ public class RoslynScriptingService
         List<string>? assemblyPaths = null
     )
     {
-        await _semaphore.WaitAsync();
+        await _stateLock.WaitAsync();
         try
         {
             if (assemblyPaths != null && assemblyPaths.Count > 0)
@@ -178,7 +191,7 @@ public class RoslynScriptingService
         }
         finally
         {
-            _semaphore.Release();
+            _stateLock.Release();
         }
     }
 
@@ -187,7 +200,7 @@ public class RoslynScriptingService
     /// </summary>
     public void Reset()
     {
-        _semaphore.Wait();
+        _stateLock.Wait();
         try
         {
             _scriptState = null;
@@ -195,7 +208,7 @@ public class RoslynScriptingService
         }
         finally
         {
-            _semaphore.Release();
+            _stateLock.Release();
         }
     }
 }
