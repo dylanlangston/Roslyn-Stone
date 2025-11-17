@@ -1,21 +1,77 @@
 # Roslyn-Stone
 
-A developer- and LLM-friendly C# REPL service built with Roslyn and the Model Context Protocol (MCP) SDK. Execute C# code, validate syntax, and lookup documentation through MCP stdio or HTTP transport for seamless AI integration.
+> **Note**: This project was collaboratively built with GitHub Copilot, embracing the future of AI-assisted development.
+
+A developer- and LLM-friendly C# REPL (Read-Eval-Print Loop) service that brings the power of the Roslyn compiler to AI coding assistants. Named as a playful nod to the Rosetta Stone—the ancient artifact that helped decode languages—Roslyn-Stone helps AI systems decode and execute C# code seamlessly through the Model Context Protocol (MCP).
+
+Execute C# code, validate syntax, load NuGet packages, and lookup documentation through MCP for seamless integration with Claude Code, VS Code, and other AI-powered development tools.
+
+## Quick Start with Docker
+
+The fastest way to get started is using the pre-built Docker container with your favorite MCP-enabled editor:
+
+### Claude Code / VS Code / Cursor
+
+Add this to your MCP configuration file:
+
+**Linux/macOS**: `~/.config/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json`  
+**Windows**: `%APPDATA%\Code\User\globalStorage\saoudrizwan.claude-dev\settings\cline_mcp_settings.json`
+
+```json
+{
+   "mcpServers": {
+       "roslyn-stone": {
+           "command": "docker",
+           "args": [
+               "run",
+               "-i",
+               "--rm",
+               "-e", "DOTNET_USE_POLLING_FILE_WATCHER=1",
+               "ghcr.io/dylanlangston/roslyn-stone:latest"
+           ]
+       }
+   }
+}
+```
+
+**Using Podman?** Just replace `"docker"` with `"podman"` in the command field.
+
+### Claude Desktop
+
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or equivalent:
+
+```json
+{
+   "mcpServers": {
+       "roslyn-stone": {
+           "command": "docker",
+           "args": [
+               "run",
+               "-i",
+               "--rm",
+               "-e", "DOTNET_USE_POLLING_FILE_WATCHER=1",
+               "ghcr.io/dylanlangston/roslyn-stone:latest"
+           ]
+       }
+   }
+}
+```
+
+That's it! The container provides isolated execution of C# code with minimal setup and enhanced security.
 
 ## Features
 
-✨ **C# REPL via Roslyn Scripting** - Execute C# code snippets with state preservation  
-🔍 **Real-time Compile Error Reporting** - Get detailed compilation errors and warnings  
-📚 **XML Documentation Lookup** - Query .NET type/method documentation via reflection  
-📦 **NuGet Package Support** - Search, discover, and load NuGet packages dynamically  
-🏗️ **CQRS Architecture** - Clean separation of commands and queries  
-🔌 **MCP Protocol** - Official ModelContextProtocol SDK with stdio and HTTP transports  
-🌐 **Dual Transport** - Support for both stdio (local) and HTTP (remote) MCP connections  
-🤖 **AI-Friendly** - Designed for LLM interactions via Model Context Protocol  
-💡 **Built-in Guidance** - Comprehensive prompts help LLMs use the REPL effectively  
-📖 **Rich Tool Descriptions** - Detailed, LLM-friendly descriptions with examples and context  
-🐳 **Containerized** - Docker support with .NET Aspire orchestration  
-📊 **OpenTelemetry** - Built-in observability with logs, metrics, and traces  
+**C# REPL via Roslyn Scripting** - Execute C# code snippets with state preservation  
+**Real-time Compile Error Reporting** - Get detailed compilation errors and warnings  
+**XML Documentation Lookup** - Query .NET type/method documentation via reflection  
+**NuGet Package Support** - Search, discover, and load NuGet packages dynamically  
+**MCP Protocol** - Official ModelContextProtocol SDK with stdio and HTTP transports  
+**Dual Transport** - Support for both stdio (local) and HTTP (remote) MCP connections  
+**AI-Friendly** - Designed for LLM interactions via Model Context Protocol  
+**Built-in Guidance** - Comprehensive prompts help LLMs use the REPL effectively  
+**Rich Tool Descriptions** - Detailed, LLM-friendly descriptions with examples and context  
+**Containerized** - Docker support with .NET Aspire orchestration  
+**OpenTelemetry** - Built-in observability with logs, metrics, and traces  
 
 ## Architecture
 
@@ -72,19 +128,11 @@ These prompts provide detailed guidance on how to use the REPL, including exampl
 
 ### Service Layer
 
-## Getting Started
+## Alternative Setup Options
 
-### Prerequisites
+### Local Development (No Docker)
 
-- .NET 10.0 SDK or later
-- C# 13
-- Docker (optional, for containerized deployment)
-- VS Code with Dev Containers extension (optional, for containerized development)
-- .NET Aspire workload (optional, for local orchestration)
-
-### Build and Run
-
-#### Local Development
+If you prefer to run without containers:
 
 ```bash
 # Clone the repository
@@ -100,11 +148,15 @@ dotnet test
 # Run the MCP server (stdio transport - default)
 cd src/RoslynStone.Api
 dotnet run
-
-# Run the MCP server with HTTP transport
-cd src/RoslynStone.Api
-MCP_TRANSPORT=http dotnet run --urls "http://localhost:8080"
 ```
+
+### Prerequisites
+
+- .NET 10.0 SDK or later
+- C# 13
+- Docker (for containerized deployment)
+- VS Code with Dev Containers extension (optional)
+- .NET Aspire workload (optional, for local orchestration)
 
 #### Transport Modes
 
@@ -134,7 +186,7 @@ MCP_TRANSPORT=http dotnet run --urls "http://localhost:8080"
 #### With Aspire (Orchestrated)
 
 ```bash
-# Install Aspire workload (or skip if you don't need local orchestration)
+# Install Aspire workload
 dotnet workload install aspire
 
 # Run with Aspire dashboard for observability
@@ -163,7 +215,7 @@ code .
 # The container will automatically build, restore dependencies, and build the project
 ```
 
-See [`.devcontainer/README.md`](.devcontainer/README.md) for more details about the devcontainer setup and Docker-in-Docker testing.
+See [`.devcontainer/README.md`](.devcontainer/README.md) for more details about the devcontainer setup.
 
 #### Docker Compose (Containerized)
 
@@ -185,20 +237,13 @@ The server supports both stdio and HTTP transport modes:
 - **Stdio transport**: Reads JSON-RPC messages from stdin and writes responses to stdout, with logging to stderr
 - **HTTP transport**: Exposes MCP endpoints via HTTP/SSE for remote access at `/mcp`
 
-## Container Registry
+## Advanced Configuration
 
-Pre-built container images are available from GitHub Container Registry:
+### Custom MCP Server Configurations
 
-```bash
-docker pull ghcr.io/dylanlangston/roslyn-stone:latest
-```
+For local development without Docker:
 
-## Usage with MCP Clients
-
-### Claude Desktop Configuration (Stdio - Local)
-
-Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
-
+**Claude Desktop:**
 ```json
 {
   "mcpServers": {
@@ -214,23 +259,7 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
 }
 ```
 
-### Claude Desktop Configuration (Stdio - Docker)
-
-```json
-{
-  "mcpServers": {
-    "roslyn-stone": {
-      "command": "docker",
-      "args": ["run", "-i", "--rm", "ghcr.io/dylanlangston/roslyn-stone:latest"],
-      "env": {
-        "MCP_TRANSPORT": "stdio"
-      }
-    }
-  }
-}
-```
-
-### HTTP Transport Configuration
+**HTTP Transport:**
 
 For remote MCP servers or web-based integrations, use HTTP transport:
 
