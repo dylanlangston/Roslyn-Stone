@@ -16,7 +16,8 @@ public class AppHostTests
     public async Task AppHost_CreatesSuccessfully()
     {
         // Arrange & Act
-        var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.RoslynStone_AppHost>();
+        var appHost =
+            await DistributedApplicationTestingBuilder.CreateAsync<Projects.RoslynStone_AppHost>();
 
         // Assert
         Assert.NotNull(appHost);
@@ -26,10 +27,12 @@ public class AppHostTests
     public async Task McpServer_HasHttpEndpoint()
     {
         // Arrange
-        var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.RoslynStone_AppHost>();
+        var appHost =
+            await DistributedApplicationTestingBuilder.CreateAsync<Projects.RoslynStone_AppHost>();
 
         // Act
-        var mcpServer = appHost.Resources.OfType<IResourceWithEndpoints>()
+        var mcpServer = appHost
+            .Resources.OfType<IResourceWithEndpoints>()
             .FirstOrDefault(r => r.Name == "roslyn-stone-mcp");
 
         // Assert
@@ -43,15 +46,19 @@ public class AppHostTests
     public async Task McpServer_HasCorrectEnvironmentVariables()
     {
         // Arrange
-        var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.RoslynStone_AppHost>();
+        var appHost =
+            await DistributedApplicationTestingBuilder.CreateAsync<Projects.RoslynStone_AppHost>();
 
         // Act
-        var mcpServer = appHost.Resources.OfType<IResourceWithEnvironment>()
+        var mcpServer = appHost
+            .Resources.OfType<IResourceWithEnvironment>()
             .FirstOrDefault(r => r.Name == "roslyn-stone-mcp");
 
         // Assert
         Assert.NotNull(mcpServer);
-        var env = await mcpServer.GetEnvironmentVariableValuesAsync(DistributedApplicationOperation.Publish);
+        var env = await mcpServer.GetEnvironmentVariableValuesAsync(
+            DistributedApplicationOperation.Publish
+        );
 
         Assert.True(env.ContainsKey("MCP_TRANSPORT"));
         Assert.Equal("http", env["MCP_TRANSPORT"]);
@@ -63,7 +70,8 @@ public class AppHostTests
     public async Task McpServer_IsConfiguredAsProjectResource()
     {
         // Arrange
-        var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.RoslynStone_AppHost>();
+        var appHost =
+            await DistributedApplicationTestingBuilder.CreateAsync<Projects.RoslynStone_AppHost>();
 
         // Act
         var mcpServer = appHost.Resources.FirstOrDefault(r => r.Name == "roslyn-stone-mcp");
@@ -77,10 +85,15 @@ public class AppHostTests
     public async Task McpServer_DoesNotHaveStdioTransport()
     {
         // Arrange
-        var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.RoslynStone_AppHost>();
+        var appHost =
+            await DistributedApplicationTestingBuilder.CreateAsync<Projects.RoslynStone_AppHost>();
 
         // Act - there should only be one resource named "roslyn-stone-mcp"
-        var mcpServers = appHost.Resources.Where(r => r.Name.Contains("roslyn-stone-mcp", StringComparison.OrdinalIgnoreCase)).ToList();
+        var mcpServers = appHost
+            .Resources.Where(r =>
+                r.Name.Contains("roslyn-stone-mcp", StringComparison.OrdinalIgnoreCase)
+            )
+            .ToList();
 
         // Assert - verify only HTTP transport is configured (no stdio)
         Assert.Single(mcpServers);
@@ -91,7 +104,8 @@ public class AppHostTests
     public async Task McpInspector_IsConfiguredInDevelopment()
     {
         // Arrange
-        var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.RoslynStone_AppHost>();
+        var appHost =
+            await DistributedApplicationTestingBuilder.CreateAsync<Projects.RoslynStone_AppHost>();
 
         // Act
         var inspector = appHost.Resources.FirstOrDefault(r => r.Name == "mcp-inspector");
@@ -105,10 +119,12 @@ public class AppHostTests
     public async Task McpInspector_HasUiAndProxyEndpoints()
     {
         // Arrange
-        var appHost = await DistributedApplicationTestingBuilder.CreateAsync<Projects.RoslynStone_AppHost>();
+        var appHost =
+            await DistributedApplicationTestingBuilder.CreateAsync<Projects.RoslynStone_AppHost>();
 
         // Act
-        var inspector = appHost.Resources.OfType<IResourceWithEndpoints>()
+        var inspector = appHost
+            .Resources.OfType<IResourceWithEndpoints>()
             .FirstOrDefault(r => r.Name == "mcp-inspector");
 
         // Assert

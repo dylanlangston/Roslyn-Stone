@@ -24,7 +24,7 @@ This document summarizes the changes made to containerize the Roslyn-Stone MCP s
   - AppHost.cs: Configures MCP server as a containerized resource with HTTP transport
   - Provides Aspire dashboard for telemetry visualization
   - Manages service lifecycle and configuration
-  - **MCP Inspector Integration**: Automatically starts the MCP Inspector in development mode, configured to connect to the HTTP endpoint via SSE transport
+  - **MCP Inspector Integration**: Uses CommunityToolkit.Aspire.Hosting.McpInspector package to automatically launch and configure the inspector in development mode
 
 #### RoslynStone.AppHost.Tests
 - **Purpose**: Integration tests for Aspire configuration
@@ -150,25 +150,24 @@ dotnet run
 
 ### Using MCP Inspector
 
-The MCP Inspector is automatically launched when running the AppHost in development mode and is pre-configured to connect to the HTTP MCP server via SSE transport.
+The MCP Inspector is automatically launched when running the AppHost in development mode using the CommunityToolkit.Aspire.Hosting.McpInspector package.
 
 **Automatic Configuration:**
-- Inspector UI: http://localhost:6274
-- Inspector Proxy: http://localhost:6277
-- Automatically connects to: http://localhost:8080/mcp/sse (or configured port)
+- Inspector UI: http://localhost:6274 (configurable via `INSPECTOR_UI_PORT`)
+- Inspector Proxy: http://localhost:6277 (configurable via `INSPECTOR_PROXY_PORT`)
+- Automatically connects to the MCP server's HTTP endpoint
 
 **Usage:**
 1. Start the Aspire AppHost: `cd src/RoslynStone.AppHost && dotnet run`
 2. Open the Inspector UI at http://localhost:6274
-3. The inspector is already configured to connect to your MCP server
+3. The inspector is automatically connected to your MCP server
 4. Test MCP tools through the visual interface
 5. Export server configurations for Claude Desktop or other MCP clients
 
-**Manual Configuration (if needed):**
-```bash
-# Run inspector separately with custom configuration
-npx @modelcontextprotocol/inspector -t sse -u http://localhost:8080/mcp/sse
-```
+**Technical Details:**
+- Uses `AddMcpInspector()` extension from CommunityToolkit package
+- Automatically discovers and connects to MCP resources via `WithMcpServer()`
+- Inspector endpoints are named "client" (UI) and "server-proxy" (proxy)
 
 ### Docker Compose
 ```bash
@@ -221,19 +220,20 @@ dotnet test
 
 ### MCP Inspector Integration
 
-The MCP Inspector is automatically launched by the AppHost in development mode and pre-configured to connect to the HTTP MCP server:
+The MCP Inspector is automatically launched by the AppHost in development mode using the CommunityToolkit.Aspire.Hosting.McpInspector package:
 
 **Features:**
 - Automatically starts when running `dotnet run` from AppHost in development
-- Pre-configured to connect via SSE transport to the HTTP endpoint
+- Uses managed Aspire resource instead of manual npx execution
+- Automatically discovers and connects to MCP server resources
 - Provides interactive web UI at `http://localhost:6274`
 - Test MCP tools without writing code
 - View real-time request/response data
 - Export server configurations for Claude Desktop and other clients
 
 **Ports:**
-- `6274`: Inspector UI (web interface)
-- `6277`: MCP Proxy (protocol bridge)
+- `6274`: Inspector UI (web interface) - endpoint name: "client"
+- `6277`: MCP Proxy (protocol bridge) - endpoint name: "server-proxy"
 
 **Environment Detection:**
 The inspector only starts when:
@@ -243,9 +243,10 @@ The inspector only starts when:
 **Benefits:**
 - Seamless testing experience alongside Aspire dashboard
 - No manual setup or configuration required
-- Automatically connects to the MCP server via runtime endpoint resolution
+- Automatic connection to MCP server via `WithMcpServer()` extension
 - Visual feedback on tool execution
 - Easy configuration export
+- Better integration with Aspire lifecycle management
 
 ## Compatibility
 
