@@ -241,6 +241,7 @@ public class AssemblyExecutionResult
     /// <summary>
     /// Gets or sets the return value from the entry point
     /// </summary>
+    // ReSharper disable once UnusedAutoPropertyAccessor.Global
     public object? ReturnValue { get; init; }
 
     /// <summary>
@@ -256,5 +257,6 @@ public class AssemblyExecutionResult
     /// <summary>
     /// Gets or sets the exception that occurred during execution
     /// </summary>
+    // ReSharper disable once UnusedAutoPropertyAccessor.Global
     public Exception? Exception { get; init; }
 }

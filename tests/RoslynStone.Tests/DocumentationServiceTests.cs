@@ -1,5 +1,4 @@
 using RoslynStone.Infrastructure.Services;
-using Xunit;
 
 namespace RoslynStone.Tests;
 
@@ -25,7 +24,7 @@ public class DocumentationServiceTests
         var symbolName = "System.String";
 
         // Act
-        var result = _service.GetDocumentation(symbolName);
+        _ = _service.GetDocumentation(symbolName);
 
         // Assert
         // Documentation may or may not be available depending on the runtime

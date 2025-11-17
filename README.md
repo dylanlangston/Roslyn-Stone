@@ -12,6 +12,8 @@ A developer- and LLM-friendly C# REPL service built with Roslyn and the Model Co
 🔌 **MCP Protocol** - Official ModelContextProtocol SDK with stdio and HTTP transports  
 🌐 **Dual Transport** - Support for both stdio (local) and HTTP (remote) MCP connections  
 🤖 **AI-Friendly** - Designed for LLM interactions via Model Context Protocol  
+💡 **Built-in Guidance** - Comprehensive prompts help LLMs use the REPL effectively  
+📖 **Rich Tool Descriptions** - Detailed, LLM-friendly descriptions with examples and context  
 🐳 **Containerized** - Docker support with .NET Aspire orchestration  
 📊 **OpenTelemetry** - Built-in observability with logs, metrics, and traces  
 
@@ -37,6 +39,7 @@ RoslynStone/
 - **EvaluateCsharp** - Execute C# code with return value and output
 - **ValidateCsharp** - Syntax/semantic validation without execution
 - **ResetRepl** - Clear REPL state
+- **GetReplInfo** - Get information about the REPL environment and capabilities
 
 #### Documentation Tools
 - **GetDocumentation** - XML documentation lookup for .NET symbols
@@ -46,6 +49,17 @@ RoslynStone/
 - **GetNuGetPackageVersions** - Get all available versions of a package
 - **GetNuGetPackageReadme** - Get the README content for a package
 - **LoadNuGetPackage** - Load a NuGet package into the REPL environment
+
+### MCP Prompts
+
+Roslyn-Stone includes built-in prompts to help LLMs use the REPL effectively:
+
+- **GetStartedWithCsharpRepl** - Comprehensive introduction to Roslyn-Stone's capabilities, quick start guide, and best practices
+- **CodeExperimentationWorkflow** - Step-by-step guide for iterative development using the REPL
+- **PackageIntegrationGuide** - How to discover, evaluate, and use NuGet packages
+- **DebuggingAndErrorHandling** - Understanding compilation errors, runtime errors, and debugging techniques
+
+These prompts provide detailed guidance on how to use the REPL, including examples, common patterns, and tips for success.
 
 ### CQRS Pattern
 
@@ -466,6 +480,42 @@ LoadNuGetPackage: { packageName: "Newtonsoft.Json", version: "13.0.3" }
 code: "using Newtonsoft.Json; var obj = new { Name = \"Test\" }; JsonConvert.SerializeObject(obj)"
 
 // Returns: "{\"Name\":\"Test\"}"
+```
+
+### Getting Started with Prompts
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "prompts/get",
+  "params": {
+    "name": "GetStartedWithCsharpRepl"
+  },
+  "id": 1
+}
+```
+
+This returns a comprehensive guide covering:
+- Core capabilities of Roslyn-Stone
+- Quick start examples
+- Best practices for using the REPL
+- Common patterns and workflows
+- Tips for success
+
+Use the prompts to help LLMs understand how to effectively use Roslyn-Stone for C# development.
+
+### Checking REPL Environment
+```json
+{
+  "jsonrpc": "2.0",
+  "method": "tools/call",
+  "params": {
+    "name": "GetReplInfo"
+  },
+  "id": 1
+}
+```
+
+Returns information about the REPL including framework version, available namespaces, capabilities, tips, and examples.
 ```
 
 ## Technology Stack

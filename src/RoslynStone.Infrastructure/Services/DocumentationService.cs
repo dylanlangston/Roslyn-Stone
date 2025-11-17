@@ -69,15 +69,15 @@ public class DocumentationService
                 // Try searching for types with the name
                 var types = assembly
                     .GetTypes()
-                    .Where(t => t.FullName?.Contains(symbolName) == true || t.Name == symbolName);
+                    .Where(t => t.FullName?.Contains(symbolName) == true || t.Name == symbolName)
+                    .ToList(); // Materialize to avoid multiple enumeration
 
-                if (types.Any())
-                    return types.First();
+                if (types.Count > 0)
+                    return types[0];
             }
             catch
             {
                 // Skip assemblies that can't be loaded
-                continue;
             }
         }
 

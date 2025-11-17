@@ -18,12 +18,12 @@ public class DocumentationTools
     /// <returns>An object containing documentation information including summary, remarks, parameters, returns, exceptions, and examples</returns>
     [McpServerTool]
     [Description(
-        "Get XML documentation for a .NET type, method, property, or other symbol including summary, remarks, parameters, and examples"
+        "Retrieve comprehensive XML documentation for any .NET type, method, property, or other symbol. Returns detailed information including summary, detailed remarks, parameter descriptions, return value info, exception documentation, and code examples. Use this to: understand how .NET APIs work, learn method signatures and parameters, discover available members, see usage examples, and get context-aware help while coding. Supports all .NET 10 types and methods."
     )]
     public static object GetDocumentation(
         DocumentationService documentationService,
         [Description(
-            "The fully qualified name of the type or method (e.g., 'System.String', 'System.Linq.Enumerable.Select')"
+            "The fully qualified name of the .NET symbol to look up. Examples: 'System.String' (for the String class), 'System.Linq.Enumerable.Select' (for LINQ Select method), 'System.Collections.Generic.List`1' (for generic List), 'System.DateTime.Now' (for properties). Use namespaces and type names exactly as they appear in C# code."
         )]
             string symbolName
     )

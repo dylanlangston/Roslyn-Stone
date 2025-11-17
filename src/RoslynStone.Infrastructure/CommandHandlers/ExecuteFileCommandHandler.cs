@@ -91,7 +91,8 @@ public class ExecuteFileCommandHandler : ICommandHandler<ExecuteFileCommand, str
                 CreateNoWindow = true,
             };
 
-            using var process = new Process { StartInfo = startInfo };
+            using var process = new Process();
+            process.StartInfo = startInfo;
             process.Start();
 
             var output = await process.StandardOutput.ReadToEndAsync(cancellationToken);
