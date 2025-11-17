@@ -53,6 +53,36 @@ dotnet test
 - Use dependency injection where appropriate
 - Follow SOLID principles
 
+### Code Formatting and Analysis
+
+**ALWAYS run these tools before committing code:**
+
+1. **ReSharper Inspection**: Run `jb inspectcode RoslynStone.sln --output=/tmp/resharper-output.xml --verbosity=WARN` to check for code quality issues
+   - Fix ALL warnings and errors before committing
+   - Check the output with: `cat /tmp/resharper-output.xml | jq -r '.runs[0].results[] | select(.level == "warning" or .level == "error")'`
+   - No ReSharper warnings or errors are allowed in the codebase
+
+2. **CSharpier Formatting**: Run `csharpier format .` to format all C# files
+   - This ensures consistent code formatting across the project
+   - Run after making code changes and before committing
+
+**Workflow:**
+```bash
+# After making code changes:
+# 1. Run ReSharper and fix all issues
+jb inspectcode RoslynStone.sln --output=/tmp/resharper-output.xml --verbosity=WARN
+cat /tmp/resharper-output.xml | jq -r '.runs[0].results[] | select(.level == "warning" or .level == "error")'
+
+# 2. Run CSharpier to format code
+csharpier format .
+
+# 3. Build and test
+dotnet build
+dotnet test
+
+# 4. Then commit via report_progress
+```
+
 ## Testing Guidelines
 
 - Write unit tests for new functionality

@@ -43,5 +43,6 @@ public class DocumentationInfo
     /// <summary>
     /// Gets or sets the full XML documentation
     /// </summary>
+    // ReSharper disable once UnusedAutoPropertyAccessor.Global
     public string? FullDocumentation { get; init; }
 }

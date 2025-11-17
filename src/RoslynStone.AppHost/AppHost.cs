@@ -3,7 +3,7 @@ var builder = DistributedApplication.CreateBuilder(args);
 // Add the MCP server with stdio transport (default)
 // The MCP server uses stdio transport by default and doesn't expose HTTP endpoints
 // We'll configure it to be containerized with OpenTelemetry support
-var mcpServerStdio = builder
+_ = builder
     .AddProject<Projects.RoslynStone_Api>("roslyn-stone-mcp-stdio")
     .WithEnvironment("MCP_TRANSPORT", "stdio")
     .WithEnvironment("OTEL_SERVICE_NAME", "roslyn-stone-mcp-stdio")
@@ -15,7 +15,7 @@ var mcpServerStdio = builder
 var mcpHttpPort = int.TryParse(builder.Configuration["MCP_HTTP_PORT"], out var httpPort)
     ? httpPort
     : 8080;
-var mcpServerHttp = builder
+_ = builder
     .AddProject<Projects.RoslynStone_Api>("roslyn-stone-mcp-http")
     .WithEnvironment("MCP_TRANSPORT", "http")
     .WithEnvironment("OTEL_SERVICE_NAME", "roslyn-stone-mcp-http")
@@ -42,7 +42,7 @@ if (
         ? proxyPort
         : 6277;
 
-    var inspector = builder
+    _ = builder
         .AddExecutable(
             "mcp-inspector",
             "npx",
