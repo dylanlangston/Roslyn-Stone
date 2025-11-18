@@ -164,4 +164,72 @@ public class DocumentationServiceTests
         // Generic type notation may or may not be found
         Assert.True(result == null || !string.IsNullOrEmpty(result.SymbolName));
     }
+
+    [Fact]
+    [Trait("Feature", "NuGetPackages")]
+    public void GetDocumentation_WithPackageId_ReturnsDocumentationIfAvailable()
+    {
+        // Arrange
+        var nugetService = new NuGetService();
+        var service = new DocumentationService(nugetService);
+        var symbolName = "Newtonsoft.Json.JsonConvert";
+        var packageId = "Newtonsoft.Json";
+
+        // Act
+        var result = service.GetDocumentation(symbolName, packageId);
+
+        // Assert
+        // Documentation may or may not be available depending on if package is installed
+        // This test ensures the method doesn't throw
+        Assert.True(result == null || result.SymbolName == symbolName);
+    }
+
+    [Fact]
+    [Trait("Feature", "NuGetPackages")]
+    public void GetDocumentation_WithoutNuGetService_ReturnsNull()
+    {
+        // Arrange
+        var service = new DocumentationService(nugetService: null);
+        var symbolName = "Newtonsoft.Json.JsonConvert";
+        var packageId = "Newtonsoft.Json";
+
+        // Act
+        var result = service.GetDocumentation(symbolName, packageId);
+
+        // Assert - Should return null when NuGet service is not available
+        Assert.Null(result);
+    }
+
+    [Fact]
+    [Trait("Feature", "NuGetPackages")]
+    public void GetDocumentation_NonExistentPackage_ReturnsNull()
+    {
+        // Arrange
+        var nugetService = new NuGetService();
+        var service = new DocumentationService(nugetService);
+        var symbolName = "Some.Type.Name";
+        var packageId = "NonExistent.Package.That.Does.Not.Exist";
+
+        // Act
+        var result = service.GetDocumentation(symbolName, packageId);
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    [Fact]
+    [Trait("Feature", "BackwardCompatibility")]
+    public void GetDocumentation_WithoutPackageId_UsesOriginalBehavior()
+    {
+        // Arrange
+        var nugetService = new NuGetService();
+        var service = new DocumentationService(nugetService);
+        var symbolName = "System.String";
+
+        // Act - Using the original method signature
+        var result = service.GetDocumentation(symbolName);
+
+        // Assert - Should still work as before
+        Assert.True(result == null || result.SymbolName == symbolName);
+    }
 }
