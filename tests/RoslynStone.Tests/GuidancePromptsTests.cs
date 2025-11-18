@@ -106,6 +106,4 @@ public class GuidancePromptsTests
         Assert.Contains("LoadNuGetPackage", result);
         Assert.Contains("Newtonsoft.Json", result);
     }
-
-
 }

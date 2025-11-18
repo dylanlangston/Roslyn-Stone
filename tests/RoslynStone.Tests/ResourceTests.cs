@@ -58,7 +58,7 @@ public class ResourceTests
 
         // Assert
         Assert.NotNull(resultDict);
-        Assert.True(resultDict.ContainsKey("uri"));
+        Assert.True(resultDict.TryGetValue("uri", out _));
     }
 
     [Fact]
@@ -75,8 +75,8 @@ public class ResourceTests
 
         // Assert
         Assert.NotNull(resultDict);
-        Assert.True(resultDict.ContainsKey("found"));
-        Assert.False(resultDict["found"].GetBoolean());
+        Assert.True(resultDict.TryGetValue("found", out var foundElement));
+        Assert.False(foundElement.GetBoolean());
     }
 
     [Fact]
@@ -93,9 +93,9 @@ public class ResourceTests
 
         // Assert
         Assert.NotNull(resultDict);
-        Assert.True(resultDict.ContainsKey("uri"));
-        Assert.Equal(uri, resultDict["uri"].GetString());
-        Assert.True(resultDict.ContainsKey("packages"));
+        Assert.True(resultDict.TryGetValue("uri", out var uriElement));
+        Assert.Equal(uri, uriElement.GetString());
+        Assert.True(resultDict.TryGetValue("packages", out _));
         Assert.True(resultDict.TryGetValue("totalCount", out var totalCountElement));
         Assert.True(totalCountElement.GetInt32() > 0);
     }
@@ -134,12 +134,12 @@ public class ResourceTests
 
         // Assert
         Assert.NotNull(resultDict);
-        Assert.True(resultDict.ContainsKey("found"));
-        Assert.True(resultDict["found"].GetBoolean());
-        Assert.True(resultDict.ContainsKey("packageId"));
-        Assert.Equal("Newtonsoft.Json", resultDict["packageId"].GetString());
-        Assert.True(resultDict.ContainsKey("versions"));
-        Assert.True(resultDict["versions"].GetArrayLength() > 0);
+        Assert.True(resultDict.TryGetValue("found", out var foundElement));
+        Assert.True(foundElement.GetBoolean());
+        Assert.True(resultDict.TryGetValue("packageId", out var packageIdElement));
+        Assert.Equal("Newtonsoft.Json", packageIdElement.GetString());
+        Assert.True(resultDict.TryGetValue("versions", out var versionsElement));
+        Assert.True(versionsElement.GetArrayLength() > 0);
     }
 
     [Fact]
@@ -156,8 +156,8 @@ public class ResourceTests
 
         // Assert
         Assert.NotNull(resultDict);
-        Assert.True(resultDict.ContainsKey("found"));
-        Assert.False(resultDict["found"].GetBoolean());
+        Assert.True(resultDict.TryGetValue("found", out var foundElement));
+        Assert.False(foundElement.GetBoolean());
     }
 
     [Fact]
@@ -174,9 +174,9 @@ public class ResourceTests
 
         // Assert
         Assert.NotNull(resultDict);
-        Assert.True(resultDict.ContainsKey("uri"));
-        Assert.True(resultDict.ContainsKey("mimeType"));
-        Assert.Equal("text/markdown", resultDict["mimeType"].GetString());
+        Assert.True(resultDict.TryGetValue("uri", out var uriElement));
+        Assert.True(resultDict.TryGetValue("mimeType", out var mimeTypeElement));
+        Assert.Equal("text/markdown", mimeTypeElement.GetString());
         // README structure should be present (content key might be present)
     }
 
@@ -194,8 +194,8 @@ public class ResourceTests
 
         // Assert
         Assert.NotNull(resultDict);
-        Assert.True(resultDict.ContainsKey("uri"));
-        Assert.True(resultDict.ContainsKey("mimeType"));
+        Assert.True(resultDict.TryGetValue("uri", out _));
+        Assert.True(resultDict.TryGetValue("mimeType", out _));
         // Version should be present in the response
     }
 
@@ -213,12 +213,12 @@ public class ResourceTests
 
         // Assert
         Assert.NotNull(resultDict);
-        Assert.True(resultDict.ContainsKey("uri"));
-        Assert.Equal(uri, resultDict["uri"].GetString());
-        Assert.True(resultDict.ContainsKey("frameworkVersion"));
-        Assert.True(resultDict.ContainsKey("language"));
-        Assert.True(resultDict.ContainsKey("capabilities"));
-        Assert.True(resultDict.ContainsKey("defaultImports"));
+        Assert.True(resultDict.TryGetValue("uri", out var uriElement));
+        Assert.Equal(uri, uriElement.GetString());
+        Assert.True(resultDict.TryGetValue("frameworkVersion", out _));
+        Assert.True(resultDict.TryGetValue("language", out _));
+        Assert.True(resultDict.TryGetValue("capabilities", out _));
+        Assert.True(resultDict.TryGetValue("defaultImports", out _));
     }
 
     [Fact]
@@ -235,8 +235,8 @@ public class ResourceTests
 
         // Assert
         Assert.NotNull(resultDict);
-        Assert.True(resultDict.ContainsKey("uri"));
-        Assert.Equal(uri, resultDict["uri"].GetString());
+        Assert.True(resultDict.TryGetValue("uri", out var uriElement));
+        Assert.Equal(uri, uriElement.GetString());
     }
 
     [Fact]
@@ -253,11 +253,11 @@ public class ResourceTests
 
         // Assert
         Assert.NotNull(resultDict);
-        Assert.True(resultDict.ContainsKey("uri"));
-        Assert.Equal(uri, resultDict["uri"].GetString());
-        Assert.True(resultDict.ContainsKey("isSessionSpecific"));
-        Assert.True(resultDict["isSessionSpecific"].GetBoolean());
-        Assert.True(resultDict.ContainsKey("contextId"));
-        Assert.Equal("test-context-123", resultDict["contextId"].GetString());
+        Assert.True(resultDict.TryGetValue("uri", out var uriElement));
+        Assert.Equal(uri, uriElement.GetString());
+        Assert.True(resultDict.TryGetValue("isSessionSpecific", out var isSessionSpecific));
+        Assert.True(isSessionSpecific.GetBoolean());
+        Assert.True(resultDict.TryGetValue("contextId", out var contextIdElement));
+        Assert.Equal("test-context-123", contextIdElement.GetString());
     }
 }

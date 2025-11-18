@@ -87,11 +87,15 @@ public class NuGetPackageResource
     )
     {
         // Extract package ID and version from URI
-        var uriObj = new Uri(uri.StartsWith("nuget://", StringComparison.OrdinalIgnoreCase)
-            ? uri
-            : $"nuget://{uri}");
+        var uriObj = new Uri(
+            uri.StartsWith("nuget://", StringComparison.OrdinalIgnoreCase) ? uri : $"nuget://{uri}"
+        );
 
-        var path = uriObj.AbsolutePath.Replace("/packages/", "", StringComparison.OrdinalIgnoreCase);
+        var path = uriObj.AbsolutePath.Replace(
+            "/packages/",
+            "",
+            StringComparison.OrdinalIgnoreCase
+        );
         var parts = path.Split('/');
         var packageId = parts.Length > 0 ? parts[0] : "";
 

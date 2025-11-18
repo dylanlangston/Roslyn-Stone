@@ -16,15 +16,52 @@ public class ReplContextManager : IReplContextManager
 
     /// <summary>
     /// Internal class to track context state and metadata
+    /// Thread-safe with Lock object for property updates
     /// </summary>
     private class ReplContext
     {
+        private readonly Lock _lock = new();
+
         public string ContextId { get; init; } = string.Empty;
         public ScriptState? State { get; set; }
         public DateTimeOffset CreatedAt { get; init; }
         public DateTimeOffset LastAccessedAt { get; set; }
         public int ExecutionCount { get; set; }
         public bool IsInitialized => State != null;
+
+        /// <summary>
+        /// Thread-safe update of LastAccessedAt
+        /// </summary>
+        public void UpdateLastAccessed()
+        {
+            lock (_lock)
+            {
+                LastAccessedAt = DateTimeOffset.UtcNow;
+            }
+        }
+
+        /// <summary>
+        /// Thread-safe increment of ExecutionCount
+        /// </summary>
+        public void IncrementExecutionCount()
+        {
+            lock (_lock)
+            {
+                ExecutionCount++;
+            }
+        }
+
+        /// <summary>
+        /// Thread-safe update of State with LastAccessedAt
+        /// </summary>
+        public void UpdateState(ScriptState state)
+        {
+            lock (_lock)
+            {
+                State = state;
+                LastAccessedAt = DateTimeOffset.UtcNow;
+            }
+        }
     }
 
     /// <summary>
@@ -32,7 +69,10 @@ public class ReplContextManager : IReplContextManager
     /// </summary>
     /// <param name="contextTimeout">Timeout for context expiration (default: 30 minutes)</param>
     /// <param name="logger">Optional logger for diagnostics</param>
-    public ReplContextManager(TimeSpan? contextTimeout = null, ILogger<ReplContextManager>? logger = null)
+    public ReplContextManager(
+        TimeSpan? contextTimeout = null,
+        ILogger<ReplContextManager>? logger = null
+    )
     {
         _contextTimeout = contextTimeout ?? TimeSpan.FromMinutes(30);
         _logger = logger;
@@ -47,7 +87,7 @@ public class ReplContextManager : IReplContextManager
             ContextId = contextId,
             CreatedAt = DateTimeOffset.UtcNow,
             LastAccessedAt = DateTimeOffset.UtcNow,
-            ExecutionCount = 0
+            ExecutionCount = 0,
         };
 
         if (_contexts.TryAdd(contextId, context))
@@ -78,8 +118,8 @@ public class ReplContextManager : IReplContextManager
 
         if (_contexts.TryGetValue(contextId, out var context))
         {
-            // Update last accessed time
-            context.LastAccessedAt = DateTimeOffset.UtcNow;
+            // Thread-safe update of last accessed time
+            context.UpdateLastAccessed();
             return context.State;
         }
 
@@ -95,11 +135,15 @@ public class ReplContextManager : IReplContextManager
         if (!_contexts.TryGetValue(contextId, out var context))
             throw new InvalidOperationException($"Context '{contextId}' not found");
 
-        context.State = state;
-        context.LastAccessedAt = DateTimeOffset.UtcNow;
-        context.ExecutionCount++;
+        // Thread-safe state update
+        context.UpdateState(state);
+        context.IncrementExecutionCount();
 
-        _logger?.LogDebug("Updated context {ContextId}, execution count: {Count}", contextId, context.ExecutionCount);
+        _logger?.LogDebug(
+            "Updated context {ContextId}, execution count: {Count}",
+            contextId,
+            context.ExecutionCount
+        );
     }
 
     /// <inheritdoc/>
@@ -163,7 +207,7 @@ public class ReplContextManager : IReplContextManager
                 CreatedAt = context.CreatedAt,
                 LastAccessedAt = context.LastAccessedAt,
                 ExecutionCount = context.ExecutionCount,
-                IsInitialized = context.IsInitialized
+                IsInitialized = context.IsInitialized,
             };
         }
 

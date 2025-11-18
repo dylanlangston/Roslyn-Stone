@@ -302,7 +302,7 @@ public class RoslynScriptingService
                         Code = "RUNTIME_ERROR",
                         Message = ex.Message,
                         Severity = "Error",
-                    }
+                    },
                 ],
                 ExecutionTime = stopwatch.Elapsed,
                 ScriptState = existingState, // Keep existing state on error

@@ -118,14 +118,23 @@ public class McpToolsIntegrationTests
     public async Task ResetRepl_ClearsState()
     {
         // Arrange
-        var result1 = await ReplTools.EvaluateCsharp(_scriptingService, _contextManager, "int x = 42;");
+        var result1 = await ReplTools.EvaluateCsharp(
+            _scriptingService,
+            _contextManager,
+            "int x = 42;"
+        );
         var json1 = JsonSerializer.Serialize(result1);
         var resultDict1 = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json1);
         var contextId = resultDict1!["contextId"].GetString();
 
         // Act
         ReplTools.ResetRepl(_contextManager, contextId);
-        var result = await ReplTools.EvaluateCsharp(_scriptingService, _contextManager, "x", contextId);
+        var result = await ReplTools.EvaluateCsharp(
+            _scriptingService,
+            _contextManager,
+            "x",
+            contextId
+        );
         var json = JsonSerializer.Serialize(result);
         var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
 

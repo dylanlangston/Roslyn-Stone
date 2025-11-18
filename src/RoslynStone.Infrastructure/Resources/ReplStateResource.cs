@@ -38,7 +38,10 @@ public class ReplStateResource
         {
             // Extract context ID from URI: repl://sessions/{contextId}/state
             var parts = uri.Split('/');
-            var sessionIndex = Array.FindIndex(parts, p => p.Equals("sessions", StringComparison.OrdinalIgnoreCase));
+            var sessionIndex = Array.FindIndex(
+                parts,
+                p => p.Equals("sessions", StringComparison.OrdinalIgnoreCase)
+            );
             if (sessionIndex >= 0 && sessionIndex + 1 < parts.Length)
             {
                 contextId = parts[sessionIndex + 1];
@@ -56,7 +59,7 @@ public class ReplStateResource
 
         // Get session information from context manager
         var activeSessionCount = contextManager.GetActiveContexts().Count;
-        
+
         var baseResponse = new
         {
             uri,
@@ -99,42 +102,34 @@ public class ReplStateResource
         };
 
         // If session-specific state is requested, include session metadata
-        if (isSessionSpecific && !string.IsNullOrEmpty(contextId))
-        {
-            var metadata = contextManager.GetContextMetadata(contextId);
-            if (metadata != null)
-            {
-                return new
-                {
-                    baseResponse.uri,
-                    baseResponse.mimeType,
-                    baseResponse.frameworkVersion,
-                    baseResponse.language,
-                    baseResponse.state,
-                    baseResponse.activeSessionCount,
-                    baseResponse.contextId,
-                    baseResponse.isSessionSpecific,
-                    baseResponse.defaultImports,
-                    baseResponse.capabilities,
-                    baseResponse.tips,
-                    baseResponse.examples,
-                    sessionMetadata = new
+        return (isSessionSpecific && !string.IsNullOrEmpty(contextId))
+            ? (
+                contextManager.GetContextMetadata(contextId) is var metadata && metadata != null
+                    ? new
                     {
-                        contextId = metadata.ContextId,
-                        createdAt = metadata.CreatedAt,
-                        lastAccessedAt = metadata.LastAccessedAt,
-                        executionCount = metadata.ExecutionCount,
-                        isInitialized = metadata.IsInitialized,
+                        baseResponse.uri,
+                        baseResponse.mimeType,
+                        baseResponse.frameworkVersion,
+                        baseResponse.language,
+                        baseResponse.state,
+                        baseResponse.activeSessionCount,
+                        baseResponse.contextId,
+                        baseResponse.isSessionSpecific,
+                        baseResponse.defaultImports,
+                        baseResponse.capabilities,
+                        baseResponse.tips,
+                        baseResponse.examples,
+                        sessionMetadata = new
+                        {
+                            metadata.ContextId,
+                            metadata.CreatedAt,
+                            metadata.LastAccessedAt,
+                            metadata.ExecutionCount,
+                            metadata.IsInitialized,
+                        },
                     }
-                };
-            }
-            else
-            {
-                // Return base response with session-specific flags even if context doesn't exist
-                return baseResponse;
-            }
-        }
-
-        return baseResponse;
+                    : baseResponse
+            )
+            : baseResponse;
     }
 }

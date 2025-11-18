@@ -58,8 +58,7 @@ public class ReplTools
                 {
                     success = false,
                     error = "REPL_CONTEXT_INVALID",
-                    message =
-                        $"Context '{contextId}' not found or expired. Omit contextId to create a new session.",
+                    message = $"Context '{contextId}' not found or expired. Omit contextId to create a new session.",
                     suggestedAction = "EvaluateCsharp without contextId",
                     contextId = (string?)null,
                 };
@@ -133,9 +132,7 @@ public class ReplTools
     public static Task<object> ValidateCsharp(
         RoslynScriptingService scriptingService,
         IReplContextManager contextManager,
-        [Description(
-            "C# code to validate. Checks syntax and semantics without executing."
-        )]
+        [Description("C# code to validate. Checks syntax and semantics without executing.")]
             string code,
         [Description(
             "Optional context ID for context-aware validation. Omit for context-free syntax checking."
@@ -156,8 +153,7 @@ public class ReplTools
                     {
                         isValid = false,
                         error = "REPL_CONTEXT_INVALID",
-                        message =
-                            $"Context '{contextId}' not found or expired. Omit contextId for context-free validation.",
+                        message = $"Context '{contextId}' not found or expired. Omit contextId for context-free validation.",
                         issues = Array.Empty<object>(),
                     }
                 );

@@ -32,14 +32,18 @@ public class NuGetSearchResource
     )
     {
         // Parse URI and extract query parameters
-        var uriObj = new Uri(uri.StartsWith("nuget://", StringComparison.OrdinalIgnoreCase)
-            ? uri
-            : $"nuget://{uri}");
+        var uriObj = new Uri(
+            uri.StartsWith("nuget://", StringComparison.OrdinalIgnoreCase) ? uri : $"nuget://{uri}"
+        );
 
         var query = QueryHelpers.ParseQuery(uriObj.Query);
         var searchQuery = query.TryGetValue("q", out var q) ? q.ToString() : "";
-        var skip = query.TryGetValue("skip", out var skipStr) && int.TryParse(skipStr, out var s) ? s : 0;
-        var take = query.TryGetValue("take", out var takeStr) && int.TryParse(takeStr, out var t) ? Math.Min(t, 100) : 20;
+        var skip =
+            query.TryGetValue("skip", out var skipStr) && int.TryParse(skipStr, out var s) ? s : 0;
+        var take =
+            query.TryGetValue("take", out var takeStr) && int.TryParse(takeStr, out var t)
+                ? Math.Min(t, 100)
+                : 20;
 
         var result = await nugetService.SearchPackagesAsync(
             searchQuery,

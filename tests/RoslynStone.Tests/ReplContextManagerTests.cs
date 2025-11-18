@@ -1,5 +1,5 @@
-using RoslynStone.Infrastructure.Services;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
+using RoslynStone.Infrastructure.Services;
 
 namespace RoslynStone.Tests;
 
@@ -139,9 +139,7 @@ public class ReplContextManagerTests
         var scriptState = await CSharpScript.RunAsync("var x = 10;");
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() =>
-            manager.UpdateContextState(null!, scriptState)
-        );
+        Assert.Throws<ArgumentException>(() => manager.UpdateContextState(null!, scriptState));
     }
 
     [Fact]
@@ -306,11 +304,15 @@ public class ReplContextManagerTests
         var contextIds = new System.Collections.Concurrent.ConcurrentBag<string>();
 
         // Act
-        Parallel.For(0, 100, _ =>
-        {
-            var contextId = manager.CreateContext();
-            contextIds.Add(contextId);
-        });
+        Parallel.For(
+            0,
+            100,
+            _ =>
+            {
+                var contextId = manager.CreateContext();
+                contextIds.Add(contextId);
+            }
+        );
 
         // Assert
         Assert.Equal(100, contextIds.Count);
