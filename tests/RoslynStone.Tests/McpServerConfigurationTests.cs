@@ -61,9 +61,9 @@ public class McpServerConfigurationTests
             .Where(m => m.GetCustomAttributes(typeof(McpServerPromptAttribute), false).Any())
             .ToList();
 
-        // We expect: GetStartedWithCsharpRepl, CodeExperimentationWorkflow,
-        //            PackageIntegrationGuide, DebuggingAndErrorHandling
-        Assert.Equal(4, methods.Count);
+        // We expect: QuickStartRepl, GetStartedWithCsharpRepl, DebugCompilationErrors,
+        //            ReplBestPractices, WorkingWithPackages, PackageIntegrationGuide
+        Assert.Equal(6, methods.Count);
     }
 
     [Fact]
