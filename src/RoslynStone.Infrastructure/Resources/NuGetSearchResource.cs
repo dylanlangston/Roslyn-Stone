@@ -25,7 +25,7 @@ public class NuGetSearchResource
     public static async Task<object> SearchPackages(
         NuGetService nugetService,
         [Description(
-            "Resource URI in the format 'nuget://search?q=query&amp;skip=0&amp;take=20'. Query parameter examples: 'json', 'http client', 'Newtonsoft.Json', 'csv parser', 'logging'."
+            "Resource URI in the format 'nuget://search?q=query&skip=0&take=20'. Query parameter examples: 'json', 'http client', 'Newtonsoft.Json', 'csv parser', 'logging'."
         )]
             string uri,
         CancellationToken cancellationToken = default

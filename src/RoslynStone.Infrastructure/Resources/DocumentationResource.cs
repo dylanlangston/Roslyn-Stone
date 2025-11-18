@@ -30,7 +30,7 @@ public class DocumentationResource
     {
         // Extract symbol name from URI (remove "doc://" prefix)
         var symbolName = uri.StartsWith("doc://", StringComparison.OrdinalIgnoreCase)
-            ? uri.Substring(6)
+            ? uri[6..]
             : uri;
 
         var doc = documentationService.GetDocumentation(symbolName);

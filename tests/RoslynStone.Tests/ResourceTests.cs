@@ -14,12 +14,14 @@ public class ResourceTests
     private readonly RoslynScriptingService _scriptingService;
     private readonly DocumentationService _documentationService;
     private readonly NuGetService _nugetService;
+    private readonly IReplContextManager _contextManager;
 
     public ResourceTests()
     {
         _scriptingService = new RoslynScriptingService();
         _documentationService = new DocumentationService();
         _nugetService = new NuGetService();
+        _contextManager = new ReplContextManager();
     }
 
     [Fact]
@@ -36,10 +38,10 @@ public class ResourceTests
 
         // Assert
         Assert.NotNull(resultDict);
-        Assert.True(resultDict.ContainsKey("uri"));
-        Assert.Equal(uri, resultDict["uri"].GetString());
-        Assert.True(resultDict.ContainsKey("mimeType"));
-        Assert.Equal("application/json", resultDict["mimeType"].GetString());
+        Assert.True(resultDict.TryGetValue("uri", out var uriElement));
+        Assert.Equal(uri, uriElement.GetString());
+        Assert.True(resultDict.TryGetValue("mimeType", out var mimeTypeElement));
+        Assert.Equal("application/json", mimeTypeElement.GetString());
     }
 
     [Fact]
@@ -94,8 +96,8 @@ public class ResourceTests
         Assert.True(resultDict.ContainsKey("uri"));
         Assert.Equal(uri, resultDict["uri"].GetString());
         Assert.True(resultDict.ContainsKey("packages"));
-        Assert.True(resultDict.ContainsKey("totalCount"));
-        Assert.True(resultDict["totalCount"].GetInt32() > 0);
+        Assert.True(resultDict.TryGetValue("totalCount", out var totalCountElement));
+        Assert.True(totalCountElement.GetInt32() > 0);
     }
 
     [Fact]
@@ -112,10 +114,10 @@ public class ResourceTests
 
         // Assert
         Assert.NotNull(resultDict);
-        Assert.True(resultDict.ContainsKey("skip"));
-        Assert.Equal(0, resultDict["skip"].GetInt32());
-        Assert.True(resultDict.ContainsKey("take"));
-        Assert.Equal(20, resultDict["take"].GetInt32());
+        Assert.True(resultDict.TryGetValue("skip", out var skipElem));
+        Assert.Equal(0, skipElem.GetInt32());
+        Assert.True(resultDict.TryGetValue("take", out var takeElem));
+        Assert.Equal(20, takeElem.GetInt32());
     }
 
     [Fact]
@@ -205,7 +207,7 @@ public class ResourceTests
         var uri = "repl://state";
 
         // Act
-        var result = ReplStateResource.GetReplState(_scriptingService, uri);
+        var result = ReplStateResource.GetReplState(_scriptingService, _contextManager, uri);
         var json = JsonSerializer.Serialize(result);
         var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
 
@@ -227,7 +229,7 @@ public class ResourceTests
         var uri = "repl://info";
 
         // Act
-        var result = ReplStateResource.GetReplState(_scriptingService, uri);
+        var result = ReplStateResource.GetReplState(_scriptingService, _contextManager, uri);
         var json = JsonSerializer.Serialize(result);
         var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
 
@@ -245,7 +247,7 @@ public class ResourceTests
         var uri = "repl://sessions/test-context-123/state";
 
         // Act
-        var result = ReplStateResource.GetReplState(_scriptingService, uri);
+        var result = ReplStateResource.GetReplState(_scriptingService, _contextManager, uri);
         var json = JsonSerializer.Serialize(result);
         var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
 

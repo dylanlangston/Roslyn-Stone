@@ -124,8 +124,8 @@ public class McpToolsIntegrationTests
         var contextId = resultDict1!["contextId"].GetString();
 
         // Act
-        var resetResult = ReplTools.ResetRepl(_contextManager, contextId);
-        var result = await ReplTools.EvaluateCsharp(_scriptingService, _contextManager, "x");
+        ReplTools.ResetRepl(_contextManager, contextId);
+        var result = await ReplTools.EvaluateCsharp(_scriptingService, _contextManager, "x", contextId);
         var json = JsonSerializer.Serialize(result);
         var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
 

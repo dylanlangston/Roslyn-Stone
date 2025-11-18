@@ -14,6 +14,7 @@ public class ReplStateResource
     /// Get current REPL environment information as a resource
     /// </summary>
     /// <param name="scriptingService">The Roslyn scripting service</param>
+    /// <param name="contextManager">The REPL context manager</param>
     /// <param name="uri">The resource URI: repl://state, repl://info, or repl://sessions/{contextId}/state</param>
     /// <returns>Information about current REPL state</returns>
     [McpServerResource]
@@ -22,6 +23,7 @@ public class ReplStateResource
     )]
     public static object GetReplState(
         RoslynScriptingService scriptingService,
+        IReplContextManager contextManager,
         [Description(
             "Resource URI. Use 'repl://state' or 'repl://info' for general info, or 'repl://sessions/{contextId}/state' for session-specific state."
         )]
@@ -52,6 +54,9 @@ public class ReplStateResource
             "System.Threading.Tasks",
         };
 
+        // Get session information from context manager
+        var activeSessionCount = contextManager.GetActiveContexts().Count;
+        
         var baseResponse = new
         {
             uri,
@@ -59,6 +64,7 @@ public class ReplStateResource
             frameworkVersion = ".NET 10.0",
             language = "C# 14",
             state = "Ready",
+            activeSessionCount,
             contextId = contextId, // Will be null for general queries, populated for session-specific
             isSessionSpecific = isSessionSpecific,
             defaultImports = imports,
@@ -92,13 +98,42 @@ public class ReplStateResource
             },
         };
 
-        // TODO: When ReplContextManager is implemented (Phase 2), retrieve actual session state here
-        // if (isSessionSpecific && !string.IsNullOrEmpty(contextId))
-        // {
-        //     var contextManager = ...; // Get from DI
-        //     var sessionState = contextManager.GetSessionState(contextId);
-        //     return new { ...baseResponse, sessionState };
-        // }
+        // If session-specific state is requested, include session metadata
+        if (isSessionSpecific && !string.IsNullOrEmpty(contextId))
+        {
+            var metadata = contextManager.GetContextMetadata(contextId);
+            if (metadata != null)
+            {
+                return new
+                {
+                    baseResponse.uri,
+                    baseResponse.mimeType,
+                    baseResponse.frameworkVersion,
+                    baseResponse.language,
+                    baseResponse.state,
+                    baseResponse.activeSessionCount,
+                    baseResponse.contextId,
+                    baseResponse.isSessionSpecific,
+                    baseResponse.defaultImports,
+                    baseResponse.capabilities,
+                    baseResponse.tips,
+                    baseResponse.examples,
+                    sessionMetadata = new
+                    {
+                        contextId = metadata.ContextId,
+                        createdAt = metadata.CreatedAt,
+                        lastAccessedAt = metadata.LastAccessedAt,
+                        executionCount = metadata.ExecutionCount,
+                        isInitialized = metadata.IsInitialized,
+                    }
+                };
+            }
+            else
+            {
+                // Return base response with session-specific flags even if context doesn't exist
+                return baseResponse;
+            }
+        }
 
         return baseResponse;
     }

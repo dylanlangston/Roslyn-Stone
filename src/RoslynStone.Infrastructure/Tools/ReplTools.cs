@@ -16,6 +16,11 @@ public class ReplTools
     /// <summary>
     /// Execute C# code in a REPL session
     /// </summary>
+    /// <param name="scriptingService">The Roslyn scripting service</param>
+    /// <param name="contextManager">The REPL context manager</param>
+    /// <param name="code">C# code to execute</param>
+    /// <param name="contextId">Optional context ID from previous execution</param>
+    /// <param name="cancellationToken">Cancellation token for async operations</param>
     [McpServerTool]
     [Description(
         "Execute C# code in a REPL session. Supports both stateful sessions (with contextId) and single-shot execution (without contextId). For stateful: provide contextId from previous execution to maintain variables and types. For single-shot: omit contextId for one-time execution. Returns contextId for continuing the session. Supports async/await, LINQ, and full .NET 10 API."
@@ -102,7 +107,7 @@ public class ReplTools
                 contextId,
             };
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // Clean up context if it was just created and something went wrong
             if (isNewContext)
@@ -116,6 +121,11 @@ public class ReplTools
     /// <summary>
     /// Validate C# code without executing it
     /// </summary>
+    /// <param name="scriptingService">The Roslyn scripting service</param>
+    /// <param name="contextManager">The REPL context manager</param>
+    /// <param name="code">C# code to validate</param>
+    /// <param name="contextId">Optional context ID for context-aware validation</param>
+    /// <param name="cancellationToken">Cancellation token for async operations</param>
     [McpServerTool]
     [Description(
         "Validate C# code syntax and semantics WITHOUT executing it. Supports context-aware validation (with contextId) to check against session variables, or context-free validation (without contextId). Returns detailed error/warning information. Fast and safe."

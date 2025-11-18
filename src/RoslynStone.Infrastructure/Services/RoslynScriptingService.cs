@@ -135,7 +135,7 @@ public class RoslynScriptingService
                 ExecutionTime = stopwatch.Elapsed,
             };
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             stopwatch.Stop();
 
@@ -288,7 +288,7 @@ public class RoslynScriptingService
                 ScriptState = existingState, // Keep existing state on error
             };
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             stopwatch.Stop();
 
