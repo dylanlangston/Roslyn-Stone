@@ -41,7 +41,8 @@ public class DocumentationResource
         string symbolName;
 
         // Check if URI contains a package ID using @ separator (e.g., "PackageId@TypeName")
-        // This explicit separator avoids ambiguity with namespace separators
+        // Use IndexOf (first occurrence) so "Package@Type@InnerType" parses as package "Package" and symbol "Type@InnerType"
+        // This allows @ characters in symbol names (e.g., verbatim identifiers like @class)
         var atIndex = uriContent.IndexOf('@');
         if (atIndex > 0)
         {

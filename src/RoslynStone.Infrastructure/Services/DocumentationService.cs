@@ -1,9 +1,5 @@
 using System.Reflection;
 using System.Xml.Linq;
-using NuGet.Configuration;
-using NuGet.Packaging;
-using NuGet.Protocol;
-using NuGet.Protocol.Core.Types;
 using RoslynStone.Core.Models;
 
 namespace RoslynStone.Infrastructure.Services;
@@ -267,14 +263,30 @@ public class DocumentationService
     }
 
     /// <summary>
-    /// Get XML documentation file for a NuGet package by downloading it at runtime using NuGet.Protocol
+    /// Get XML documentation file for a NuGet package by downloading it at runtime using NuGet.Protocol.
+    /// Downloads the latest version of the package from NuGet.org and caches the result per package.
     /// </summary>
+    /// <param name="packageId">The NuGet package ID to download</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>
+    /// The XDocument containing XML documentation if found; otherwise null.
+    /// Returns null if: package not found, package has no XML documentation files, symbol not found in docs, or any error occurs.
+    /// </returns>
     private async Task<XDocument?> GetNuGetPackageXmlDocumentationAsync(
         string packageId,
         CancellationToken cancellationToken
     )
     {
         if (_nugetService == null)
+            return null;
+
+        // Validate packageId to prevent security issues
+        if (
+            string.IsNullOrWhiteSpace(packageId)
+            || packageId.Contains(':')
+            || packageId.Contains('/')
+            || packageId.Contains('\\')
+        )
             return null;
 
         // Check cache first
@@ -284,58 +296,16 @@ public class DocumentationService
 
         try
         {
-            // Use NuGet.Protocol to get package metadata and download the package
-            var repository = Repository.Factory.GetCoreV3("https://api.nuget.org/v3/index.json");
-            using var cache = new SourceCacheContext();
-
-            var metadataResource = await repository.GetResourceAsync<PackageMetadataResource>(
-                cancellationToken
-            );
-
-            var metadata = await metadataResource.GetMetadataAsync(
+            // Use NuGetService to download the package
+            using var packageResult = await _nugetService.GetPackageReaderAsync(
                 packageId,
-                includePrerelease: true,
-                includeUnlisted: false,
-                cache,
-                NuGet.Common.NullLogger.Instance,
                 cancellationToken
             );
 
-            var metadataList = metadata.ToList();
-            if (metadataList.Count == 0)
+            if (packageResult == null)
                 return null;
 
-            // Get the latest version
-            var packageMetadata = metadataList
-                .OrderByDescending(m => m.Identity.Version)
-                .FirstOrDefault();
-
-            if (packageMetadata == null)
-                return null;
-
-            // Download the package
-            var downloadResource = await repository.GetResourceAsync<DownloadResource>(
-                cancellationToken
-            );
-
-            var globalPackagesFolder = SettingsUtility.GetGlobalPackagesFolder(
-                Settings.LoadDefaultSettings(null)
-            );
-
-            using var downloadResult = await downloadResource.GetDownloadResourceResultAsync(
-                packageMetadata.Identity,
-                new PackageDownloadContext(cache),
-                globalPackagesFolder,
-                NuGet.Common.NullLogger.Instance,
-                cancellationToken
-            );
-
-            if (downloadResult.Status != DownloadResourceResultStatus.Available)
-                return null;
-
-            // Extract and read XML documentation from the package stream
-            using var packageStream = downloadResult.PackageStream;
-            using var packageReader = new PackageArchiveReader(packageStream);
+            var packageReader = packageResult.PackageReader;
 
             // Get all files in the package
             var files = packageReader.GetFiles().ToList();

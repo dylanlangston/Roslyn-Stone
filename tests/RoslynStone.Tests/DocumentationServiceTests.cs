@@ -170,7 +170,7 @@ public class DocumentationServiceTests
     public async Task GetDocumentationAsync_WithPackageId_ReturnsDocumentationIfAvailable()
     {
         // Arrange
-        var nugetService = new NuGetService();
+        using var nugetService = new NuGetService();
         var service = new DocumentationService(nugetService);
         var symbolName = "Newtonsoft.Json.JsonConvert";
         var packageId = "Newtonsoft.Json";
@@ -205,7 +205,7 @@ public class DocumentationServiceTests
     public async Task GetDocumentationAsync_NonExistentPackage_ReturnsNull()
     {
         // Arrange
-        var nugetService = new NuGetService();
+        using var nugetService = new NuGetService();
         var service = new DocumentationService(nugetService);
         var symbolName = "Some.Type.Name";
         var packageId = "NonExistent.Package.That.Does.Not.Exist";
@@ -222,7 +222,7 @@ public class DocumentationServiceTests
     public async Task GetDocumentationAsync_WithoutPackageId_UsesOriginalBehavior()
     {
         // Arrange
-        var nugetService = new NuGetService();
+        using var nugetService = new NuGetService();
         var service = new DocumentationService(nugetService);
         var symbolName = "System.String";
 
