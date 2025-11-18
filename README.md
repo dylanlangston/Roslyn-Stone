@@ -75,7 +75,22 @@ That's it! The container provides isolated execution of C# code with minimal set
 
 ## Architecture
 
-The solution follows clean architecture principles with functional programming patterns and MCP integration. It implements best practices for dynamic code compilation and execution, including proper AssemblyLoadContext usage for memory management. See `DYNAMIC_COMPILATION_BEST_PRACTICES.md` for details.
+Roslyn-Stone implements the Model Context Protocol (MCP) following best practices by properly distinguishing between:
+
+- **Resources** (passive data sources): URI-based read-only access to documentation (`doc://`), NuGet packages (`nuget://`), and REPL state (`repl://`)
+- **Tools** (active operations): Context-aware C# execution, validation, and package loading with optional session management
+- **Prompts** (optimized templates): Token-efficient guidance for LLMs with resource references
+
+The solution follows clean architecture principles with functional programming patterns. It implements best practices for dynamic code compilation and execution, including proper AssemblyLoadContext usage for memory management.
+
+### Key Components
+
+- **Context Management**: Thread-safe session lifecycle with automatic cleanup (30min timeout)
+- **Stateful REPL**: Variables and types persist within sessions via optional `contextId` parameter
+- **Resource Discovery**: Query docs, packages, and state before execution for efficient workflows
+- **Token Optimization**: Prompts reduced 59% (4500→1850 tokens) by referencing resources
+
+See `MCP_ARCHITECTURE.md` for detailed design documentation and `DYNAMIC_COMPILATION_BEST_PRACTICES.md` for compilation details.
 
 ```
 RoslynStone/
