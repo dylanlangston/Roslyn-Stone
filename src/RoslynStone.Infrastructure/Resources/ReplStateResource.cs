@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using ModelContextProtocol.Server;
+using RoslynStone.Infrastructure.Models;
 using RoslynStone.Infrastructure.Services;
 
 namespace RoslynStone.Infrastructure.Resources;
@@ -19,9 +20,9 @@ public class ReplStateResource
     /// <returns>Information about current REPL state</returns>
     [McpServerResource]
     [Description(
-        "Access current REPL environment state and capabilities. Returns information about framework version, available namespaces, loaded assemblies, imported NuGet packages, current variables in scope, and REPL capabilities. Use this to understand what's available, check the current state, and get oriented in a session. For session-specific state, use 'repl://sessions/{contextId}/state'."
+        "Access current REPL environment state and capabilities. Returns information about framework version, available namespaces, loaded assemblies, imported NuGet packages, current variables in scope, and REPL capabilities. Use 'repl://state' or 'repl://info' for general info, or 'repl://sessions/{contextId}/state' for session-specific state. URI formats: repl://state, repl://info, repl://sessions/{contextId}/state"
     )]
-    public static object GetReplState(
+    public static ReplStateResponse GetReplState(
         RoslynScriptingService scriptingService,
         IReplContextManager contextManager,
         [Description(
@@ -48,7 +49,7 @@ public class ReplStateResource
             }
         }
 
-        var imports = new[]
+        var imports = new List<string>
         {
             "System",
             "System.Collections.Generic",
@@ -60,76 +61,69 @@ public class ReplStateResource
         // Get session information from context manager
         var activeSessionCount = contextManager.GetActiveContexts().Count;
 
-        var baseResponse = new
+        var tips = new List<string>
         {
-            uri,
-            mimeType = "application/json",
-            frameworkVersion = ".NET 10.0",
-            language = "C# 14",
-            state = "Ready",
-            activeSessionCount,
-            contextId = contextId, // Will be null for general queries, populated for session-specific
-            isSessionSpecific = isSessionSpecific,
-            defaultImports = imports,
-            capabilities = new
-            {
-                asyncAwait = true,
-                linq = true,
-                topLevelStatements = true,
-                consoleOutput = true,
-                nugetPackages = true,
-                statefulness = true,
-            },
-            tips = new[]
-            {
-                "Variables and types persist between executions",
-                "Use 'using' directives to import additional namespaces",
-                "Console.WriteLine output is captured separately from return values",
-                "Async/await is fully supported in the REPL",
-                "Use LoadNuGetPackage to add external libraries",
-                "Use ResetRepl to clear all state and start fresh",
-                "Use ValidateCsharp to check syntax before execution",
-                "Use documentation resources to learn about .NET APIs",
-            },
-            examples = new
-            {
-                simpleExpression = "2 + 2",
-                variableDeclaration = "var name = \"Alice\"; name",
-                asyncOperation = "await Task.Delay(100); \"Done\"",
-                linqQuery = "new[] { 1, 2, 3 }.Select(x => x * 2)",
-                consoleOutput = "Console.WriteLine(\"Debug\"); return \"Result\"",
-            },
+            "Variables and types persist between executions",
+            "Use 'using' directives to import additional namespaces",
+            "Console.WriteLine output is captured separately from return values",
+            "Async/await is fully supported in the REPL",
+            "Use LoadNuGetPackage to add external libraries",
+            "Use ResetRepl to clear all state and start fresh",
+            "Use ValidateCsharp to check syntax before execution",
+            "Use documentation resources to learn about .NET APIs",
         };
 
-        // If session-specific state is requested, include session metadata
-        return (isSessionSpecific && !string.IsNullOrEmpty(contextId))
-            ? (
-                contextManager.GetContextMetadata(contextId) is var metadata && metadata != null
-                    ? new
-                    {
-                        baseResponse.uri,
-                        baseResponse.mimeType,
-                        baseResponse.frameworkVersion,
-                        baseResponse.language,
-                        baseResponse.state,
-                        baseResponse.activeSessionCount,
-                        baseResponse.contextId,
-                        baseResponse.isSessionSpecific,
-                        baseResponse.defaultImports,
-                        baseResponse.capabilities,
-                        baseResponse.tips,
-                        baseResponse.examples,
-                        sessionMetadata = new
-                        {
-                            metadata.ContextId,
-                            metadata.CreatedAt,
-                            metadata.LastAccessedAt,
-                            metadata.ExecutionCount,
-                            metadata.IsInitialized,
-                        },
-                    }
-                    : baseResponse
-            )
-            : baseResponse;
+        var capabilities = new ReplCapabilities
+        {
+            AsyncAwait = true,
+            Linq = true,
+            TopLevelStatements = true,
+            ConsoleOutput = true,
+            NugetPackages = true,
+            Statefulness = true,
+        };
+
+        var examples = new ReplExamples
+        {
+            SimpleExpression = "2 + 2",
+            VariableDeclaration = "var name = \"Alice\"; name",
+            AsyncOperation = "await Task.Delay(100); \"Done\"",
+            LinqQuery = "new[] { 1, 2, 3 }.Select(x => x * 2)",
+            ConsoleOutput = "Console.WriteLine(\"Debug\"); return \"Result\"",
+        };
+
+        SessionMetadata? sessionMetadata = null;
+        if (isSessionSpecific && !string.IsNullOrEmpty(contextId))
+        {
+            var metadata = contextManager.GetContextMetadata(contextId);
+            if (metadata != null)
+            {
+                sessionMetadata = new SessionMetadata
+                {
+                    ContextId = metadata.ContextId,
+                    CreatedAt = metadata.CreatedAt,
+                    LastAccessedAt = metadata.LastAccessedAt,
+                    ExecutionCount = metadata.ExecutionCount,
+                    IsInitialized = metadata.IsInitialized,
+                };
+            }
+        }
+
+        return new ReplStateResponse
+        {
+            Uri = uri,
+            MimeType = "application/json",
+            FrameworkVersion = ".NET 10.0",
+            Language = "C# 14",
+            State = "Ready",
+            ActiveSessionCount = activeSessionCount,
+            ContextId = contextId,
+            IsSessionSpecific = isSessionSpecific,
+            DefaultImports = imports,
+            Capabilities = capabilities,
+            Tips = tips,
+            Examples = examples,
+            SessionMetadata = sessionMetadata,
+        };
     }
 }

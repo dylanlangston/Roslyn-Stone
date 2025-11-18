@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using Microsoft.AspNetCore.WebUtilities;
 using ModelContextProtocol.Server;
+using RoslynStone.Infrastructure.Models;
 using RoslynStone.Infrastructure.Services;
 
 namespace RoslynStone.Infrastructure.Resources;
@@ -20,9 +21,9 @@ public class NuGetSearchResource
     /// <returns>Search results with package metadata</returns>
     [McpServerResource]
     [Description(
-        "Access the NuGet package repository catalog to find libraries and tools. Returns matching packages with metadata including name, description, authors, latest version, download count, and URLs. Use this to discover packages for specific functionality, find popular libraries, and check package information before loading. Search by keywords, package names, tags, or descriptions."
+        "Access the NuGet package repository catalog to find libraries and tools. Returns matching packages with metadata including name, description, authors, latest version, download count, and URLs. Use this to discover packages for specific functionality, find popular libraries, and check package information before loading. Search by keywords, package names, tags, or descriptions. URI format: nuget://search?q={query}&skip={skip}&take={take}"
     )]
-    public static async Task<object> SearchPackages(
+    public static async Task<PackageSearchResponse> SearchPackages(
         NuGetService nugetService,
         [Description(
             "Resource URI in the format 'nuget://search?q=query&skip=0&take=20'. Query parameter examples: 'json', 'http client', 'Newtonsoft.Json', 'csv parser', 'logging'."
@@ -52,26 +53,28 @@ public class NuGetSearchResource
             cancellationToken
         );
 
-        return new
+        return new PackageSearchResponse
         {
-            uri,
-            mimeType = "application/json",
-            packages = result.Packages.Select(p => new
-            {
-                id = p.Id,
-                title = p.Title,
-                description = p.Description,
-                authors = p.Authors,
-                latestVersion = p.LatestVersion,
-                downloadCount = p.DownloadCount,
-                iconUrl = p.IconUrl,
-                projectUrl = p.ProjectUrl,
-                tags = p.Tags,
-            }),
-            totalCount = result.TotalCount,
-            query = result.Query,
-            skip,
-            take,
+            Uri = uri,
+            MimeType = "application/json",
+            Packages = result
+                .Packages.Select(p => new PackageInfo
+                {
+                    Id = p.Id,
+                    Title = p.Title,
+                    Description = p.Description,
+                    Authors = p.Authors,
+                    LatestVersion = p.LatestVersion,
+                    DownloadCount = p.DownloadCount ?? 0,
+                    IconUrl = p.IconUrl,
+                    ProjectUrl = p.ProjectUrl,
+                    Tags = p.Tags,
+                })
+                .ToList(),
+            TotalCount = result.TotalCount,
+            Query = result.Query,
+            Skip = skip,
+            Take = take,
         };
     }
 }

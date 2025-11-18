@@ -144,47 +144,6 @@ public class McpToolsIntegrationTests
     }
 
     [Fact]
-    [Trait("Feature", "Documentation")]
-    public void GetDocumentation_ValidType_ReturnsDocumentation()
-    {
-        // Arrange
-        var symbolName = "System.String";
-
-        // Act
-        var result = DocumentationTools.GetDocumentation(_documentationService, symbolName);
-        var json = JsonSerializer.Serialize(result);
-        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
-
-        // Assert
-        Assert.NotNull(resultDict);
-        // Documentation may not be found in test environment without XML docs
-        // Just verify the tool returns a valid structure
-        Assert.True(resultDict.ContainsKey("found"));
-
-        if (resultDict["found"].GetBoolean())
-        {
-            Assert.Equal("System.String", resultDict["symbolName"].GetString());
-        }
-    }
-
-    [Fact]
-    [Trait("Feature", "Documentation")]
-    public void GetDocumentation_InvalidType_ReturnsNotFound()
-    {
-        // Arrange
-        var symbolName = "InvalidType.DoesNotExist";
-
-        // Act
-        var result = DocumentationTools.GetDocumentation(_documentationService, symbolName);
-        var json = JsonSerializer.Serialize(result);
-        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
-
-        // Assert
-        Assert.NotNull(resultDict);
-        Assert.False(resultDict["found"].GetBoolean());
-    }
-
-    [Fact]
     [Trait("Feature", "StateManagement")]
     public async Task EvaluateCsharp_PreservesStateBetweenCalls()
     {
@@ -228,37 +187,5 @@ public class McpToolsIntegrationTests
         Assert.NotNull(resultDict);
         Assert.True(resultDict["success"].GetBoolean());
         Assert.Equal("completed", resultDict["returnValue"].GetString());
-    }
-
-    [Fact]
-    [Trait("Feature", "ReplInfo")]
-    public void GetReplInfo_ReturnsEnvironmentInformation()
-    {
-        // Act
-        var result = ReplTools.GetReplInfo(_contextManager);
-        var json = JsonSerializer.Serialize(result);
-        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
-
-        // Assert
-        Assert.NotNull(resultDict);
-        Assert.True(resultDict.TryGetValue("frameworkVersion", out var frameworkVersion));
-        Assert.True(resultDict.ContainsKey("language"));
-        Assert.True(resultDict.TryGetValue("defaultImports", out var defaultImports));
-        Assert.True(resultDict.TryGetValue("capabilities", out var capabilities));
-        Assert.True(resultDict.ContainsKey("activeSessions"));
-
-        // Verify framework version
-        Assert.Equal(".NET 10.0", frameworkVersion.GetString());
-
-        // Verify capabilities
-        Assert.True(capabilities.GetProperty("asyncAwait").GetBoolean());
-        Assert.True(capabilities.GetProperty("linq").GetBoolean());
-        Assert.True(capabilities.GetProperty("contextManagement").GetBoolean());
-
-        // Verify default imports exist
-        var imports = defaultImports.EnumerateArray().ToList();
-        Assert.NotEmpty(imports);
-        Assert.Contains(imports, i => i.GetString() == "System");
-        Assert.Contains(imports, i => i.GetString() == "System.Linq");
     }
 }

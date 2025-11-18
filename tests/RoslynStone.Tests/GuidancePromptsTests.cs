@@ -86,7 +86,6 @@ public class GuidancePromptsTests
         Assert.NotNull(result);
         Assert.NotEmpty(result);
         Assert.Contains("NuGet", result);
-        Assert.Contains("SearchNuGetPackages", result);
         Assert.Contains("LoadNuGetPackage", result);
         Assert.Contains("nuget://", result);
     }
@@ -102,7 +101,6 @@ public class GuidancePromptsTests
         Assert.NotNull(result);
         Assert.NotEmpty(result);
         Assert.Contains("NuGet", result);
-        Assert.Contains("SearchNuGetPackages", result);
         Assert.Contains("LoadNuGetPackage", result);
         Assert.Contains("Newtonsoft.Json", result);
     }

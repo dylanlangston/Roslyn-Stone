@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using Microsoft.AspNetCore.WebUtilities;
 using ModelContextProtocol.Server;
+using RoslynStone.Infrastructure.Models;
 using RoslynStone.Infrastructure.Services;
 
 namespace RoslynStone.Infrastructure.Resources;
@@ -20,9 +21,9 @@ public class NuGetPackageResource
     /// <returns>List of package versions with metadata</returns>
     [McpServerResource]
     [Description(
-        "Access all published versions of a specific NuGet package, sorted from newest to oldest. Returns version numbers, download counts, and flags indicating prerelease or deprecated status. Use this to choose a specific version to load, check version history, avoid deprecated versions, and identify stable releases."
+        "Access all published versions of a specific NuGet package, sorted from newest to oldest. Returns version numbers, download counts, and flags indicating prerelease or deprecated status. Use this to choose a specific version to load, check version history, avoid deprecated versions, and identify stable releases. URI format: nuget://packages/{PackageId}/versions"
     )]
-    public static async Task<object> GetPackageVersions(
+    public static async Task<PackageVersionsResponse> GetPackageVersions(
         NuGetService nugetService,
         [Description(
             "Resource URI in the format 'nuget://packages/PackageId/versions'. Examples: 'nuget://packages/Newtonsoft.Json/versions', 'nuget://packages/Microsoft.Extensions.Logging/versions'."
@@ -38,31 +39,34 @@ public class NuGetPackageResource
 
         if (string.IsNullOrWhiteSpace(packageId))
         {
-            return new
+            return new PackageVersionsResponse
             {
-                uri,
-                found = false,
-                mimeType = "application/json",
-                message = "Invalid URI format. Expected: nuget://packages/{packageId}/versions",
+                Uri = uri,
+                Found = false,
+                MimeType = "application/json",
+                Message =
+                    "Invalid URI format. Expected: nuget://packages/{packageId}/versions. Example: nuget://packages/Newtonsoft.Json/versions",
             };
         }
 
         var versions = await nugetService.GetPackageVersionsAsync(packageId, cancellationToken);
 
-        return new
+        return new PackageVersionsResponse
         {
-            uri,
-            mimeType = "application/json",
-            found = true,
-            packageId,
-            versions = versions.Select(v => new
-            {
-                version = v.Version,
-                downloadCount = v.DownloadCount,
-                isPrerelease = v.IsPrerelease,
-                isDeprecated = v.IsDeprecated,
-            }),
-            totalCount = versions.Count,
+            Uri = uri,
+            MimeType = "application/json",
+            Found = true,
+            PackageId = packageId,
+            Versions = versions
+                .Select(v => new PackageVersionInfo
+                {
+                    Version = v.Version,
+                    DownloadCount = v.DownloadCount ?? 0,
+                    IsPrerelease = v.IsPrerelease,
+                    IsDeprecated = v.IsDeprecated,
+                })
+                .ToList(),
+            TotalCount = versions.Count,
         };
     }
 
@@ -75,9 +79,9 @@ public class NuGetPackageResource
     /// <returns>Package README content</returns>
     [McpServerResource]
     [Description(
-        "Access README documentation for a NuGet package. README files typically contain installation instructions, quick start guides, API overview, usage examples, and links to detailed documentation. Use this to understand how to use a package, see code examples, learn about package features, and check requirements before loading."
+        "Access README documentation for a NuGet package. README files typically contain installation instructions, quick start guides, API overview, usage examples, and links to detailed documentation. Use this to understand how to use a package, see code examples, learn about package features, and check requirements before loading. URI format: nuget://packages/{PackageId}/readme?version={version}"
     )]
-    public static async Task<object> GetPackageReadme(
+    public static async Task<PackageReadmeResponse> GetPackageReadme(
         NuGetService nugetService,
         [Description(
             "Resource URI in the format 'nuget://packages/PackageId/readme' or 'nuget://packages/PackageId/readme?version=1.0.0'. Examples: 'nuget://packages/Newtonsoft.Json/readme', 'nuget://packages/Flurl.Http/readme?version=4.0.0'."
@@ -101,12 +105,13 @@ public class NuGetPackageResource
 
         if (string.IsNullOrWhiteSpace(packageId))
         {
-            return new
+            return new PackageReadmeResponse
             {
-                uri,
-                found = false,
-                mimeType = "text/markdown",
-                message = "Invalid URI format. Expected: nuget://packages/{packageId}/readme",
+                Uri = uri,
+                Found = false,
+                MimeType = "text/markdown",
+                Message =
+                    "Invalid URI format. Expected: nuget://packages/{packageId}/readme. Example: nuget://packages/Newtonsoft.Json/readme",
             };
         }
 
@@ -119,14 +124,14 @@ public class NuGetPackageResource
             cancellationToken
         );
 
-        return new
+        return new PackageReadmeResponse
         {
-            uri,
-            mimeType = "text/markdown",
-            found = readme != null,
-            packageId,
-            version = version ?? "latest",
-            content = readme ?? "README not found",
+            Uri = uri,
+            MimeType = "text/markdown",
+            Found = readme != null,
+            PackageId = packageId,
+            Version = version ?? "latest",
+            Content = readme ?? "README not found for this package",
         };
     }
 }

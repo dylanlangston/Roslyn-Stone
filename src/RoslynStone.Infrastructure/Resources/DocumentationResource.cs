@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using ModelContextProtocol.Server;
+using RoslynStone.Infrastructure.Models;
 using RoslynStone.Infrastructure.Services;
 
 namespace RoslynStone.Infrastructure.Resources;
@@ -18,12 +19,12 @@ public class DocumentationResource
     /// <returns>Documentation content in structured format</returns>
     [McpServerResource]
     [Description(
-        "Access comprehensive XML documentation for .NET types, methods, properties, and other symbols. Returns detailed information including summary, remarks, parameters, return values, exceptions, and code examples. Use this to: understand .NET APIs, learn method signatures, discover available members, and get context-aware help. Supports all .NET 10 types and methods."
+        "Access comprehensive XML documentation for .NET types, methods, properties, and other symbols. Returns detailed information including summary, remarks, parameters, return values, exceptions, and code examples. Use this to: understand .NET APIs, learn method signatures, discover available members, and get context-aware help. Supports all .NET 10 types and methods. URI format: doc://{FullyQualifiedTypeName}"
     )]
-    public static object GetDocumentation(
+    public static DocumentationResponse GetDocumentation(
         DocumentationService documentationService,
         [Description(
-            "Resource URI in the format 'doc://Fully.Qualified.TypeName'. Examples: 'doc://System.String', 'doc://System.Linq.Enumerable.Select', 'doc://System.Collections.Generic.List`1'."
+            "Resource URI in the format 'doc://Fully.Qualified.TypeName'. Examples: 'doc://System.String', 'doc://System.Linq.Enumerable.Select', 'doc://System.Collections.Generic.List`1'"
         )]
             string uri
     )
@@ -37,27 +38,28 @@ public class DocumentationResource
 
         if (doc == null)
         {
-            return new
+            return new DocumentationResponse
             {
-                uri,
-                found = false,
-                mimeType = "application/json",
-                message = $"Documentation not found for symbol: {symbolName}",
+                Uri = uri,
+                Found = false,
+                MimeType = "application/json",
+                Message =
+                    $"Documentation not found for symbol: {symbolName}. Try well-known types like System.String, System.Linq.Enumerable, System.Collections.Generic.List`1, System.Threading.Tasks.Task, or System.Text.Json.JsonSerializer.",
             };
         }
 
-        return new
+        return new DocumentationResponse
         {
-            uri,
-            found = true,
-            mimeType = "application/json",
-            symbolName = doc.SymbolName,
-            summary = doc.Summary,
-            remarks = doc.Remarks,
-            parameters = doc.Parameters,
-            returns = doc.Returns,
-            exceptions = doc.Exceptions,
-            example = doc.Example,
+            Uri = uri,
+            Found = true,
+            MimeType = "application/json",
+            SymbolName = doc.SymbolName,
+            Summary = doc.Summary,
+            Remarks = doc.Remarks,
+            Parameters = doc.Parameters,
+            Returns = doc.Returns,
+            Exceptions = doc.Exceptions,
+            Example = doc.Example,
         };
     }
 }
