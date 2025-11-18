@@ -96,7 +96,7 @@ public class LoadTester
             ("Simple Expression", CreateSimpleExpressionRequest()),
             ("Variable Assignment", CreateVariableAssignmentRequest()),
             ("LINQ Query", CreateLinqQueryRequest()),
-            ("NuGet Search", CreateNuGetSearchRequest()),
+            ("Context Management", CreateContextManagementRequest()),
         };
 
         foreach (var (scenarioName, requestContent) in scenarios)
@@ -223,7 +223,7 @@ public class LoadTester
         return JsonSerializer.Serialize(request);
     }
 
-    private static string CreateNuGetSearchRequest()
+    private static string CreateContextManagementRequest()
     {
         var request = new
         {
@@ -231,13 +231,8 @@ public class LoadTester
             method = "tools/call",
             @params = new
             {
-                name = "SearchNuGetPackages",
-                arguments = new
-                {
-                    query = "Newtonsoft.Json",
-                    skip = 0,
-                    take = 10,
-                },
+                name = "EvaluateCsharp",
+                arguments = new { code = "int counter = 0; counter++; counter" },
             },
             id = 1,
         };
