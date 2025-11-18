@@ -80,6 +80,26 @@ public class ResourceTests
     }
 
     [Fact]
+    [Trait("Feature", "Documentation")]
+    public async Task DocumentationResource_GetDocumentation_PackageUriFormat_ParsesCorrectly()
+    {
+        // Arrange
+        var uri = "doc://Newtonsoft.Json@Newtonsoft.Json.JsonConvert";
+
+        // Act
+        var result = await DocumentationResource.GetDocumentation(_documentationService, uri);
+        var json = JsonSerializer.Serialize(result);
+        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+
+        // Assert
+        Assert.NotNull(resultDict);
+        Assert.True(resultDict.TryGetValue("uri", out var uriElement));
+        Assert.Equal(uri, uriElement.GetString());
+        // Package may or may not be available, but URI parsing should work
+        Assert.True(resultDict.TryGetValue("found", out _));
+    }
+
+    [Fact]
     [Trait("Feature", "NuGet")]
     public async Task NuGetSearchResource_SearchPackages_ValidQuery_ReturnsResults()
     {

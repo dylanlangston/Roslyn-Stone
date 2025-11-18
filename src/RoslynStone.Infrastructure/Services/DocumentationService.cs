@@ -258,8 +258,10 @@ public class DocumentationService
                 FullDocumentation = memberElement.ToString(),
             };
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            // Log and swallow exceptions for graceful degradation
+            // TODO: Add proper logging when logger is available
             return null;
         }
     }
@@ -284,7 +286,7 @@ public class DocumentationService
         {
             // Use NuGet.Protocol to get package metadata and download the package
             var repository = Repository.Factory.GetCoreV3("https://api.nuget.org/v3/index.json");
-            var cache = new SourceCacheContext();
+            using var cache = new SourceCacheContext();
 
             var metadataResource = await repository.GetResourceAsync<PackageMetadataResource>(
                 cancellationToken
@@ -370,13 +372,12 @@ public class DocumentationService
             // Cache the document
             _documentationCache[cacheKey] = doc;
 
-            cache.Dispose();
-
             return doc;
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            // XML documentation not available
+            // Log and swallow exceptions for graceful degradation
+            // TODO: Add proper logging when logger is available
             return null;
         }
     }
