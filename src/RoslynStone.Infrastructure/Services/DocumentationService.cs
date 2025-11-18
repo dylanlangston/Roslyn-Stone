@@ -1,6 +1,10 @@
 using System.Reflection;
 using System.Xml.Linq;
 using NuGet.Configuration;
+using NuGet.Packaging;
+using NuGet.Protocol;
+using NuGet.Protocol.Core.Types;
+using NuGet.Versioning;
 using RoslynStone.Core.Models;
 
 namespace RoslynStone.Infrastructure.Services;
@@ -26,10 +30,14 @@ public class DocumentationService
     /// Get documentation for a symbol (type, method, property, etc.)
     /// </summary>
     /// <param name="symbolName">The symbol name to look up (e.g., "System.String" or "Newtonsoft.Json.JsonConvert")</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Documentation information if found, otherwise null</returns>
-    public DocumentationInfo? GetDocumentation(string symbolName)
+    public async Task<DocumentationInfo?> GetDocumentationAsync(
+        string symbolName,
+        CancellationToken cancellationToken = default
+    )
     {
-        return GetDocumentation(symbolName, packageId: null);
+        return await GetDocumentationAsync(symbolName, packageId: null, cancellationToken);
     }
 
     /// <summary>
@@ -37,8 +45,13 @@ public class DocumentationService
     /// </summary>
     /// <param name="symbolName">The symbol name to look up</param>
     /// <param name="packageId">Optional NuGet package ID to search (e.g., "Newtonsoft.Json")</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Documentation information if found, otherwise null</returns>
-    public DocumentationInfo? GetDocumentation(string symbolName, string? packageId)
+    public async Task<DocumentationInfo?> GetDocumentationAsync(
+        string symbolName,
+        string? packageId,
+        CancellationToken cancellationToken = default
+    )
     {
         try
         {
@@ -74,7 +87,11 @@ public class DocumentationService
             // If not found and packageId is provided, try NuGet package documentation
             if (!string.IsNullOrWhiteSpace(packageId) && _nugetService != null)
             {
-                return GetNuGetPackageDocumentation(symbolName, packageId);
+                return await GetNuGetPackageDocumentationAsync(
+                    symbolName,
+                    packageId,
+                    cancellationToken
+                );
             }
 
             return null;
@@ -192,13 +209,17 @@ public class DocumentationService
     }
 
     /// <summary>
-    /// Get documentation from a NuGet package's XML file
+    /// Get documentation from a NuGet package by downloading it at runtime
     /// </summary>
-    private DocumentationInfo? GetNuGetPackageDocumentation(string symbolName, string packageId)
+    private async Task<DocumentationInfo?> GetNuGetPackageDocumentationAsync(
+        string symbolName,
+        string packageId,
+        CancellationToken cancellationToken
+    )
     {
         try
         {
-            var xmlDoc = GetNuGetPackageXmlDocumentation(packageId);
+            var xmlDoc = await GetNuGetPackageXmlDocumentationAsync(packageId, cancellationToken);
             if (xmlDoc == null)
                 return null;
 
@@ -245,10 +266,16 @@ public class DocumentationService
     }
 
     /// <summary>
-    /// Get XML documentation file for a NuGet package
+    /// Get XML documentation file for a NuGet package by downloading it at runtime using NuGet.Protocol
     /// </summary>
-    private XDocument? GetNuGetPackageXmlDocumentation(string packageId)
+    private async Task<XDocument?> GetNuGetPackageXmlDocumentationAsync(
+        string packageId,
+        CancellationToken cancellationToken
+    )
     {
+        if (_nugetService == null)
+            return null;
+
         // Check cache first
         var cacheKey = $"nuget:{packageId}";
         if (_documentationCache.TryGetValue(cacheKey, out var cached))
@@ -256,58 +283,102 @@ public class DocumentationService
 
         try
         {
-            // Get NuGet global packages folder
+            // Use NuGet.Protocol to get package metadata and download the package
+            var repository = Repository.Factory.GetCoreV3("https://api.nuget.org/v3/index.json");
+            var cache = new SourceCacheContext();
+
+            var metadataResource = await repository.GetResourceAsync<PackageMetadataResource>(
+                cancellationToken
+            );
+
+            var metadata = await metadataResource.GetMetadataAsync(
+                packageId,
+                includePrerelease: true,
+                includeUnlisted: false,
+                cache,
+                NuGet.Common.NullLogger.Instance,
+                cancellationToken
+            );
+
+            var metadataList = metadata.ToList();
+            if (metadataList.Count == 0)
+                return null;
+
+            // Get the latest version
+            var packageMetadata = metadataList
+                .OrderByDescending(m => m.Identity.Version)
+                .FirstOrDefault();
+
+            if (packageMetadata == null)
+                return null;
+
+            // Download the package
+            var downloadResource = await repository.GetResourceAsync<DownloadResource>(
+                cancellationToken
+            );
+
             var globalPackagesFolder = SettingsUtility.GetGlobalPackagesFolder(
                 Settings.LoadDefaultSettings(null)
             );
 
-            // NuGet stores packages in lowercase
-            var packagePath = Path.Combine(globalPackagesFolder, packageId.ToLowerInvariant());
+            using var downloadResult = await downloadResource.GetDownloadResourceResultAsync(
+                packageMetadata.Identity,
+                new PackageDownloadContext(cache),
+                globalPackagesFolder,
+                NuGet.Common.NullLogger.Instance,
+                cancellationToken
+            );
 
-            if (!Directory.Exists(packagePath))
+            if (downloadResult.Status != DownloadResourceResultStatus.Available)
                 return null;
 
-            // Find the latest version directory
-            var versionDirs = Directory
-                .GetDirectories(packagePath)
-                .OrderByDescending(d => d)
-                .ToList();
+            // Extract and read XML documentation from the package stream
+            using var packageStream = downloadResult.PackageStream;
+            using var packageReader = new PackageArchiveReader(packageStream);
 
-            if (versionDirs.Count == 0)
-                return null;
+            // Get all files in the package
+            var files = packageReader.GetFiles().ToList();
 
-            // Search for XML documentation files in the package
-            foreach (var versionDir in versionDirs)
-            {
-                var xmlFiles = Directory.GetFiles(versionDir, "*.xml", SearchOption.AllDirectories);
-
-                // Prefer XML files in lib directories and skip ref directories
-                var libXmlFiles = xmlFiles
-                    .Where(f =>
+            // Find XML files in lib directories (skip ref directories)
+            var xmlFiles = files
+                .Where(f =>
+                    f.EndsWith(".xml", StringComparison.OrdinalIgnoreCase)
+                    && (
                         f.Contains("/lib/", StringComparison.OrdinalIgnoreCase)
                         || f.Contains("\\lib\\", StringComparison.OrdinalIgnoreCase)
                     )
-                    .Where(f =>
-                        !f.Contains("/ref/", StringComparison.OrdinalIgnoreCase)
-                        && !f.Contains("\\ref\\", StringComparison.OrdinalIgnoreCase)
-                    )
+                    && !f.Contains("/ref/", StringComparison.OrdinalIgnoreCase)
+                    && !f.Contains("\\ref\\", StringComparison.OrdinalIgnoreCase)
+                )
+                .ToList();
+
+            // If no lib XML files, try any XML file
+            if (xmlFiles.Count == 0)
+            {
+                xmlFiles = files
+                    .Where(f => f.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
                     .ToList();
-
-                var xmlFile = libXmlFiles.FirstOrDefault() ?? xmlFiles.FirstOrDefault();
-
-                if (xmlFile != null && File.Exists(xmlFile))
-                {
-                    var doc = XDocument.Load(xmlFile);
-                    _documentationCache[cacheKey] = doc;
-                    return doc;
-                }
             }
+
+            if (xmlFiles.Count == 0)
+                return null;
+
+            // Read the first XML file
+            var xmlFile = xmlFiles.First();
+            using var xmlStream = packageReader.GetStream(xmlFile);
+            var doc = XDocument.Load(xmlStream);
+
+            // Cache the document
+            _documentationCache[cacheKey] = doc;
+
+            cache.Dispose();
+
+            return doc;
         }
         catch
         {
             // XML documentation not available
+            return null;
         }
-
-        return null;
     }
 }

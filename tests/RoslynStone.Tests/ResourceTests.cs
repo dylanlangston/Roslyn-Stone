@@ -26,13 +26,13 @@ public class ResourceTests
 
     [Fact]
     [Trait("Feature", "Documentation")]
-    public void DocumentationResource_GetDocumentation_ValidUri_ReturnsDocumentation()
+    public async Task DocumentationResource_GetDocumentation_ValidUri_ReturnsDocumentation()
     {
         // Arrange
         var uri = "doc://System.String";
 
         // Act
-        var result = DocumentationResource.GetDocumentation(_documentationService, uri);
+        var result = await DocumentationResource.GetDocumentation(_documentationService, uri);
         var json = JsonSerializer.Serialize(result);
         var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
 
@@ -46,13 +46,13 @@ public class ResourceTests
 
     [Fact]
     [Trait("Feature", "Documentation")]
-    public void DocumentationResource_GetDocumentation_WithoutPrefix_ReturnsDocumentation()
+    public async Task DocumentationResource_GetDocumentation_WithoutPrefix_ReturnsDocumentation()
     {
         // Arrange
         var uri = "System.String";
 
         // Act
-        var result = DocumentationResource.GetDocumentation(_documentationService, uri);
+        var result = await DocumentationResource.GetDocumentation(_documentationService, uri);
         var json = JsonSerializer.Serialize(result);
         var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
 
@@ -63,13 +63,13 @@ public class ResourceTests
 
     [Fact]
     [Trait("Feature", "Documentation")]
-    public void DocumentationResource_GetDocumentation_InvalidSymbol_ReturnsNotFound()
+    public async Task DocumentationResource_GetDocumentation_InvalidSymbol_ReturnsNotFound()
     {
         // Arrange
         var uri = "doc://NonExistent.Type.Name";
 
         // Act
-        var result = DocumentationResource.GetDocumentation(_documentationService, uri);
+        var result = await DocumentationResource.GetDocumentation(_documentationService, uri);
         var json = JsonSerializer.Serialize(result);
         var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
 

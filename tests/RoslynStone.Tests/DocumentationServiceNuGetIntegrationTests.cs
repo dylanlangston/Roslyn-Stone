@@ -20,14 +20,14 @@ public class DocumentationServiceNuGetIntegrationTests : IDisposable
 
     [Fact]
     [Trait("Feature", "NuGetPackages")]
-    public void GetDocumentation_NewtonsoftJsonJsonConvert_ReturnsDocumentationIfInstalled()
+    public async Task GetDocumentationAsync_NewtonsoftJsonJsonConvert_ReturnsDocumentationIfInstalled()
     {
         // Arrange
         var symbolName = "Newtonsoft.Json.JsonConvert";
         var packageId = "Newtonsoft.Json";
 
         // Act
-        var result = _service.GetDocumentation(symbolName, packageId);
+        var result = await _service.GetDocumentationAsync(symbolName, packageId);
 
         // Assert
         // If the package is installed locally (from other tests or builds),
@@ -43,7 +43,7 @@ public class DocumentationServiceNuGetIntegrationTests : IDisposable
 
     [Fact]
     [Trait("Feature", "NuGetPackages")]
-    public void GetDocumentation_CommonNuGetPackage_HandlesGracefully()
+    public async Task GetDocumentationAsync_CommonNuGetPackage_HandlesGracefully()
     {
         // Arrange - Try a few common packages that might be installed
         var testCases = new[]
@@ -56,7 +56,7 @@ public class DocumentationServiceNuGetIntegrationTests : IDisposable
         foreach (var (symbolName, packageId) in testCases)
         {
             // Act
-            var result = _service.GetDocumentation(symbolName, packageId);
+            var result = await _service.GetDocumentationAsync(symbolName, packageId);
 
             // Assert - Should not throw, may or may not find documentation
             Assert.True(
@@ -68,14 +68,14 @@ public class DocumentationServiceNuGetIntegrationTests : IDisposable
 
     [Fact]
     [Trait("Feature", "NuGetPackages")]
-    public void GetDocumentation_TypeInInstalledPackage_RetrievesCorrectMemberTypes()
+    public async Task GetDocumentationAsync_TypeInInstalledPackage_RetrievesCorrectMemberTypes()
     {
         // Arrange
         var symbolName = "Newtonsoft.Json.JsonConvert";
         var packageId = "Newtonsoft.Json";
 
         // Act
-        var result = _service.GetDocumentation(symbolName, packageId);
+        var result = await _service.GetDocumentationAsync(symbolName, packageId);
 
         // Assert
         if (result != null)
@@ -90,14 +90,14 @@ public class DocumentationServiceNuGetIntegrationTests : IDisposable
 
     [Fact]
     [Trait("Feature", "NuGetPackages")]
-    public void GetDocumentation_InvalidPackageId_ReturnsNull()
+    public async Task GetDocumentationAsync_InvalidPackageId_ReturnsNull()
     {
         // Arrange
         var symbolName = "Some.Type.Name";
         var packageId = "This.Package.Does.Not.Exist.123456789";
 
         // Act
-        var result = _service.GetDocumentation(symbolName, packageId);
+        var result = await _service.GetDocumentationAsync(symbolName, packageId);
 
         // Assert
         Assert.Null(result);
@@ -105,14 +105,14 @@ public class DocumentationServiceNuGetIntegrationTests : IDisposable
 
     [Fact]
     [Trait("Feature", "NuGetPackages")]
-    public void GetDocumentation_EmptyPackageId_ReturnsFallbackBehavior()
+    public async Task GetDocumentationAsync_EmptyPackageId_ReturnsFallbackBehavior()
     {
         // Arrange
         var symbolName = "System.String";
         var packageId = "";
 
         // Act
-        var result = _service.GetDocumentation(symbolName, packageId);
+        var result = await _service.GetDocumentationAsync(symbolName, packageId);
 
         // Assert - Empty package ID should fall back to normal behavior
         Assert.True(result == null || result.SymbolName == symbolName);
