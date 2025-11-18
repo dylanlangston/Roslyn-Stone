@@ -109,7 +109,7 @@ Validate that the MCP HTTP server can handle high concurrency and scale under lo
 1. **Simple Expression** - `2 + 2`
 2. **Variable Assignment** - `var x = 10; x * 2`
 3. **LINQ Query** - `Enumerable.Range(1, 100).Where(x => x % 2 == 0).Sum()`
-4. **NuGet Search** - Search for "Newtonsoft.Json"
+4. **NuGet Package Loading** - Load package via LoadNuGetPackage tool
 
 ### Expected Performance
 
@@ -244,7 +244,7 @@ Branch coverage: 62.98% (target: 75%)
    - Download failure handling
    - Partial download recovery
 
-3. **DocumentationTools.GetDocumentation**
+3. **DocumentationResource**
    - Missing XML documentation files
    - Assembly load failures
    - Symbol resolution edge cases

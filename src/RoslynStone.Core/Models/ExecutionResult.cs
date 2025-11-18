@@ -1,3 +1,5 @@
+using Microsoft.CodeAnalysis.Scripting;
+
 namespace RoslynStone.Core.Models;
 
 /// <summary>
@@ -35,6 +37,11 @@ public class ExecutionResult
     /// Gets or sets the total execution time
     /// </summary>
     public TimeSpan ExecutionTime { get; init; }
+
+    /// <summary>
+    /// Gets or sets the resulting script state (for context-aware execution)
+    /// </summary>
+    public ScriptState? ScriptState { get; init; }
 }
 
 /// <summary>

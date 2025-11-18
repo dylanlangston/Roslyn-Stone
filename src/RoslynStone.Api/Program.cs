@@ -1,3 +1,4 @@
+using RoslynStone.Infrastructure.Resources;
 using RoslynStone.Infrastructure.Services;
 using RoslynStone.Infrastructure.Tools;
 
@@ -26,6 +27,7 @@ static void RegisterServices(IServiceCollection services)
     services.AddSingleton<CompilationService>();
     services.AddSingleton<AssemblyExecutionService>();
     services.AddSingleton<NuGetService>();
+    services.AddSingleton<IReplContextManager, ReplContextManager>();
 }
 
 if (useHttpTransport)
@@ -50,7 +52,8 @@ if (useHttpTransport)
         .Services.AddMcpServer()
         .WithHttpTransport()
         .WithPromptsFromAssembly(typeof(GuidancePrompts).Assembly)
-        .WithToolsFromAssembly(typeof(ReplTools).Assembly);
+        .WithToolsFromAssembly(typeof(ReplTools).Assembly)
+        .WithResourcesFromAssembly(typeof(DocumentationResource).Assembly);
 
     var app = builder.Build();
 
@@ -85,7 +88,8 @@ else
         .Services.AddMcpServer()
         .WithStdioServerTransport()
         .WithPromptsFromAssembly(typeof(GuidancePrompts).Assembly)
-        .WithToolsFromAssembly(typeof(ReplTools).Assembly);
+        .WithToolsFromAssembly(typeof(ReplTools).Assembly)
+        .WithResourcesFromAssembly(typeof(DocumentationResource).Assembly);
 
     // Build and run the host
     await builder.Build().RunAsync();

@@ -116,6 +116,7 @@ public class RoslynScriptingService
                     Errors = errors,
                     Warnings = warnings,
                     ExecutionTime = stopwatch.Elapsed,
+                    ScriptState = _scriptState,
                 };
             }
             finally
@@ -134,7 +135,7 @@ public class RoslynScriptingService
                 ExecutionTime = stopwatch.Elapsed,
             };
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             stopwatch.Stop();
 
@@ -206,6 +207,114 @@ public class RoslynScriptingService
         finally
         {
             _stateLock.Release();
+        }
+    }
+
+    /// <summary>
+    /// Execute C# code with an existing script state (for context-aware execution)
+    /// </summary>
+    /// <param name="code">The C# code to execute</param>
+    /// <param name="existingState">The existing script state to continue from (can be null for new state)</param>
+    /// <param name="cancellationToken">Cancellation token for async operations</param>
+    /// <returns>Execution result with return value, output, errors, timing information, and updated script state</returns>
+    public async Task<ExecutionResult> ExecuteWithStateAsync(
+        string code,
+        ScriptState? existingState,
+        CancellationToken cancellationToken = default
+    )
+    {
+        var stopwatch = Stopwatch.StartNew();
+        var errors = new List<CompilationError>();
+        var warnings = new List<CompilationError>();
+
+        // Use static execution lock to prevent Console.SetOut() interference
+        await _executionLock.WaitAsync(cancellationToken);
+        try
+        {
+            // Capture console output
+            var originalOut = Console.Out;
+            using var tempWriter = new StringWriter();
+            Console.SetOut(tempWriter);
+
+            try
+            {
+                // Continue from provided state or start new
+                ScriptState<object>? newState;
+                if (existingState == null)
+                {
+                    newState = await CSharpScript.RunAsync(
+                        code,
+                        _scriptOptions,
+                        cancellationToken: cancellationToken
+                    );
+                }
+                else
+                {
+                    newState = await existingState.ContinueWithAsync(
+                        code,
+                        cancellationToken: cancellationToken
+                    );
+                }
+
+                stopwatch.Stop();
+
+                // Ensure all output is flushed
+                await Console.Out.FlushAsync();
+
+                // Get the current output
+                var output = tempWriter.ToString();
+
+                return new ExecutionResult
+                {
+                    Success = true,
+                    ReturnValue = newState.ReturnValue,
+                    Output = output,
+                    Errors = errors,
+                    Warnings = warnings,
+                    ExecutionTime = stopwatch.Elapsed,
+                    ScriptState = newState, // Return the new state
+                };
+            }
+            finally
+            {
+                Console.SetOut(originalOut);
+            }
+        }
+        catch (CompilationErrorException ex)
+        {
+            stopwatch.Stop();
+
+            return new ExecutionResult
+            {
+                Success = false,
+                Errors = ex.Diagnostics.ToCompilationErrors(),
+                ExecutionTime = stopwatch.Elapsed,
+                ScriptState = existingState, // Keep existing state on error
+            };
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            stopwatch.Stop();
+
+            return new ExecutionResult
+            {
+                Success = false,
+                Errors =
+                [
+                    new CompilationError
+                    {
+                        Code = "RUNTIME_ERROR",
+                        Message = ex.Message,
+                        Severity = "Error",
+                    },
+                ],
+                ExecutionTime = stopwatch.Elapsed,
+                ScriptState = existingState, // Keep existing state on error
+            };
+        }
+        finally
+        {
+            _executionLock.Release();
         }
     }
 }
