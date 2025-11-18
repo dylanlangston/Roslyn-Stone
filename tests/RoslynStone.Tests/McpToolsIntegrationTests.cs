@@ -224,11 +224,7 @@ public class McpToolsIntegrationTests
         var contextMgr = new ReplContextManager(contextTimeout: shortTimeout);
 
         // Create a context and let it expire
-        var result1 = await ReplTools.EvaluateCsharp(
-            _scriptingService,
-            contextMgr,
-            "int x = 42;"
-        );
+        var result1 = await ReplTools.EvaluateCsharp(_scriptingService, contextMgr, "int x = 42;");
         var json1 = JsonSerializer.Serialize(result1);
         var result1Dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json1);
         var contextId = result1Dict!["contextId"].GetString();
@@ -287,20 +283,12 @@ public class McpToolsIntegrationTests
         var contextMgr = new ReplContextManager();
 
         // Act - Create two contexts with different variables
-        var result1 = await ReplTools.EvaluateCsharp(
-            service,
-            contextMgr,
-            "int value1 = 100;"
-        );
+        var result1 = await ReplTools.EvaluateCsharp(service, contextMgr, "int value1 = 100;");
         var json1 = JsonSerializer.Serialize(result1);
         var result1Dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json1);
         var context1Id = result1Dict!["contextId"].GetString();
 
-        var result2 = await ReplTools.EvaluateCsharp(
-            service,
-            contextMgr,
-            "int value2 = 200;"
-        );
+        var result2 = await ReplTools.EvaluateCsharp(service, contextMgr, "int value2 = 200;");
         var json2 = JsonSerializer.Serialize(result2);
         var result2Dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json2);
         var context2Id = result2Dict!["contextId"].GetString();
@@ -343,14 +331,10 @@ public class McpToolsIntegrationTests
         var contextMgr = new ReplContextManager();
 
         // Act - Define variable in context1
-        var result1 = await ReplTools.EvaluateCsharp(
-            service,
-            contextMgr,
-            "int secretValue = 999;"
-        );
+        var result1 = await ReplTools.EvaluateCsharp(service, contextMgr, "int secretValue = 999;");
         var json1 = JsonSerializer.Serialize(result1);
         var result1Dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json1);
-        var context1Id = result1Dict!["contextId"].GetString();
+        _ = result1Dict!["contextId"].GetString(); // Context 1 created but not used for validation
 
         // Try to access variable from context2 (should fail)
         var result2 = await ReplTools.EvaluateCsharp(service, contextMgr, "secretValue");
@@ -372,20 +356,12 @@ public class McpToolsIntegrationTests
         var contextMgr = new ReplContextManager();
 
         // Create two contexts
-        var result1 = await ReplTools.EvaluateCsharp(
-            service,
-            contextMgr,
-            "int value1 = 100;"
-        );
+        var result1 = await ReplTools.EvaluateCsharp(service, contextMgr, "int value1 = 100;");
         var json1 = JsonSerializer.Serialize(result1);
         var result1Dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json1);
         var context1Id = result1Dict!["contextId"].GetString();
 
-        var result2 = await ReplTools.EvaluateCsharp(
-            service,
-            contextMgr,
-            "int value2 = 200;"
-        );
+        var result2 = await ReplTools.EvaluateCsharp(service, contextMgr, "int value2 = 200;");
         var json2 = JsonSerializer.Serialize(result2);
         var result2Dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json2);
         var context2Id = result2Dict!["contextId"].GetString();
@@ -458,23 +434,13 @@ public class McpToolsIntegrationTests
         var resetDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(resetJson);
 
         // Try to use contexts
-        var result1After = await ReplTools.EvaluateCsharp(
-            service,
-            contextMgr,
-            "x",
-            context1Id
-        );
+        var result1After = await ReplTools.EvaluateCsharp(service, contextMgr, "x", context1Id);
         var json1After = JsonSerializer.Serialize(result1After);
         var result1AfterDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
             json1After
         );
 
-        var result2After = await ReplTools.EvaluateCsharp(
-            service,
-            contextMgr,
-            "y",
-            context2Id
-        );
+        var result2After = await ReplTools.EvaluateCsharp(service, contextMgr, "y", context2Id);
         var json2After = JsonSerializer.Serialize(result2After);
         var result2AfterDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
             json2After

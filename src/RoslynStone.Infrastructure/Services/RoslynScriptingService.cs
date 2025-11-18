@@ -239,17 +239,22 @@ public class RoslynScriptingService
             try
             {
                 // Continue from provided state or start new
-                var newState =
-                    existingState == null
-                        ? await CSharpScript.RunAsync(
-                            code,
-                            _scriptOptions,
-                            cancellationToken: cancellationToken
-                        )
-                        : await existingState.ContinueWithAsync(
-                            code,
-                            cancellationToken: cancellationToken
-                        );
+                ScriptState<object>? newState;
+                if (existingState == null)
+                {
+                    newState = await CSharpScript.RunAsync(
+                        code,
+                        _scriptOptions,
+                        cancellationToken: cancellationToken
+                    );
+                }
+                else
+                {
+                    newState = await existingState.ContinueWithAsync(
+                        code,
+                        cancellationToken: cancellationToken
+                    );
+                }
 
                 stopwatch.Stop();
 

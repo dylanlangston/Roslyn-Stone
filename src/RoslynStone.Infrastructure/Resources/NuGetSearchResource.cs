@@ -65,6 +65,7 @@ public class NuGetSearchResource
                     Description = p.Description,
                     Authors = p.Authors,
                     LatestVersion = p.LatestVersion,
+                    // Defensive: DownloadCount may be null for newly published packages or due to data sync issues with NuGet API
                     DownloadCount = p.DownloadCount ?? 0,
                     IconUrl = p.IconUrl,
                     ProjectUrl = p.ProjectUrl,

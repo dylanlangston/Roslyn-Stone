@@ -43,9 +43,21 @@ public class ReplStateResource
                 parts,
                 p => p.Equals("sessions", StringComparison.OrdinalIgnoreCase)
             );
-            if (sessionIndex >= 0 && sessionIndex + 1 < parts.Length)
+            if (
+                sessionIndex >= 0
+                && sessionIndex + 1 < parts.Length
+                && !string.IsNullOrWhiteSpace(parts[sessionIndex + 1])
+            )
             {
                 contextId = parts[sessionIndex + 1];
+                // Validate that it's followed by 'state' as expected
+                if (
+                    sessionIndex + 2 >= parts.Length
+                    || !parts[sessionIndex + 2].Equals("state", StringComparison.OrdinalIgnoreCase)
+                )
+                {
+                    contextId = null; // Invalid format, reset
+                }
             }
         }
 

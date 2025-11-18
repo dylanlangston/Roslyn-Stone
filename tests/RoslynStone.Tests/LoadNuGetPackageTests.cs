@@ -85,7 +85,8 @@ public class LoadNuGetPackageTests : IDisposable
         await NuGetTools.LoadNuGetPackage(_scriptingService, _nugetService, packageName);
 
         // Act - Try to use types from the loaded package
-        var code = @"
+        var code =
+            @"
 using Newtonsoft.Json;
 var obj = new { Name = ""Test"", Value = 42 };
 JsonConvert.SerializeObject(obj)
@@ -122,7 +123,11 @@ JsonConvert.SerializeObject(obj)
         Assert.NotNull(resultDict);
         Assert.False(resultDict["isLoaded"].GetBoolean());
         Assert.Equal(invalidPackageName, resultDict["packageName"].GetString());
-        Assert.Contains("not found", resultDict["message"].GetString(), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(
+            "not found",
+            resultDict["message"].GetString(),
+            StringComparison.OrdinalIgnoreCase
+        );
     }
 
     [Fact]
@@ -147,7 +152,11 @@ JsonConvert.SerializeObject(obj)
         // Assert
         Assert.NotNull(resultDict);
         Assert.False(resultDict["isLoaded"].GetBoolean());
-        Assert.Contains("not found", resultDict["message"].GetString(), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(
+            "not found",
+            resultDict["message"].GetString(),
+            StringComparison.OrdinalIgnoreCase
+        );
     }
 
     [Fact]
@@ -158,21 +167,22 @@ JsonConvert.SerializeObject(obj)
         var packages = new[] { "Newtonsoft.Json", "System.Text.Json" };
 
         // Act
-        var results = new List<Dictionary<string, JsonElement>>();
-        foreach (var packageName in packages)
-        {
-            var result = await NuGetTools.LoadNuGetPackage(
-                _scriptingService,
-                _nugetService,
-                packageName
-            );
-            var json = JsonSerializer.Serialize(result);
-            var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
-            results.Add(resultDict!);
-        }
+        var results = await Task.WhenAll(
+            packages.Select(async packageName =>
+            {
+                var result = await NuGetTools.LoadNuGetPackage(
+                    _scriptingService,
+                    _nugetService,
+                    packageName
+                );
+                var json = JsonSerializer.Serialize(result);
+                var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+                return resultDict!;
+            })
+        );
 
         // Assert
-        Assert.Equal(packages.Length, results.Count);
+        Assert.Equal(packages.Length, results.Length);
         Assert.All(results, result => Assert.True(result["isLoaded"].GetBoolean()));
     }
 
@@ -184,7 +194,8 @@ JsonConvert.SerializeObject(obj)
         await NuGetTools.LoadNuGetPackage(_scriptingService, _nugetService, "Newtonsoft.Json");
 
         // Act - Use both packages in the same code
-        var code = @"
+        var code =
+            @"
 using Newtonsoft.Json;
 var data = new { X = 10, Y = 20 };
 JsonConvert.SerializeObject(data)
@@ -203,7 +214,8 @@ JsonConvert.SerializeObject(data)
     {
         // Arrange - Load package and verify it works
         await NuGetTools.LoadNuGetPackage(_scriptingService, _nugetService, "Newtonsoft.Json");
-        var codeBeforeReset = "using Newtonsoft.Json; JsonConvert.SerializeObject(new { Test = 1 })";
+        var codeBeforeReset =
+            "using Newtonsoft.Json; JsonConvert.SerializeObject(new { Test = 1 })";
         var resultBeforeReset = await _scriptingService.ExecuteAsync(codeBeforeReset);
         Assert.True(resultBeforeReset.Success);
 
@@ -229,14 +241,13 @@ JsonConvert.SerializeObject(data)
         cts.Cancel();
 
         // Act & Assert
-        await Assert.ThrowsAsync<TaskCanceledException>(
-            async () =>
-                await NuGetTools.LoadNuGetPackage(
-                    _scriptingService,
-                    _nugetService,
-                    packageName,
-                    cancellationToken: cts.Token
-                )
+        await Assert.ThrowsAsync<TaskCanceledException>(async () =>
+            await NuGetTools.LoadNuGetPackage(
+                _scriptingService,
+                _nugetService,
+                packageName,
+                cancellationToken: cts.Token
+            )
         );
     }
 

@@ -33,11 +33,12 @@ public class NuGetPackageResource
     )
     {
         // Extract package ID from URI (format: nuget://packages/{packageId}/versions)
-        var parts = uri.Replace("nuget://packages/", "", StringComparison.OrdinalIgnoreCase)
-            .Split('/');
-        var packageId = parts.Length > 0 ? parts[0] : "";
-
-        if (string.IsNullOrWhiteSpace(packageId))
+        if (
+            !Uri.TryCreate(uri, UriKind.Absolute, out var parsedUri)
+            || !string.Equals(parsedUri.Scheme, "nuget", StringComparison.OrdinalIgnoreCase)
+            || !string.Equals(parsedUri.Host, "packages", StringComparison.OrdinalIgnoreCase)
+            || string.IsNullOrEmpty(parsedUri.AbsolutePath)
+        )
         {
             return new PackageVersionsResponse
             {
@@ -48,6 +49,25 @@ public class NuGetPackageResource
                     "Invalid URI format. Expected: nuget://packages/{packageId}/versions. Example: nuget://packages/Newtonsoft.Json/versions",
             };
         }
+
+        // AbsolutePath is like "/PackageId/versions"
+        var segments = parsedUri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (
+            segments.Length != 2
+            || !string.Equals(segments[1], "versions", StringComparison.OrdinalIgnoreCase)
+        )
+        {
+            return new PackageVersionsResponse
+            {
+                Uri = uri,
+                Found = false,
+                MimeType = "application/json",
+                Message =
+                    "Invalid URI format. Expected: nuget://packages/{packageId}/versions. Example: nuget://packages/Newtonsoft.Json/versions",
+            };
+        }
+
+        var packageId = segments[0];
 
         var versions = await nugetService.GetPackageVersionsAsync(packageId, cancellationToken);
 

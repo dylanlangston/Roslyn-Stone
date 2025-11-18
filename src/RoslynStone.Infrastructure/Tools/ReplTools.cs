@@ -60,7 +60,7 @@ public class ReplTools
                     error = "REPL_CONTEXT_INVALID",
                     message = $"Context '{contextId}' not found or expired. Omit contextId to create a new session.",
                     suggestedAction = "EvaluateCsharp without contextId",
-                    contextId = default(string),
+                    contextId = (string?)null,
                 };
             }
             existingState = contextManager.GetContextState(contextId);
