@@ -13,11 +13,13 @@ public class McpToolsIntegrationTests
 {
     private readonly RoslynScriptingService _scriptingService;
     private readonly DocumentationService _documentationService;
+    private readonly IReplContextManager _contextManager;
 
     public McpToolsIntegrationTests()
     {
         _scriptingService = new RoslynScriptingService();
         _documentationService = new DocumentationService();
+        _contextManager = new ReplContextManager();
     }
 
     [Fact]
@@ -28,7 +30,7 @@ public class McpToolsIntegrationTests
         var code = "2 + 2";
 
         // Act
-        var result = await ReplTools.EvaluateCsharp(_scriptingService, code);
+        var result = await ReplTools.EvaluateCsharp(_scriptingService, _contextManager, code);
         var json = JsonSerializer.Serialize(result);
         var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
 
@@ -36,6 +38,7 @@ public class McpToolsIntegrationTests
         Assert.NotNull(resultDict);
         Assert.True(resultDict["success"].GetBoolean());
         Assert.Equal(4, resultDict["returnValue"].GetInt32());
+        Assert.True(resultDict.ContainsKey("contextId"));
     }
 
     [Fact]
@@ -46,7 +49,7 @@ public class McpToolsIntegrationTests
         var code = "Console.WriteLine(\"Test Output\"); 42";
 
         // Act
-        var result = await ReplTools.EvaluateCsharp(_scriptingService, code);
+        var result = await ReplTools.EvaluateCsharp(_scriptingService, _contextManager, code);
         var json = JsonSerializer.Serialize(result);
         var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
 
@@ -65,7 +68,7 @@ public class McpToolsIntegrationTests
         var code = "int x = \"not a number\";";
 
         // Act
-        var result = await ReplTools.EvaluateCsharp(_scriptingService, code);
+        var result = await ReplTools.EvaluateCsharp(_scriptingService, _contextManager, code);
         var json = JsonSerializer.Serialize(result);
         var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
 
@@ -83,7 +86,7 @@ public class McpToolsIntegrationTests
         var code = "int x = 42;";
 
         // Act
-        var result = await ReplTools.ValidateCsharp(_scriptingService, code);
+        var result = await ReplTools.ValidateCsharp(_scriptingService, _contextManager, code);
         var json = JsonSerializer.Serialize(result);
         var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
 
@@ -100,7 +103,7 @@ public class McpToolsIntegrationTests
         var code = "int x = \"not a number\";";
 
         // Act
-        var result = await ReplTools.ValidateCsharp(_scriptingService, code);
+        var result = await ReplTools.ValidateCsharp(_scriptingService, _contextManager, code);
         var json = JsonSerializer.Serialize(result);
         var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
 
@@ -115,16 +118,18 @@ public class McpToolsIntegrationTests
     public async Task ResetRepl_ClearsState()
     {
         // Arrange
-        await ReplTools.EvaluateCsharp(_scriptingService, "int x = 42;");
+        var result1 = await ReplTools.EvaluateCsharp(_scriptingService, _contextManager, "int x = 42;");
+        var json1 = JsonSerializer.Serialize(result1);
+        var resultDict1 = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json1);
+        var contextId = resultDict1!["contextId"].GetString();
 
         // Act
-        var resetMessage = ReplTools.ResetRepl(_scriptingService);
-        var result = await ReplTools.EvaluateCsharp(_scriptingService, "x");
+        var resetResult = ReplTools.ResetRepl(_contextManager, contextId);
+        var result = await ReplTools.EvaluateCsharp(_scriptingService, _contextManager, "x");
         var json = JsonSerializer.Serialize(result);
         var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
 
         // Assert
-        Assert.Equal("REPL state has been reset", resetMessage);
         Assert.NotNull(resultDict);
         Assert.False(resultDict["success"].GetBoolean()); // x should not be defined anymore
     }
@@ -176,14 +181,18 @@ public class McpToolsIntegrationTests
     {
         // Arrange
         var service = new RoslynScriptingService(); // Fresh instance
+        var contextMgr = new ReplContextManager();
 
-        // Act
-        var result1 = await ReplTools.EvaluateCsharp(service, "int value = 100;");
-        var result2 = await ReplTools.EvaluateCsharp(service, "value + 50");
-
+        // Act - First execution creates context
+        var result1 = await ReplTools.EvaluateCsharp(service, contextMgr, "int value = 100;");
         var json1 = JsonSerializer.Serialize(result1);
-        var json2 = JsonSerializer.Serialize(result2);
         var result1Dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json1);
+        var contextId = result1Dict!["contextId"].GetString();
+
+        // Second execution uses same context
+        var result2 = await ReplTools.EvaluateCsharp(service, contextMgr, "value + 50", contextId);
+
+        var json2 = JsonSerializer.Serialize(result2);
         var result2Dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json2);
 
         // Assert
@@ -202,7 +211,7 @@ public class McpToolsIntegrationTests
         var code = "await Task.Delay(10); \"completed\"";
 
         // Act
-        var result = await ReplTools.EvaluateCsharp(_scriptingService, code);
+        var result = await ReplTools.EvaluateCsharp(_scriptingService, _contextManager, code);
         var json = JsonSerializer.Serialize(result);
         var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
 
@@ -217,7 +226,7 @@ public class McpToolsIntegrationTests
     public void GetReplInfo_ReturnsEnvironmentInformation()
     {
         // Act
-        var result = ReplTools.GetReplInfo(_scriptingService);
+        var result = ReplTools.GetReplInfo(_contextManager);
         var json = JsonSerializer.Serialize(result);
         var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
 
@@ -225,11 +234,9 @@ public class McpToolsIntegrationTests
         Assert.NotNull(resultDict);
         Assert.True(resultDict.TryGetValue("frameworkVersion", out var frameworkVersion));
         Assert.True(resultDict.ContainsKey("language"));
-        Assert.True(resultDict.ContainsKey("state"));
         Assert.True(resultDict.TryGetValue("defaultImports", out var defaultImports));
         Assert.True(resultDict.TryGetValue("capabilities", out var capabilities));
-        Assert.True(resultDict.ContainsKey("tips"));
-        Assert.True(resultDict.ContainsKey("examples"));
+        Assert.True(resultDict.ContainsKey("activeSessions"));
 
         // Verify framework version
         Assert.Equal(".NET 10.0", frameworkVersion.GetString());
@@ -237,7 +244,7 @@ public class McpToolsIntegrationTests
         // Verify capabilities
         Assert.True(capabilities.GetProperty("asyncAwait").GetBoolean());
         Assert.True(capabilities.GetProperty("linq").GetBoolean());
-        Assert.True(capabilities.GetProperty("statefulness").GetBoolean());
+        Assert.True(capabilities.GetProperty("contextManagement").GetBoolean());
 
         // Verify default imports exist
         var imports = defaultImports.EnumerateArray().ToList();

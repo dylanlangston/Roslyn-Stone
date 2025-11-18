@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
+using Microsoft.CodeAnalysis.Scripting;
 using ModelContextProtocol.Server;
 using RoslynStone.Infrastructure.Functional;
 using RoslynStone.Infrastructure.Services;
@@ -7,79 +8,159 @@ using RoslynStone.Infrastructure.Services;
 namespace RoslynStone.Infrastructure.Tools;
 
 /// <summary>
-/// MCP tools for C# REPL operations
+/// MCP tools for C# REPL operations with context management
 /// </summary>
 [McpServerToolType]
 public class ReplTools
 {
     /// <summary>
-    /// Execute C# code in the REPL and return the result
+    /// Execute C# code in a REPL session
     /// </summary>
-    /// <param name="scriptingService">The Roslyn scripting service for code execution</param>
-    /// <param name="code">C# code to execute</param>
-    /// <param name="cancellationToken">Cancellation token for async operations</param>
-    /// <returns>An object containing execution results, including success status, return value, output, errors, warnings, and execution time</returns>
     [McpServerTool]
     [Description(
-        "Execute C# code in a stateful REPL and return results. Use this to run C# expressions, statements, or complete programs. The REPL maintains state between calls - variables, types, and using directives persist across executions. Supports async/await, LINQ, and full .NET 10 API. Returns success status, return value, Console output, compilation errors/warnings, and execution time. Perfect for: testing code snippets, iterative development, data processing, algorithm experimentation, and learning C# interactively."
+        "Execute C# code in a REPL session. Supports both stateful sessions (with contextId) and single-shot execution (without contextId). For stateful: provide contextId from previous execution to maintain variables and types. For single-shot: omit contextId for one-time execution. Returns contextId for continuing the session. Supports async/await, LINQ, and full .NET 10 API."
     )]
     public static async Task<object> EvaluateCsharp(
         RoslynScriptingService scriptingService,
+        IReplContextManager contextManager,
         [Description(
-            "C# code to execute. Can be a single expression (e.g., '2 + 2'), multiple statements (e.g., 'var x = 10; x * 2'), or complete programs with classes and methods. Use 'return' for explicit returns. Variables and types persist between calls. Supports top-level statements, async/await, and LINQ. Console.WriteLine output is captured separately from return values."
+            "C# code to execute. Can be expressions, statements, or complete programs. Variables persist in sessions."
         )]
             string code,
+        [Description(
+            "Optional context ID from previous execution. Omit for single-shot execution, provide to continue a session."
+        )]
+            string? contextId = null,
         CancellationToken cancellationToken = default
     )
     {
-        var result = await scriptingService.ExecuteAsync(code, cancellationToken);
+        ScriptState? existingState = null;
+        bool isNewContext = false;
 
-        return new
+        // Handle context
+        if (string.IsNullOrWhiteSpace(contextId))
         {
-            success = result.Success,
-            returnValue = result.ReturnValue,
-            output = result.Output,
-            errors = result.Errors.Select(e => new
+            // Single-shot or new session - create context
+            contextId = contextManager.CreateContext();
+            isNewContext = true;
+        }
+        else
+        {
+            // Continue existing session
+            if (!contextManager.ContextExists(contextId))
             {
-                code = e.Code,
-                message = e.Message,
-                severity = e.Severity,
-                line = e.Line,
-                column = e.Column,
-            }),
-            warnings = result.Warnings.Select(w => new
+                return new
+                {
+                    success = false,
+                    error = "REPL_CONTEXT_INVALID",
+                    message =
+                        $"Context '{contextId}' not found or expired. Omit contextId to create a new session.",
+                    suggestedAction = "EvaluateCsharp without contextId",
+                    contextId = (string?)null,
+                };
+            }
+            existingState = contextManager.GetContextState(contextId);
+        }
+
+        try
+        {
+            // Execute code
+            var result = await scriptingService.ExecuteWithStateAsync(
+                code,
+                existingState,
+                cancellationToken
+            );
+
+            // Store state if execution succeeded
+            if (result.Success && result.ScriptState != null)
             {
-                code = w.Code,
-                message = w.Message,
-                severity = w.Severity,
-                line = w.Line,
-                column = w.Column,
-            }),
-            executionTime = result.ExecutionTime.TotalMilliseconds,
-        };
+                contextManager.UpdateContextState(contextId, result.ScriptState);
+            }
+
+            return new
+            {
+                success = result.Success,
+                returnValue = result.ReturnValue,
+                output = result.Output,
+                errors = result.Errors.Select(e => new
+                {
+                    code = e.Code,
+                    message = e.Message,
+                    severity = e.Severity,
+                    line = e.Line,
+                    column = e.Column,
+                }),
+                warnings = result.Warnings.Select(w => new
+                {
+                    code = w.Code,
+                    message = w.Message,
+                    severity = w.Severity,
+                    line = w.Line,
+                    column = w.Column,
+                }),
+                executionTime = result.ExecutionTime.TotalMilliseconds,
+                contextId,
+            };
+        }
+        catch
+        {
+            // Clean up context if it was just created and something went wrong
+            if (isNewContext)
+            {
+                contextManager.RemoveContext(contextId);
+            }
+            throw;
+        }
     }
 
     /// <summary>
     /// Validate C# code without executing it
     /// </summary>
-    /// <param name="scriptingService">The Roslyn scripting service for code validation</param>
-    /// <param name="code">C# code to validate</param>
-    /// <param name="cancellationToken">Cancellation token for async operations</param>
-    /// <returns>An object containing validation results with isValid flag and list of issues</returns>
     [McpServerTool]
     [Description(
-        "Validate C# code syntax and semantics WITHOUT executing it. Use this before EvaluateCsharp to catch compilation errors safely. This is fast, safe, and doesn't change REPL state. Returns detailed error/warning information with line numbers, column numbers, error codes, and helpful messages. Perfect for: checking syntax before execution, understanding compilation errors, learning correct C# syntax, and validating complex code structures."
+        "Validate C# code syntax and semantics WITHOUT executing it. Supports context-aware validation (with contextId) to check against session variables, or context-free validation (without contextId). Returns detailed error/warning information. Fast and safe."
     )]
     public static Task<object> ValidateCsharp(
         RoslynScriptingService scriptingService,
+        IReplContextManager contextManager,
         [Description(
-            "C# code to validate. Checks syntax and semantics without executing. Use this to catch errors like missing semicolons, type mismatches, undefined variables, and invalid operations before running the code."
+            "C# code to validate. Checks syntax and semantics without executing."
         )]
             string code,
+        [Description(
+            "Optional context ID for context-aware validation. Omit for context-free syntax checking."
+        )]
+            string? contextId = null,
         CancellationToken cancellationToken = default
     )
     {
-        var script = CSharpScript.Create(code, scriptingService.ScriptOptions);
+        ScriptState? existingState = null;
+
+        // Check for context-aware validation
+        if (!string.IsNullOrWhiteSpace(contextId))
+        {
+            if (!contextManager.ContextExists(contextId))
+            {
+                return Task.FromResult<object>(
+                    new
+                    {
+                        isValid = false,
+                        error = "REPL_CONTEXT_INVALID",
+                        message =
+                            $"Context '{contextId}' not found or expired. Omit contextId for context-free validation.",
+                        issues = Array.Empty<object>(),
+                    }
+                );
+            }
+            existingState = contextManager.GetContextState(contextId);
+        }
+
+        // Validate with or without context
+        var script =
+            existingState != null
+                ? existingState.Script.ContinueWith(code)
+                : CSharpScript.Create(code, scriptingService.ScriptOptions);
+
         var diagnostics = script.Compile(cancellationToken);
 
         var issues = diagnostics
@@ -98,30 +179,68 @@ public class ReplTools
     }
 
     /// <summary>
-    /// Reset the REPL state
+    /// Reset a REPL session or all sessions
     /// </summary>
-    /// <param name="scriptingService">The Roslyn scripting service to reset</param>
-    /// <returns>A confirmation message indicating the REPL state has been reset</returns>
     [McpServerTool]
     [Description(
-        "Reset the REPL to a clean state, removing all variables, types, using directives, and loaded assemblies. Use this when: starting a new experiment, clearing conflicting definitions, recovering from errors, or wanting a fresh environment. After reset, you'll need to re-load any NuGet packages and re-define any variables. This is a clean slate operation."
+        "Reset REPL session(s), removing variables, types, using directives, and loaded assemblies. Provide contextId to reset a specific session, or omit to reset all sessions. The contextId becomes invalid after reset."
     )]
-    public static string ResetRepl(RoslynScriptingService scriptingService)
+    public static object ResetRepl(
+        IReplContextManager contextManager,
+        [Description("Optional context ID to reset. Omit to reset all sessions.")]
+            string? contextId = null
+    )
     {
-        scriptingService.Reset();
-        return "REPL state has been reset";
+        if (string.IsNullOrWhiteSpace(contextId))
+        {
+            // Reset all contexts
+            var activeContexts = contextManager.GetActiveContexts();
+            foreach (var id in activeContexts)
+            {
+                contextManager.RemoveContext(id);
+            }
+
+            return new
+            {
+                success = true,
+                message = $"All REPL sessions have been reset ({activeContexts.Count} sessions cleared)",
+                sessionsCleared = activeContexts.Count,
+            };
+        }
+
+        // Reset specific context
+        var removed = contextManager.RemoveContext(contextId);
+
+        if (removed)
+        {
+            return new
+            {
+                success = true,
+                message = $"REPL session '{contextId}' has been reset",
+                contextId,
+            };
+        }
+
+        return new
+        {
+            success = false,
+            message = $"Context '{contextId}' not found or already removed",
+            contextId,
+        };
     }
 
     /// <summary>
-    /// Get information about the current REPL environment
+    /// Get information about the REPL environment
     /// </summary>
-    /// <param name="scriptingService">The Roslyn scripting service</param>
-    /// <returns>Information about current REPL state including available namespaces and capabilities</returns>
     [McpServerTool]
     [Description(
-        "Get comprehensive information about the current REPL environment and capabilities. Shows available namespaces, framework version, supported features, and helpful tips. Use this to: understand what's available by default, learn about REPL capabilities, see which namespaces are imported, and get oriented in a new session. Perfect for getting started or checking the current state."
+        "Get information about REPL environment and active sessions. Shows framework version, capabilities, and session count. Optionally get details about a specific session by providing contextId."
     )]
-    public static object GetReplInfo(RoslynScriptingService scriptingService)
+    public static object GetReplInfo(
+        IReplContextManager contextManager,
+        [Description("Optional context ID to get session-specific information")]
+            string? contextId = null
+    )
     {
         var imports = new[]
         {
@@ -132,11 +251,10 @@ public class ReplTools
             "System.Threading.Tasks",
         };
 
-        return new
+        var baseInfo = new
         {
             frameworkVersion = ".NET 10.0",
             language = "C# 14",
-            state = "Ready",
             defaultImports = imports,
             capabilities = new
             {
@@ -145,27 +263,46 @@ public class ReplTools
                 topLevelStatements = true,
                 consoleOutput = true,
                 nugetPackages = true,
-                statefulness = true,
+                contextManagement = true,
             },
-            tips = new[]
-            {
-                "Variables and types persist between executions",
-                "Use 'using' directives to import additional namespaces",
-                "Console.WriteLine output is captured separately from return values",
-                "Async/await is fully supported in the REPL",
-                "Use LoadNuGetPackage to add external libraries",
-                "Use ResetRepl to clear all state and start fresh",
-                "Use ValidateCsharp to check syntax before execution",
-                "Use GetDocumentation to learn about .NET APIs",
-            },
-            examples = new
-            {
-                simpleExpression = "2 + 2",
-                variableDeclaration = "var name = \"Alice\"; name",
-                asyncOperation = "await Task.Delay(100); \"Done\"",
-                linqQuery = "new[] { 1, 2, 3 }.Select(x => x * 2)",
-                consoleOutput = "Console.WriteLine(\"Debug\"); return \"Result\"",
-            },
+            activeSessions = contextManager.GetActiveContexts().Count,
         };
+
+        // If contextId provided, include session-specific info
+        if (!string.IsNullOrWhiteSpace(contextId))
+        {
+            var metadata = contextManager.GetContextMetadata(contextId);
+            if (metadata != null)
+            {
+                return new
+                {
+                    baseInfo.frameworkVersion,
+                    baseInfo.language,
+                    baseInfo.defaultImports,
+                    baseInfo.capabilities,
+                    baseInfo.activeSessions,
+                    session = new
+                    {
+                        contextId = metadata.ContextId,
+                        createdAt = metadata.CreatedAt,
+                        lastAccessedAt = metadata.LastAccessedAt,
+                        executionCount = metadata.ExecutionCount,
+                        isInitialized = metadata.IsInitialized,
+                    },
+                };
+            }
+
+            return new
+            {
+                baseInfo.frameworkVersion,
+                baseInfo.language,
+                baseInfo.defaultImports,
+                baseInfo.capabilities,
+                baseInfo.activeSessions,
+                error = $"Session '{contextId}' not found",
+            };
+        }
+
+        return baseInfo;
     }
 }
