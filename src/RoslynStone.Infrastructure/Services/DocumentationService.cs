@@ -4,7 +4,6 @@ using NuGet.Configuration;
 using NuGet.Packaging;
 using NuGet.Protocol;
 using NuGet.Protocol.Core.Types;
-using NuGet.Versioning;
 using RoslynStone.Core.Models;
 
 namespace RoslynStone.Infrastructure.Services;

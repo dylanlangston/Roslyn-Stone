@@ -174,7 +174,7 @@ public class ResourceTests
 
         // Assert
         Assert.NotNull(resultDict);
-        Assert.True(resultDict.TryGetValue("uri", out var uriElement));
+        Assert.True(resultDict.TryGetValue("uri", out _));
         Assert.True(resultDict.TryGetValue("mimeType", out var mimeTypeElement));
         Assert.Equal("text/markdown", mimeTypeElement.GetString());
         // README structure should be present (content key might be present)
