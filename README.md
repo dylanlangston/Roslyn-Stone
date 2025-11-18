@@ -120,6 +120,8 @@ Resources provide URI-based access to passive data sources:
 
 - **`doc://{symbolName}`** - .NET XML documentation lookup
   - Example: `doc://System.String`, `doc://System.Linq.Enumerable.Select`
+  - **New:** Supports NuGet packages: `doc://{packageId}/{symbolName}`
+  - Example: `doc://Newtonsoft.Json/Newtonsoft.Json.JsonConvert`
 - **`nuget://search?q={query}`** - Search NuGet packages
   - Example: `nuget://search?q=json&take=10`
 - **`nuget://packages/{id}/versions`** - Get package version list
@@ -172,6 +174,9 @@ Assistant: [Calls EvaluateCsharp with contextId: "abc-123"] → Returns 20
 ```
 User: "Show me the documentation for System.Linq.Enumerable"
 Assistant: [Reads doc://System.Linq.Enumerable resource]
+
+User: "What methods are available in Newtonsoft.Json.JsonConvert?"
+Assistant: [Reads doc://Newtonsoft.Json/Newtonsoft.Json.JsonConvert resource]
 ```
 
 **Search and load packages:**
