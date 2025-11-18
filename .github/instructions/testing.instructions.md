@@ -16,7 +16,7 @@ scope:
 When writing tests, use the roslyn-stone MCP tools to validate test code:
 - Use `ValidateCsharp` to check test code syntax
 - Use `EvaluateCsharp` to verify test assertions and expected behavior
-- Use `GetDocumentation` to look up xUnit attributes and .NET testing APIs
+- Access `doc://{symbolName}` resources to look up xUnit attributes and .NET testing APIs
 - This ensures test code is correct before running the full test suite
 
 ## Testing Framework

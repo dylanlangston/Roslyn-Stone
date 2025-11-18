@@ -61,15 +61,16 @@ That's it! The container provides isolated execution of C# code with minimal set
 
 ## Features
 
-**C# REPL via Roslyn Scripting** - Execute C# code snippets with state preservation  
+**C# REPL via Roslyn Scripting** - Execute C# code with optional stateful sessions  
+**Context Management** - Maintain variables and state across executions with contextId  
 **Real-time Compile Error Reporting** - Get detailed compilation errors and warnings  
-**XML Documentation Lookup** - Query .NET type/method documentation via reflection  
-**NuGet Package Support** - Search, discover, and load NuGet packages dynamically  
+**Resources & Tools** - Proper MCP separation: Resources (data) vs Tools (operations)  
+**Documentation Access** - Query .NET type/method docs via `doc://` resource URIs  
+**NuGet Integration** - Search packages via `nuget://` resources, load with tools  
 **MCP Protocol** - Official ModelContextProtocol SDK with stdio and HTTP transports  
 **Dual Transport** - Support for both stdio (local) and HTTP (remote) MCP connections  
 **AI-Friendly** - Designed for LLM interactions via Model Context Protocol  
-**Built-in Guidance** - Comprehensive prompts help LLMs use the REPL effectively  
-**Rich Tool Descriptions** - Detailed, LLM-friendly descriptions with examples and context  
+**Token-Optimized Prompts** - 59% smaller prompts using resource references  
 **Containerized** - Docker support with .NET Aspire orchestration  
 **OpenTelemetry** - Built-in observability with logs, metrics, and traces  
 
@@ -113,22 +114,35 @@ RoslynStone/
 - **Thread Safety**: Static and instance-level synchronization for reliable parallel execution
 - **Immutable Models**: Uses records and readonly properties where appropriate
 
-### MCP Tools
+### MCP Resources (Read-Only Data Access)
 
-#### REPL Tools
-- **EvaluateCsharp** - Execute C# code with return value and output
-- **ValidateCsharp** - Syntax/semantic validation without execution
-- **ResetRepl** - Clear REPL state
-- **GetReplInfo** - Get information about the REPL environment and capabilities
+Resources provide URI-based access to passive data sources:
 
-#### Documentation Tools
-- **GetDocumentation** - XML documentation lookup for .NET symbols
+- **`doc://{symbolName}`** - .NET XML documentation lookup
+  - Example: `doc://System.String`, `doc://System.Linq.Enumerable.Select`
+- **`nuget://search?q={query}`** - Search NuGet packages
+  - Example: `nuget://search?q=json&take=10`
+- **`nuget://packages/{id}/versions`** - Get package version list
+  - Example: `nuget://packages/Newtonsoft.Json/versions`
+- **`nuget://packages/{id}/readme`** - Get package README
+  - Example: `nuget://packages/Newtonsoft.Json/readme?version=13.0.3`
+- **`repl://state`** - General REPL information and capabilities
+- **`repl://sessions`** - List active REPL sessions
+- **`repl://sessions/{contextId}/state`** - Session-specific metadata
 
-#### NuGet Tools
-- **SearchNuGetPackages** - Search for NuGet packages by name, description, or tags
-- **GetNuGetPackageVersions** - Get all available versions of a package
-- **GetNuGetPackageReadme** - Get the README content for a package
-- **LoadNuGetPackage** - Load a NuGet package into the REPL environment
+### MCP Tools (Active Operations)
+
+Tools perform operations and can modify state. All tools support optional context management:
+
+- **EvaluateCsharp** - Execute C# code in a REPL session
+  - Optional `contextId` parameter for stateful sessions
+  - Returns `contextId` for session continuity
+- **ValidateCsharp** - Validate C# syntax and semantics
+  - Optional `contextId` for context-aware validation
+- **ResetRepl** - Reset REPL sessions
+  - Optional `contextId` to reset specific session or all sessions
+- **LoadNuGetPackage** - Load NuGet packages into REPL environment
+  - Packages persist in session until reset
 
 ### MCP Prompts
 
@@ -143,14 +157,39 @@ These prompts provide detailed guidance on how to use the REPL, including exampl
 
 ## What Can It Do?
 
-Once configured, your AI assistant can use these tools naturally. For example:
+Once configured, your AI assistant can interact with the REPL naturally:
 
-- "Execute this C# code: `var numbers = Enumerable.Range(1, 10); numbers.Sum()`"
-- "Search for JSON parsing packages in NuGet"
-- "Load the Newtonsoft.Json package"
-- "Show me the documentation for System.Linq.Enumerable"
+**Execute code with state preservation:**
+```
+User: "Create a variable x = 10"
+Assistant: [Calls EvaluateCsharp] → Returns contextId: "abc-123"
 
-The AI assistant will automatically call the appropriate MCP tools to execute your requests.
+User: "Multiply x by 2"
+Assistant: [Calls EvaluateCsharp with contextId: "abc-123"] → Returns 20
+```
+
+**Query documentation:**
+```
+User: "Show me the documentation for System.Linq.Enumerable"
+Assistant: [Reads doc://System.Linq.Enumerable resource]
+```
+
+**Search and load packages:**
+```
+User: "Search for JSON parsing packages"
+Assistant: [Reads nuget://search?q=json resource]
+
+User: "Load Newtonsoft.Json"
+Assistant: [Calls LoadNuGetPackage tool]
+```
+
+**Check REPL state:**
+```
+User: "How many REPL sessions are active?"
+Assistant: [Reads repl://sessions resource]
+```
+
+The AI assistant automatically uses Resources for queries and Tools for operations.
 
 ## For Developers
 

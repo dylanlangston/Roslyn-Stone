@@ -381,8 +381,9 @@ Artifacts generated:
 - **Domain Types**: Simple records and classes representing domain concepts
 
 ### Infrastructure (Implementation Layer)
-- **Tools**: MCP tool implementations (ReplTools, DocumentationTools, NuGetTools)
-- **Services**: RoslynScriptingService, DocumentationService, NuGetService, CompilationService, AssemblyExecutionService
+- **Tools**: MCP tool implementations (ReplTools, NuGetTools) - Active operations
+- **Resources**: MCP resource implementations (DocumentationResource, NuGetSearchResource, NuGetPackageResource, ReplStateResource) - Passive data access
+- **Services**: RoslynScriptingService, DocumentationService, NuGetService, CompilationService, AssemblyExecutionService, ReplContextManager
 - **Functional Helpers**: Pure functions for diagnostics, transformations, and utilities
 
 ### Api (Presentation Layer)
@@ -395,7 +396,7 @@ Artifacts generated:
 
 1. Create tool method in `Infrastructure/Tools` with `[McpServerTool]` attribute
 2. Add to existing `[McpServerToolType]` class or create new one
-3. Use dependency injection for services (RoslynScriptingService, etc.)
+3. Use dependency injection for services (RoslynScriptingService, IReplContextManager, etc.)
 4. Include comprehensive XML documentation with `<param>` and `<returns>` tags
 5. Add `[Description]` attributes for MCP protocol metadata
 6. Tools are auto-discovered via `WithToolsFromAssembly()`
@@ -406,19 +407,53 @@ Example:
 public class MyTools
 {
     /// <summary>
-    /// Tool description
+    /// Execute custom operation
     /// </summary>
     /// <param name="service">Injected service</param>
+    /// <param name="contextManager">Context manager for stateful operations</param>
     /// <param name="input">Input parameter</param>
+    /// <param name="contextId">Optional context ID for session continuity</param>
+    /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Result description</returns>
     [McpServerTool]
     [Description("Tool description for MCP")]
     public static async Task<object> MyTool(
         MyService service,
+        IReplContextManager contextManager,
         [Description("Input description")] string input,
+        [Description("Optional context ID from previous execution")] string? contextId = null,
         CancellationToken cancellationToken = default)
     {
         // Implementation
+    }
+}
+```
+
+## Adding New MCP Resources
+
+1. Create resource class in `Infrastructure/Resources` implementing base resource patterns
+2. Add `[McpServerResourceType]` attribute to the class
+3. Implement URI parsing logic for your resource patterns
+4. Return structured data (not operations)
+5. Resources are auto-discovered via `WithResourcesFromAssembly()`
+
+Example:
+```csharp
+[McpServerResourceType]
+public class MyDataResource
+{
+    /// <summary>
+    /// Provides access to my data
+    /// </summary>
+    [McpServerResource("mydata://{id}")]
+    [Description("Access my data by ID")]
+    public static async Task<object> GetMyData(
+        [Description("Data ID")] string id,
+        MyDataService service,
+        CancellationToken cancellationToken = default)
+    {
+        var data = await service.GetDataAsync(id, cancellationToken);
+        return new { id, data };
     }
 }
 ```

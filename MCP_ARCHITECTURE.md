@@ -126,15 +126,6 @@ Reset REPL sessions.
 
 **Returns**: `{ success, message, sessionsCleared }`
 
-### GetReplInfo
-
-Get REPL environment information.
-
-**Parameters**:
-- `contextId` (optional): Specific session for metadata
-
-**Returns**: Framework info, capabilities, active session count, optionally session metadata
-
 ### LoadNuGetPackage
 
 Load a NuGet package into the REPL.
@@ -250,34 +241,6 @@ Prompts guide LLMs in using Roslyn-Stone effectively. All prompts are token-opti
 - **Clarity**: Concise prompts are easier to understand
 - **Maintainability**: Smaller prompts are easier to update
 - **Resource-driven**: Leverage Resources for examples instead of embedding
-
-## Migration Notes
-
-### Breaking Changes (Phase 3)
-
-Original tools removed, replaced with context-aware versions:
-
-**Before**:
-```csharp
-EvaluateCsharp(scriptingService, code)
-ValidateCsharp(scriptingService, code)
-ResetRepl(scriptingService)
-GetReplInfo(scriptingService)
-```
-
-**After**:
-```csharp
-EvaluateCsharp(scriptingService, contextManager, code, contextId?)
-ValidateCsharp(scriptingService, contextManager, code, contextId?)
-ResetRepl(contextManager, contextId?)
-GetReplInfo(contextManager, contextId?)
-```
-
-### Compatibility Strategy
-
-- Resources: Additive only (no breaking changes)
-- Tools: Intentional breaking changes (per architecture requirements)
-- Prompts: Backward compatible (old prompts work, new ones are better)
 
 ## Performance Considerations
 

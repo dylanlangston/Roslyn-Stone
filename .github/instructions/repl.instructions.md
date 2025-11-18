@@ -16,7 +16,7 @@ scope:
 When working on REPL functionality, **ALWAYS** use the MCP tools to test your changes:
 - Use `EvaluateCsharp` to test the code patterns you're implementing
 - Use `ValidateCsharp` to verify syntax of example code
-- Use `GetReplInfo` to understand current REPL capabilities
+- Access `repl://state` or `repl://sessions` resources to understand current REPL capabilities
 - This ensures the REPL works correctly and validates the very functionality you're building
 
 ## REPL Implementation
