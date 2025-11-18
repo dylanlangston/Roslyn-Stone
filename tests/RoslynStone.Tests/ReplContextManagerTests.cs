@@ -85,7 +85,7 @@ public class ReplContextManagerTests
 
     [Fact]
     [Trait("Feature", "ContextState")]
-    public async Task GetContextState_NewContext_ReturnsNull()
+    public void GetContextState_NewContext_ReturnsNull()
     {
         // Arrange
         var manager = new ReplContextManager();
@@ -196,7 +196,7 @@ public class ReplContextManagerTests
 
     [Fact]
     [Trait("Feature", "ContextCleanup")]
-    public async Task CleanupExpiredContexts_ActiveContexts_DoesNotRemove()
+    public void CleanupExpiredContexts_ActiveContexts_DoesNotRemove()
     {
         // Arrange
         var manager = new ReplContextManager(contextTimeout: TimeSpan.FromHours(1));

@@ -45,7 +45,7 @@ EvaluateCsharp(code: ""x * 2"", contextId: ""session1"")
 **Key Tools:**
 - `EvaluateCsharp` - Execute code
 - `ValidateCsharp` - Check syntax
-- `GetDocumentation` - Look up .NET APIs (doc://System.String)
+- Resource: `doc://{symbol}` - Look up .NET APIs (e.g., doc://System.String)
 - `ResetRepl` - Clear state
 
 **Resources:**
@@ -99,19 +99,15 @@ State persists within the same contextId.
 - `ValidateCsharp(code, contextId?)` - Check syntax without execution
 
 **Documentation:**
-- `GetDocumentation(symbolName)` - Get XML docs
-- Resource: `doc://System.String`, `doc://System.Linq.Enumerable.Select`
+- Resource: `doc://{symbol}` - Get XML docs (e.g., doc://System.String, doc://System.Linq.Enumerable.Select)
 
 **Packages:**
-- `SearchNuGetPackages(query)` - Find packages
 - `LoadNuGetPackage(packageName, version?)` - Add packages
-- `GetNuGetPackageVersions(packageId)` - List versions
-- Resources: `nuget://search?q=json`, `nuget://packages/{id}/readme`
+- Resources: `nuget://search?q={query}` - Find packages, `nuget://packages/{id}/versions` - List versions, `nuget://packages/{id}/readme` - Get documentation
 
 **State Management:**
-- `GetReplInfo(contextId?)` - Environment info
 - `ResetRepl(contextId?)` - Clear state (specific session or all)
-- Resources: `repl://state`, `repl://sessions/{contextId}/state`
+- Resources: `repl://state` - Environment info, `repl://sessions/{contextId}/state` - Session details
 
 ## Workflow Pattern
 
@@ -148,7 +144,7 @@ Instead of guessing, query resources:
 - **Package info:** `nuget://packages/Newtonsoft.Json/versions`
 - **REPL state:** `repl://state` or `repl://sessions/my-session/state`
 
-Use GetDocumentation, SearchNuGetPackages, GetReplInfo to access these resources."
+Access these resources directly via MCP resource URIs."
         );
     }
 
@@ -222,7 +218,7 @@ ValidateCsharp(code: ""y + 10"")
 5. Execute: `EvaluateCsharp(code, contextId?)`
 
 **Use resources for help:**
-- `doc://{symbol}` - Check API usage via GetDocumentation
+- `doc://{symbol}` - Check API usage
 - `repl://sessions/{contextId}/state` - Check session variables"
         );
     }
@@ -383,19 +379,16 @@ EvaluateCsharp(code: ""Enumerable.Range(1, 1000000).Sum()"")
 
 ## Package Workflow
 
-**1. Search** - Find packages:
+**1. Search** - Find packages via resource:
 ```
-SearchNuGetPackages(query: ""json serialization"", take: 5)
-→ Resource: nuget://search?q=json+serialization
+Resource: nuget://search?q=json+serialization
 ```
 
-**2. Research** - Get package info:
+**2. Research** - Get package info via resources:
 ```
-GetNuGetPackageVersions(packageId: ""Newtonsoft.Json"")
-→ Resource: nuget://packages/Newtonsoft.Json/versions
+Resource: nuget://packages/Newtonsoft.Json/versions
 
-GetNuGetPackageReadme(packageId: ""Newtonsoft.Json"")
-→ Resource: nuget://packages/Newtonsoft.Json/readme
+Resource: nuget://packages/Newtonsoft.Json/readme
 ```
 
 **3. Load** - Add package to REPL:
@@ -416,14 +409,14 @@ EvaluateCsharp(code: @""
 ## Complete Example
 
 ```
-// Find package
-SearchNuGetPackages(query: ""csv parser"", take: 3)
+// Find package via resource
+Resource: nuget://search?q=csv+parser
 
 // Check versions (avoid prereleases)
-GetNuGetPackageVersions(packageId: ""CsvHelper"")
+Resource: nuget://packages/CsvHelper/versions
 
 // Read docs to understand usage
-GetNuGetPackageReadme(packageId: ""CsvHelper"")
+Resource: nuget://packages/CsvHelper/readme
 
 // Load stable version
 LoadNuGetPackage(packageName: ""CsvHelper"", version: ""30.0.1"")
@@ -489,8 +482,7 @@ EvaluateCsharp(code: @""
 
 **Use resource-driven search:**
 ```
-SearchNuGetPackages(query: ""http client"", take: 10)
-→ nuget://search?q=http+client
+Resource: nuget://search?q=http+client
 ```
 
 **Evaluate results:**
@@ -502,8 +494,7 @@ SearchNuGetPackages(query: ""http client"", take: 10)
 
 **Check version history:**
 ```
-GetNuGetPackageVersions(packageId: ""Flurl.Http"")
-→ nuget://packages/Flurl.Http/versions
+Resource: nuget://packages/Flurl.Http/versions
 ```
 - Avoid deprecated versions
 - Prefer stable over prerelease
@@ -511,8 +502,7 @@ GetNuGetPackageVersions(packageId: ""Flurl.Http"")
 
 **Read documentation:**
 ```
-GetNuGetPackageReadme(packageId: ""Flurl.Http"")
-→ nuget://packages/Flurl.Http/readme
+Resource: nuget://packages/Flurl.Http/readme
 ```
 README typically includes:
 - Installation guide
@@ -622,7 +612,7 @@ nuget://packages/{id}/versions     // Version list
 nuget://packages/{id}/readme       // Documentation
 ```
 
-Query with GetNuGetPackageVersions, GetNuGetPackageReadme, SearchNuGetPackages.
+Access these resources directly via MCP resource URIs.
 
 ## State & Packages
 

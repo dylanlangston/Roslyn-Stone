@@ -170,14 +170,9 @@ public class ReplContextManager : IReplContextManager
             .Select(kvp => kvp.Key)
             .ToList();
 
-        var removed = 0;
-        foreach (var contextId in expiredContexts)
-        {
-            if (_contexts.TryRemove(contextId, out _))
-            {
-                removed++;
-            }
-        }
+        var removed = expiredContexts
+            .Where(contextId => _contexts.TryRemove(contextId, out _))
+            .Count();
 
         if (removed > 0)
         {

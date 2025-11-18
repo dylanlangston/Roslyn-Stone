@@ -23,7 +23,7 @@ public class GuidancePromptsTests
         Assert.Contains("REPL", result);
         Assert.Contains("EvaluateCsharp", result);
         Assert.Contains("ValidateCsharp", result);
-        Assert.Contains("GetDocumentation", result);
+        Assert.Contains("doc://", result);
         Assert.Contains("NuGet", result);
     }
 

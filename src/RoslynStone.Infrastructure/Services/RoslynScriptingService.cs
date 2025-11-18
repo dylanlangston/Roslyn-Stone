@@ -233,7 +233,7 @@ public class RoslynScriptingService
         {
             // Capture console output
             var originalOut = Console.Out;
-            var tempWriter = new StringWriter();
+            using var tempWriter = new StringWriter();
             Console.SetOut(tempWriter);
 
             try
@@ -273,7 +273,6 @@ public class RoslynScriptingService
             finally
             {
                 Console.SetOut(originalOut);
-                tempWriter.Dispose();
             }
         }
         catch (CompilationErrorException ex)
