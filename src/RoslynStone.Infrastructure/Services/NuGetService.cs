@@ -10,6 +10,38 @@ using RoslynStone.Core.Models;
 namespace RoslynStone.Infrastructure.Services;
 
 /// <summary>
+/// Wrapper for package download result that manages disposal
+/// </summary>
+public class PackageDownloadResult : IDisposable
+{
+    private readonly DownloadResourceResult _downloadResult;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="PackageDownloadResult"/> class
+    /// </summary>
+    /// <param name="downloadResult">The download result to wrap</param>
+    public PackageDownloadResult(DownloadResourceResult downloadResult)
+    {
+        _downloadResult = downloadResult;
+        PackageReader = new PackageArchiveReader(downloadResult.PackageStream);
+    }
+
+    /// <summary>
+    /// Gets the package archive reader for accessing files in the package
+    /// </summary>
+    public PackageArchiveReader PackageReader { get; }
+
+    /// <summary>
+    /// Disposes the package reader and download result
+    /// </summary>
+    public void Dispose()
+    {
+        PackageReader.Dispose();
+        _downloadResult.Dispose();
+    }
+}
+
+/// <summary>
 /// Service for NuGet package operations including search, version lookup, and package loading
 /// </summary>
 public class NuGetService : IDisposable
@@ -326,6 +358,76 @@ public class NuGetService : IDisposable
         }
 
         return assemblies;
+    }
+
+    /// <summary>
+    /// Download a NuGet package and get its package reader for accessing files
+    /// </summary>
+    /// <param name="packageId">Package ID</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Package archive reader wrapped in a disposable result, or null if package not found</returns>
+    public async Task<PackageDownloadResult?> GetPackageReaderAsync(
+        string packageId,
+        CancellationToken cancellationToken = default
+    )
+    {
+        try
+        {
+            var metadataResource = await _repository.GetResourceAsync<PackageMetadataResource>(
+                cancellationToken
+            );
+
+            var metadata = await metadataResource.GetMetadataAsync(
+                packageId,
+                includePrerelease: true,
+                includeUnlisted: false,
+                _cache,
+                _logger,
+                cancellationToken
+            );
+
+            var metadataList = metadata.ToList();
+            if (metadataList.Count == 0)
+                return null;
+
+            // Get the latest version
+            var packageMetadata = metadataList
+                .OrderByDescending(m => m.Identity.Version)
+                .FirstOrDefault();
+
+            if (packageMetadata == null)
+                return null;
+
+            // Download the package
+            var downloadResource = await _repository.GetResourceAsync<DownloadResource>(
+                cancellationToken
+            );
+
+            var globalPackagesFolder = SettingsUtility.GetGlobalPackagesFolder(
+                Settings.LoadDefaultSettings(null)
+            );
+
+            var downloadResult = await downloadResource.GetDownloadResourceResultAsync(
+                packageMetadata.Identity,
+                new PackageDownloadContext(_cache),
+                globalPackagesFolder,
+                _logger,
+                cancellationToken
+            );
+
+            if (downloadResult.Status != DownloadResourceResultStatus.Available)
+            {
+                downloadResult.Dispose();
+                return null;
+            }
+
+            return new PackageDownloadResult(downloadResult);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Log and return null for graceful degradation
+            return null;
+        }
     }
 
     /// <summary>

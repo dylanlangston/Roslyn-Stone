@@ -26,13 +26,13 @@ public class ResourceTests
 
     [Fact]
     [Trait("Feature", "Documentation")]
-    public void DocumentationResource_GetDocumentation_ValidUri_ReturnsDocumentation()
+    public async Task DocumentationResource_GetDocumentation_ValidUri_ReturnsDocumentation()
     {
         // Arrange
         var uri = "doc://System.String";
 
         // Act
-        var result = DocumentationResource.GetDocumentation(_documentationService, uri);
+        var result = await DocumentationResource.GetDocumentation(_documentationService, uri);
         var json = JsonSerializer.Serialize(result);
         var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
 
@@ -46,13 +46,13 @@ public class ResourceTests
 
     [Fact]
     [Trait("Feature", "Documentation")]
-    public void DocumentationResource_GetDocumentation_WithoutPrefix_ReturnsDocumentation()
+    public async Task DocumentationResource_GetDocumentation_WithoutPrefix_ReturnsDocumentation()
     {
         // Arrange
         var uri = "System.String";
 
         // Act
-        var result = DocumentationResource.GetDocumentation(_documentationService, uri);
+        var result = await DocumentationResource.GetDocumentation(_documentationService, uri);
         var json = JsonSerializer.Serialize(result);
         var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
 
@@ -63,13 +63,13 @@ public class ResourceTests
 
     [Fact]
     [Trait("Feature", "Documentation")]
-    public void DocumentationResource_GetDocumentation_InvalidSymbol_ReturnsNotFound()
+    public async Task DocumentationResource_GetDocumentation_InvalidSymbol_ReturnsNotFound()
     {
         // Arrange
         var uri = "doc://NonExistent.Type.Name";
 
         // Act
-        var result = DocumentationResource.GetDocumentation(_documentationService, uri);
+        var result = await DocumentationResource.GetDocumentation(_documentationService, uri);
         var json = JsonSerializer.Serialize(result);
         var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
 
@@ -77,6 +77,26 @@ public class ResourceTests
         Assert.NotNull(resultDict);
         Assert.True(resultDict.TryGetValue("found", out var foundElement));
         Assert.False(foundElement.GetBoolean());
+    }
+
+    [Fact]
+    [Trait("Feature", "Documentation")]
+    public async Task DocumentationResource_GetDocumentation_PackageUriFormat_ParsesCorrectly()
+    {
+        // Arrange
+        var uri = "doc://Newtonsoft.Json@Newtonsoft.Json.JsonConvert";
+
+        // Act
+        var result = await DocumentationResource.GetDocumentation(_documentationService, uri);
+        var json = JsonSerializer.Serialize(result);
+        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+
+        // Assert
+        Assert.NotNull(resultDict);
+        Assert.True(resultDict.TryGetValue("uri", out var uriElement));
+        Assert.Equal(uri, uriElement.GetString());
+        // Package may or may not be available, but URI parsing should work
+        Assert.True(resultDict.TryGetValue("found", out _));
     }
 
     [Fact]
@@ -174,7 +194,7 @@ public class ResourceTests
 
         // Assert
         Assert.NotNull(resultDict);
-        Assert.True(resultDict.TryGetValue("uri", out var uriElement));
+        Assert.True(resultDict.TryGetValue("uri", out _));
         Assert.True(resultDict.TryGetValue("mimeType", out var mimeTypeElement));
         Assert.Equal("text/markdown", mimeTypeElement.GetString());
         // README structure should be present (content key might be present)
