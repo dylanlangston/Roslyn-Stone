@@ -37,7 +37,13 @@ public class McpToolsIntegrationTests : IDisposable
         var code = "2 + 2";
 
         // Act - Using createContext: true to maintain stateful behavior
-        var result = await ReplTools.EvaluateCsharp(_scriptingService, _contextManager, _nugetService, code, createContext: true);
+        var result = await ReplTools.EvaluateCsharp(
+            _scriptingService,
+            _contextManager,
+            _nugetService,
+            code,
+            createContext: true
+        );
         var json = JsonSerializer.Serialize(result);
         var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
 
@@ -56,7 +62,12 @@ public class McpToolsIntegrationTests : IDisposable
         var code = "Console.WriteLine(\"Test Output\"); 42";
 
         // Act
-        var result = await ReplTools.EvaluateCsharp(_scriptingService, _contextManager, _nugetService, code);
+        var result = await ReplTools.EvaluateCsharp(
+            _scriptingService,
+            _contextManager,
+            _nugetService,
+            code
+        );
         var json = JsonSerializer.Serialize(result);
         var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
 
@@ -75,7 +86,12 @@ public class McpToolsIntegrationTests : IDisposable
         var code = "int x = \"not a number\";";
 
         // Act
-        var result = await ReplTools.EvaluateCsharp(_scriptingService, _contextManager, _nugetService, code);
+        var result = await ReplTools.EvaluateCsharp(
+            _scriptingService,
+            _contextManager,
+            _nugetService,
+            code
+        );
         var json = JsonSerializer.Serialize(result);
         var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
 
@@ -163,13 +179,25 @@ public class McpToolsIntegrationTests : IDisposable
         using var nugetSvc = new NuGetService();
 
         // Act - First execution creates context
-        var result1 = await ReplTools.EvaluateCsharp(service, contextMgr, nugetSvc, "int value = 100;", createContext: true);
+        var result1 = await ReplTools.EvaluateCsharp(
+            service,
+            contextMgr,
+            nugetSvc,
+            "int value = 100;",
+            createContext: true
+        );
         var json1 = JsonSerializer.Serialize(result1);
         var result1Dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json1);
         var contextId = result1Dict!["contextId"].GetString();
 
         // Second execution uses same context
-        var result2 = await ReplTools.EvaluateCsharp(service, contextMgr, nugetSvc, "value + 50", contextId);
+        var result2 = await ReplTools.EvaluateCsharp(
+            service,
+            contextMgr,
+            nugetSvc,
+            "value + 50",
+            contextId
+        );
 
         var json2 = JsonSerializer.Serialize(result2);
         var result2Dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json2);
@@ -190,7 +218,12 @@ public class McpToolsIntegrationTests : IDisposable
         var code = "await Task.Delay(10); \"completed\"";
 
         // Act
-        var result = await ReplTools.EvaluateCsharp(_scriptingService, _contextManager, _nugetService, code);
+        var result = await ReplTools.EvaluateCsharp(
+            _scriptingService,
+            _contextManager,
+            _nugetService,
+            code
+        );
         var json = JsonSerializer.Serialize(result);
         var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
 
@@ -237,7 +270,13 @@ public class McpToolsIntegrationTests : IDisposable
         using var nugetSvc = new NuGetService();
 
         // Create a context and let it expire
-        var result1 = await ReplTools.EvaluateCsharp(_scriptingService, contextMgr, nugetSvc, "int x = 42;", createContext: true);
+        var result1 = await ReplTools.EvaluateCsharp(
+            _scriptingService,
+            contextMgr,
+            nugetSvc,
+            "int x = 42;",
+            createContext: true
+        );
         var json1 = JsonSerializer.Serialize(result1);
         var result1Dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json1);
         var contextId = result1Dict!["contextId"].GetString();
@@ -298,12 +337,24 @@ public class McpToolsIntegrationTests : IDisposable
         using var nugetSvc = new NuGetService();
 
         // Act - Create two contexts with different variables
-        var result1 = await ReplTools.EvaluateCsharp(service, contextMgr, nugetSvc, "int value1 = 100;", createContext: true);
+        var result1 = await ReplTools.EvaluateCsharp(
+            service,
+            contextMgr,
+            nugetSvc,
+            "int value1 = 100;",
+            createContext: true
+        );
         var json1 = JsonSerializer.Serialize(result1);
         var result1Dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json1);
         var context1Id = result1Dict!["contextId"].GetString();
 
-        var result2 = await ReplTools.EvaluateCsharp(service, contextMgr, nugetSvc, "int value2 = 200;", createContext: true);
+        var result2 = await ReplTools.EvaluateCsharp(
+            service,
+            contextMgr,
+            nugetSvc,
+            "int value2 = 200;",
+            createContext: true
+        );
         var json2 = JsonSerializer.Serialize(result2);
         var result2Dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json2);
         var context2Id = result2Dict!["contextId"].GetString();
@@ -349,7 +400,13 @@ public class McpToolsIntegrationTests : IDisposable
         using var nugetSvc = new NuGetService();
 
         // Act - Define variable in context1
-        var result1 = await ReplTools.EvaluateCsharp(service, contextMgr, nugetSvc, "int secretValue = 999;", createContext: true);
+        var result1 = await ReplTools.EvaluateCsharp(
+            service,
+            contextMgr,
+            nugetSvc,
+            "int secretValue = 999;",
+            createContext: true
+        );
         var json1 = JsonSerializer.Serialize(result1);
         var result1Dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json1);
         _ = result1Dict!["contextId"].GetString(); // Context 1 created but not used for validation
@@ -375,12 +432,24 @@ public class McpToolsIntegrationTests : IDisposable
         using var nugetSvc = new NuGetService();
 
         // Create two contexts
-        var result1 = await ReplTools.EvaluateCsharp(service, contextMgr, nugetSvc, "int value1 = 100;", createContext: true);
+        var result1 = await ReplTools.EvaluateCsharp(
+            service,
+            contextMgr,
+            nugetSvc,
+            "int value1 = 100;",
+            createContext: true
+        );
         var json1 = JsonSerializer.Serialize(result1);
         var result1Dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json1);
         var context1Id = result1Dict!["contextId"].GetString();
 
-        var result2 = await ReplTools.EvaluateCsharp(service, contextMgr, nugetSvc, "int value2 = 200;", createContext: true);
+        var result2 = await ReplTools.EvaluateCsharp(
+            service,
+            contextMgr,
+            nugetSvc,
+            "int value2 = 200;",
+            createContext: true
+        );
         var json2 = JsonSerializer.Serialize(result2);
         var result2Dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json2);
         var context2Id = result2Dict!["contextId"].GetString();
@@ -440,12 +509,24 @@ public class McpToolsIntegrationTests : IDisposable
         using var nugetSvc = new NuGetService();
 
         // Create multiple contexts
-        var result1 = await ReplTools.EvaluateCsharp(service, contextMgr, nugetSvc, "int x = 1;", createContext: true);
+        var result1 = await ReplTools.EvaluateCsharp(
+            service,
+            contextMgr,
+            nugetSvc,
+            "int x = 1;",
+            createContext: true
+        );
         var json1 = JsonSerializer.Serialize(result1);
         var result1Dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json1);
         var context1Id = result1Dict!["contextId"].GetString();
 
-        var result2 = await ReplTools.EvaluateCsharp(service, contextMgr, nugetSvc, "int y = 2;", createContext: true);
+        var result2 = await ReplTools.EvaluateCsharp(
+            service,
+            contextMgr,
+            nugetSvc,
+            "int y = 2;",
+            createContext: true
+        );
         var json2 = JsonSerializer.Serialize(result2);
         var result2Dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json2);
         var context2Id = result2Dict!["contextId"].GetString();
@@ -456,13 +537,25 @@ public class McpToolsIntegrationTests : IDisposable
         var resetDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(resetJson);
 
         // Try to use contexts
-        var result1After = await ReplTools.EvaluateCsharp(service, contextMgr, nugetSvc, "x", context1Id);
+        var result1After = await ReplTools.EvaluateCsharp(
+            service,
+            contextMgr,
+            nugetSvc,
+            "x",
+            context1Id
+        );
         var json1After = JsonSerializer.Serialize(result1After);
         var result1AfterDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
             json1After
         );
 
-        var result2After = await ReplTools.EvaluateCsharp(service, contextMgr, nugetSvc, "y", context2Id);
+        var result2After = await ReplTools.EvaluateCsharp(
+            service,
+            contextMgr,
+            nugetSvc,
+            "y",
+            context2Id
+        );
         var json2After = JsonSerializer.Serialize(result2After);
         var result2AfterDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
             json2After

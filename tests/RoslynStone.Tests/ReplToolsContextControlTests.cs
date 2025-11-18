@@ -51,7 +51,10 @@ public class ReplToolsContextControlTests : IDisposable
         Assert.NotNull(resultDict);
         Assert.True(resultDict["success"].GetBoolean());
         Assert.Equal(2, resultDict["returnValue"].GetInt32());
-        Assert.False(resultDict.ContainsKey("contextId") && resultDict["contextId"].ValueKind != JsonValueKind.Null);
+        Assert.False(
+            resultDict.ContainsKey("contextId")
+                && resultDict["contextId"].ValueKind != JsonValueKind.Null
+        );
     }
 
     [Fact]
@@ -102,7 +105,10 @@ public class ReplToolsContextControlTests : IDisposable
         // Assert
         Assert.NotNull(resultDict);
         Assert.True(resultDict["success"].GetBoolean());
-        Assert.False(resultDict.ContainsKey("contextId") && resultDict["contextId"].ValueKind != JsonValueKind.Null);
+        Assert.False(
+            resultDict.ContainsKey("contextId")
+                && resultDict["contextId"].ValueKind != JsonValueKind.Null
+        );
     }
 
     [Fact]
@@ -146,7 +152,8 @@ public class ReplToolsContextControlTests : IDisposable
     public async Task EvaluateCsharp_WithNuGetPackages_LoadsPackagesBeforeExecution()
     {
         // Arrange
-        var code = @"
+        var code =
+            @"
 using Newtonsoft.Json;
 var obj = new { Name = ""Test"", Value = 42 };
 JsonConvert.SerializeObject(obj)
@@ -178,7 +185,8 @@ JsonConvert.SerializeObject(obj)
     public async Task EvaluateCsharp_WithNuGetPackagesAndVersion_LoadsSpecificVersion()
     {
         // Arrange
-        var code = @"
+        var code =
+            @"
 using Newtonsoft.Json;
 JsonConvert.SerializeObject(new { Test = 1 })
 ";
@@ -291,7 +299,8 @@ JsonConvert.SerializeObject(new { Test = 1 })
     public async Task EvaluateCsharp_WithMultiplePackages_LoadsAllPackages()
     {
         // Arrange
-        var code = @"
+        var code =
+            @"
 using Newtonsoft.Json;
 var data = new { X = 10, Y = 20 };
 JsonConvert.SerializeObject(data)
@@ -299,7 +308,7 @@ JsonConvert.SerializeObject(data)
         var packages = new[]
         {
             new { packageName = "Newtonsoft.Json", version = (string?)null },
-            new { packageName = "System.Text.Json", version = (string?)null }
+            new { packageName = "System.Text.Json", version = (string?)null },
         };
 
         // Act
@@ -327,7 +336,7 @@ JsonConvert.SerializeObject(data)
     {
         // Arrange - Load package in stateful context
         var packages = new[] { new { packageName = "Newtonsoft.Json", version = (string?)null } };
-        
+
         var result1 = await ReplTools.EvaluateCsharp(
             _scriptingService,
             _contextManager,
@@ -336,7 +345,7 @@ JsonConvert.SerializeObject(data)
             nugetPackages: packages,
             createContext: true
         );
-        
+
         var json1 = JsonSerializer.Serialize(result1);
         var dict1 = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json1);
         var contextId = dict1!["contextId"].GetString();
