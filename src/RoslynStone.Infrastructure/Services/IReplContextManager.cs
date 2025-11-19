@@ -35,6 +35,20 @@ public interface IReplContextManager
     void UpdateContextState(string contextId, ScriptState state);
 
     /// <summary>
+    /// Get the script options for a given context
+    /// </summary>
+    /// <param name="contextId">The context ID</param>
+    /// <returns>The ScriptOptions for the context, or null if not found</returns>
+    ScriptOptions? GetContextOptions(string contextId);
+
+    /// <summary>
+    /// Update the script options for a given context
+    /// </summary>
+    /// <param name="contextId">The context ID</param>
+    /// <param name="options">The new script options</param>
+    void UpdateContextOptions(string contextId, ScriptOptions options);
+
+    /// <summary>
     /// Remove a context and its associated state
     /// </summary>
     /// <param name="contextId">The context ID to remove</param>

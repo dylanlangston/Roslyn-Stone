@@ -215,11 +215,13 @@ public class RoslynScriptingService
     /// </summary>
     /// <param name="code">The C# code to execute</param>
     /// <param name="existingState">The existing script state to continue from (can be null for new state)</param>
+    /// <param name="customOptions">Custom script options to use (overrides default options)</param>
     /// <param name="cancellationToken">Cancellation token for async operations</param>
     /// <returns>Execution result with return value, output, errors, timing information, and updated script state</returns>
     public async Task<ExecutionResult> ExecuteWithStateAsync(
         string code,
         ScriptState? existingState,
+        ScriptOptions? customOptions = null,
         CancellationToken cancellationToken = default
     )
     {
@@ -240,11 +242,13 @@ public class RoslynScriptingService
             {
                 // Continue from provided state or start new
                 ScriptState<object>? newState;
+                var optionsToUse = customOptions ?? _scriptOptions;
+
                 if (existingState == null)
                 {
                     newState = await CSharpScript.RunAsync(
                         code,
-                        _scriptOptions,
+                        optionsToUse,
                         cancellationToken: cancellationToken
                     );
                 }

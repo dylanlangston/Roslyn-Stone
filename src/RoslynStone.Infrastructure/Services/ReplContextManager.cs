@@ -24,6 +24,7 @@ public class ReplContextManager : IReplContextManager
 
         public string ContextId { get; init; } = string.Empty;
         public ScriptState? State { get; set; }
+        public ScriptOptions? Options { get; set; }
         public DateTimeOffset CreatedAt { get; init; }
         public DateTimeOffset LastAccessedAt { get; set; }
         public int ExecutionCount { get; set; }
@@ -59,6 +60,18 @@ public class ReplContextManager : IReplContextManager
             lock (_lock)
             {
                 State = state;
+                LastAccessedAt = DateTimeOffset.UtcNow;
+            }
+        }
+
+        /// <summary>
+        /// Thread-safe update of Options with LastAccessedAt
+        /// </summary>
+        public void UpdateOptions(ScriptOptions options)
+        {
+            lock (_lock)
+            {
+                Options = options;
                 LastAccessedAt = DateTimeOffset.UtcNow;
             }
         }
@@ -144,6 +157,36 @@ public class ReplContextManager : IReplContextManager
             contextId,
             context.ExecutionCount
         );
+    }
+
+    /// <inheritdoc/>
+    public ScriptOptions? GetContextOptions(string contextId)
+    {
+        if (string.IsNullOrWhiteSpace(contextId))
+            return null;
+
+        if (_contexts.TryGetValue(contextId, out var context))
+        {
+            context.UpdateLastAccessed();
+            return context.Options;
+        }
+
+        return null;
+    }
+
+    /// <inheritdoc/>
+    public void UpdateContextOptions(string contextId, ScriptOptions options)
+    {
+        if (string.IsNullOrWhiteSpace(contextId))
+            throw new ArgumentException("Context ID cannot be null or empty", nameof(contextId));
+
+        if (!_contexts.TryGetValue(contextId, out var context))
+            throw new InvalidOperationException($"Context '{contextId}' not found");
+
+        // Thread-safe options update
+        context.UpdateOptions(options);
+
+        _logger?.LogDebug("Updated script options for context {ContextId}", contextId);
     }
 
     /// <inheritdoc/>
