@@ -34,10 +34,7 @@ public class ResourceEquivalentToolsTests
         var symbolName = "System.String";
 
         // Act
-        var result = await DocumentationTools.GetDocumentation(
-            _documentationService,
-            symbolName
-        );
+        var result = await DocumentationTools.GetDocumentation(_documentationService, symbolName);
 
         // Assert
         Assert.NotNull(result);
@@ -54,10 +51,7 @@ public class ResourceEquivalentToolsTests
         var symbolName = "NonExistent.Type.Name";
 
         // Act
-        var result = await DocumentationTools.GetDocumentation(
-            _documentationService,
-            symbolName
-        );
+        var result = await DocumentationTools.GetDocumentation(_documentationService, symbolName);
 
         // Assert
         Assert.NotNull(result);

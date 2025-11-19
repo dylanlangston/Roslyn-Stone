@@ -48,11 +48,7 @@ public class DocumentationTools
                     ? $"Documentation not found for symbol: {symbolName} in package: {packageId}. Make sure the package exists and contains XML documentation."
                     : $"Documentation not found for symbol: {symbolName}. Try well-known types like System.String, System.Linq.Enumerable, System.Collections.Generic.List`1, System.Threading.Tasks.Task, or System.Text.Json.JsonSerializer. For NuGet packages, provide packageId parameter (e.g., packageId: 'Newtonsoft.Json').";
 
-            return new
-            {
-                found = false,
-                message = exampleMessage,
-            };
+            return new { found = false, message = exampleMessage };
         }
 
         return new

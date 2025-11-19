@@ -106,22 +106,15 @@ public class NuGetTools
             "Search query. Examples: 'json', 'http client', 'Newtonsoft.Json', 'csv parser', 'logging'"
         )]
             string query,
-        [Description("Number of results to skip for pagination. Default: 0")]
-            int skip = 0,
-        [Description("Number of results to return. Default: 20, max: 100")]
-            int take = 20,
+        [Description("Number of results to skip for pagination. Default: 0")] int skip = 0,
+        [Description("Number of results to return. Default: 20, max: 100")] int take = 20,
         CancellationToken cancellationToken = default
     )
     {
         // Clamp take to valid range
         take = Math.Min(Math.Max(take, 1), 100);
 
-        var result = await nugetService.SearchPackagesAsync(
-            query,
-            skip,
-            take,
-            cancellationToken
-        );
+        var result = await nugetService.SearchPackagesAsync(query, skip, take, cancellationToken);
 
         return new
         {
@@ -168,10 +161,7 @@ public class NuGetTools
     {
         try
         {
-            var versions = await nugetService.GetPackageVersionsAsync(
-                packageId,
-                cancellationToken
-            );
+            var versions = await nugetService.GetPackageVersionsAsync(packageId, cancellationToken);
 
             return new
             {
