@@ -3,6 +3,7 @@ using System.Runtime.Loader;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Scripting;
+using RoslynStone.Infrastructure.Helpers;
 
 namespace RoslynStone.Infrastructure.Services;
 
@@ -19,22 +20,7 @@ public class CompilationService
     /// </summary>
     public CompilationService()
     {
-        // Configure default references
-        _scriptOptions = ScriptOptions
-            .Default.WithReferences(
-                typeof(object).Assembly,
-                typeof(Enumerable).Assembly,
-                typeof(Console).Assembly,
-                Assembly.Load("System.Runtime"),
-                Assembly.Load("System.Collections")
-            )
-            .WithImports(
-                "System",
-                "System.Collections.Generic",
-                "System.Linq",
-                "System.Text",
-                "System.Threading.Tasks"
-            );
+        _scriptOptions = MetadataReferenceHelper.GetDefaultScriptOptions();
     }
 
     /// <summary>
@@ -49,19 +35,10 @@ public class CompilationService
 
         var syntaxTree = CSharpSyntaxTree.ParseText(code);
 
-        // Get metadata references from existing assemblies
+        // Get metadata references from script options (already configured in constructor)
         var references = _scriptOptions
             .MetadataReferences.OfType<PortableExecutableReference>()
             .ToList();
-
-        // Add additional required references
-        references.Add(MetadataReference.CreateFromFile(typeof(object).Assembly.Location));
-        references.Add(MetadataReference.CreateFromFile(typeof(Console).Assembly.Location));
-        references.Add(MetadataReference.CreateFromFile(typeof(Enumerable).Assembly.Location));
-
-        // Add System.Runtime
-        var runtimeAssembly = Assembly.Load("System.Runtime");
-        references.Add(MetadataReference.CreateFromFile(runtimeAssembly.Location));
 
         // Create compilation
         var compilation = CSharpCompilation.Create(

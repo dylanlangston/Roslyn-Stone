@@ -1,9 +1,11 @@
 using System.Diagnostics;
 using System.Reflection;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
 using RoslynStone.Core.Models;
 using RoslynStone.Infrastructure.Functional;
+using RoslynStone.Infrastructure.Helpers;
 
 namespace RoslynStone.Infrastructure.Services;
 
@@ -38,23 +40,7 @@ public class RoslynScriptingService
     public RoslynScriptingService()
     {
         _outputWriter = new StringWriter();
-
-        // Configure script options with common assemblies
-        _scriptOptions = ScriptOptions
-            .Default.WithReferences(
-                typeof(object).Assembly,
-                typeof(Enumerable).Assembly,
-                typeof(Console).Assembly,
-                Assembly.Load("System.Runtime"),
-                Assembly.Load("System.Collections")
-            )
-            .WithImports(
-                "System",
-                "System.Collections.Generic",
-                "System.Linq",
-                "System.Text",
-                "System.Threading.Tasks"
-            );
+        _scriptOptions = MetadataReferenceHelper.GetDefaultScriptOptions();
     }
 
     /// <summary>
@@ -177,10 +163,13 @@ public class RoslynScriptingService
         {
             if (assemblyPaths != null && assemblyPaths.Count > 0)
             {
-                // Add each assembly to script options
+                // Add each assembly to script options using MetadataReference
+                // This avoids loading assemblies into the runtime (Assembly.LoadFrom)
                 foreach (var assemblyPath in assemblyPaths.Where(File.Exists))
                 {
-                    _scriptOptions = _scriptOptions.AddReferences(Assembly.LoadFrom(assemblyPath));
+                    _scriptOptions = _scriptOptions.AddReferences(
+                        MetadataReference.CreateFromFile(assemblyPath)
+                    );
                 }
 
                 // Reset script state to apply new references
@@ -215,11 +204,13 @@ public class RoslynScriptingService
     /// </summary>
     /// <param name="code">The C# code to execute</param>
     /// <param name="existingState">The existing script state to continue from (can be null for new state)</param>
+    /// <param name="customOptions">Custom script options to use (overrides default options)</param>
     /// <param name="cancellationToken">Cancellation token for async operations</param>
     /// <returns>Execution result with return value, output, errors, timing information, and updated script state</returns>
     public async Task<ExecutionResult> ExecuteWithStateAsync(
         string code,
         ScriptState? existingState,
+        ScriptOptions? customOptions = null,
         CancellationToken cancellationToken = default
     )
     {
@@ -240,11 +231,13 @@ public class RoslynScriptingService
             {
                 // Continue from provided state or start new
                 ScriptState<object>? newState;
+                var optionsToUse = customOptions ?? _scriptOptions;
+
                 if (existingState == null)
                 {
                     newState = await CSharpScript.RunAsync(
                         code,
-                        _scriptOptions,
+                        optionsToUse,
                         cancellationToken: cancellationToken
                     );
                 }

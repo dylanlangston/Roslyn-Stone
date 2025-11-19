@@ -1,7 +1,10 @@
 using System.ComponentModel;
+using System.Reflection;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
 using ModelContextProtocol.Server;
+using RoslynStone.Core.Models;
 using RoslynStone.Infrastructure.Functional;
 using RoslynStone.Infrastructure.Services;
 
@@ -18,67 +21,159 @@ public class ReplTools
     /// </summary>
     /// <param name="scriptingService">The Roslyn scripting service</param>
     /// <param name="contextManager">The REPL context manager</param>
+    /// <param name="nugetService">The NuGet service for package operations</param>
     /// <param name="code">C# code to execute</param>
     /// <param name="contextId">Optional context ID from previous execution</param>
+    /// <param name="nugetPackages">Optional NuGet packages to load before execution</param>
+    /// <param name="createContext">Whether to create a persistent context (default: false for single-shot execution)</param>
     /// <param name="cancellationToken">Cancellation token for async operations</param>
+    /// <remarks>
+    /// SECURITY CONSIDERATION: This tool loads NuGet packages based on user input without validation of package sources or integrity checks.
+    /// In production deployments, consider implementing additional security measures such as:
+    /// - Restricting package sources to trusted feeds only
+    /// - Implementing package signature verification
+    /// - Requiring package approval workflows
+    /// - Using a package allow-list for sensitive environments
+    /// </remarks>
     [McpServerTool]
     [Description(
-        "Execute C# code in a REPL session. Supports both stateful sessions (with contextId) and single-shot execution (without contextId). For stateful: provide contextId from previous execution to maintain variables and types. For single-shot: omit contextId for one-time execution. Returns contextId for continuing the session. Supports async/await, LINQ, and full .NET 10 API."
+        "Execute C# code in a REPL session. Supports both stateful sessions (createContext=true or with contextId) and single-shot execution (createContext=false, default). For stateful: set createContext=true to get contextId for maintaining variables and types across executions. For single-shot: use default createContext=false for temporary execution that is disposed after completion. Can load NuGet packages before execution using nugetPackages parameter. Packages are isolated to the context they are loaded in and are disposed when the context is removed. In stateful contexts, packages persist across executions. Supports async/await, LINQ, and full .NET 10 API."
     )]
     public static async Task<object> EvaluateCsharp(
         RoslynScriptingService scriptingService,
         IReplContextManager contextManager,
+        NuGetService nugetService,
         [Description(
-            "C# code to execute. Can be expressions, statements, or complete programs. Variables persist in sessions."
+            "C# code to execute. Can be expressions, statements, or complete programs. Variables persist in stateful sessions."
         )]
             string code,
         [Description(
-            "Optional context ID from previous execution. Omit for single-shot execution, provide to continue a session."
+            "Optional context ID from previous execution. Provide to continue an existing session. When provided, createContext parameter is ignored."
         )]
             string? contextId = null,
+        [Description(
+            "Optional array of NuGet packages to load before execution. Each package should have 'packageName' (required) and 'version' (optional, uses latest if omitted). Example: [{'packageName': 'Newtonsoft.Json', 'version': '13.0.3'}]. Packages are context-specific and disposed when context is removed."
+        )]
+            NuGetPackageSpec[]? nugetPackages = null,
+        [Description(
+            "Whether to create a persistent context. Default is false (single-shot execution with no contextId returned). Set to true to create a stateful session that returns contextId. Ignored when contextId is provided."
+        )]
+            bool createContext = false,
         CancellationToken cancellationToken = default
     )
     {
         ScriptState? existingState = null;
+        ScriptOptions? contextOptions = null;
         bool isNewContext = false;
+        bool shouldReturnContextId = false;
+        string? activeContextId = null;
+        var packageErrors = new List<string>();
 
-        // Handle context
-        if (string.IsNullOrWhiteSpace(contextId))
+        // Handle context logic
+        if (!string.IsNullOrWhiteSpace(contextId))
         {
-            // Single-shot or new session - create context
-            contextId = contextManager.CreateContext();
-            isNewContext = true;
-        }
-        else
-        {
-            // Continue existing session
+            // Continue existing session (contextId provided)
             if (!contextManager.ContextExists(contextId))
             {
                 return new
                 {
                     success = false,
                     error = "REPL_CONTEXT_INVALID",
-                    message = $"Context '{contextId}' not found or expired. Omit contextId to create a new session.",
-                    suggestedAction = "EvaluateCsharp without contextId",
+                    message = $"Context '{contextId}' not found or expired. Set createContext=true to create a new persistent session, or omit contextId for a temporary execution.",
+                    suggestedAction = "EvaluateCsharp with createContext=true for a persistent session, or without contextId for a temporary execution",
                     contextId = (string?)null,
                 };
             }
             existingState = contextManager.GetContextState(contextId);
+            contextOptions = contextManager.GetContextOptions(contextId);
+            activeContextId = contextId;
+            shouldReturnContextId = true; // Always return contextId for existing contexts
+        }
+        else if (createContext)
+        {
+            // Create new persistent context (createContext=true, no contextId)
+            activeContextId = contextManager.CreateContext();
+            isNewContext = true;
+            shouldReturnContextId = true;
+        }
+        else
+        {
+            // Single-shot execution (createContext=false, no contextId)
+            // Create temporary context for execution but don't return it
+            activeContextId = contextManager.CreateContext();
+            isNewContext = true;
+            shouldReturnContextId = false;
         }
 
         try
         {
-            // Execute code
+            // Get base script options (from context or service default)
+            var baseOptions = contextOptions ?? scriptingService.ScriptOptions;
+
+            // Load NuGet packages if provided
+            if (nugetPackages != null && nugetPackages.Length > 0)
+            {
+                foreach (var package in nugetPackages)
+                {
+                    if (string.IsNullOrWhiteSpace(package.PackageName))
+                    {
+                        packageErrors.Add("Package name is null or empty");
+                        continue;
+                    }
+
+                    try
+                    {
+                        // Load the package
+                        var assemblyPaths = await nugetService.DownloadPackageAsync(
+                            package.PackageName,
+                            package.Version,
+                            cancellationToken
+                        );
+
+                        // Add assemblies to context-specific options using MetadataReference
+                        // This avoids loading assemblies into the runtime (Assembly.LoadFrom)
+                        foreach (var assemblyPath in assemblyPaths.Where(File.Exists))
+                        {
+                            baseOptions = baseOptions.AddReferences(
+                                MetadataReference.CreateFromFile(assemblyPath)
+                            );
+                        }
+                    }
+                    catch (Exception ex) when (ex is not OperationCanceledException)
+                    {
+                        packageErrors.Add(
+                            $"Failed to load package '{package.PackageName}': {ex.Message}"
+                        );
+                    }
+                }
+
+                // Store updated options in context
+                contextManager.UpdateContextOptions(activeContextId!, baseOptions);
+            }
+            // If this is a new context and no packages were loaded, store the base options
+            else if (isNewContext)
+            {
+                contextManager.UpdateContextOptions(activeContextId!, baseOptions);
+            }
+
+            // Execute code with context-specific options
             var result = await scriptingService.ExecuteWithStateAsync(
                 code,
                 existingState,
+                baseOptions,
                 cancellationToken
             );
 
-            // Store state if execution succeeded
-            if (result.Success && result.ScriptState != null)
+            // Store state if execution succeeded and we're using a context
+            if (result.Success && result.ScriptState != null && shouldReturnContextId)
             {
-                contextManager.UpdateContextState(contextId, result.ScriptState);
+                contextManager.UpdateContextState(activeContextId!, result.ScriptState);
+            }
+
+            // Clean up temporary context if single-shot execution
+            if (!shouldReturnContextId)
+            {
+                contextManager.RemoveContext(activeContextId!);
             }
 
             return new
@@ -94,16 +189,25 @@ public class ReplTools
                     line = e.Line,
                     column = e.Column,
                 }),
-                warnings = result.Warnings.Select(w => new
-                {
-                    code = w.Code,
-                    message = w.Message,
-                    severity = w.Severity,
-                    line = w.Line,
-                    column = w.Column,
-                }),
+                warnings = result
+                    .Warnings.Concat(
+                        packageErrors.Select(err => new CompilationError
+                        {
+                            Code = "PACKAGE_LOAD_ERROR",
+                            Message = err,
+                            Severity = "Warning",
+                        })
+                    )
+                    .Select(w => new
+                    {
+                        code = w.Code,
+                        message = w.Message,
+                        severity = w.Severity,
+                        line = w.Line,
+                        column = w.Column,
+                    }),
                 executionTime = result.ExecutionTime.TotalMilliseconds,
-                contextId,
+                contextId = shouldReturnContextId ? activeContextId : null,
             };
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
@@ -111,7 +215,7 @@ public class ReplTools
             // Clean up context if it was just created and something went wrong
             if (isNewContext)
             {
-                contextManager.RemoveContext(contextId);
+                contextManager.RemoveContext(activeContextId!);
             }
             throw;
         }
@@ -142,6 +246,7 @@ public class ReplTools
     )
     {
         ScriptState? existingState = null;
+        ScriptOptions? contextOptions = null;
 
         // Check for context-aware validation
         if (!string.IsNullOrWhiteSpace(contextId))
@@ -159,13 +264,15 @@ public class ReplTools
                 );
             }
             existingState = contextManager.GetContextState(contextId);
+            contextOptions = contextManager.GetContextOptions(contextId);
         }
 
         // Validate with or without context
+        var optionsToUse = contextOptions ?? scriptingService.ScriptOptions;
         var script =
             existingState != null
                 ? existingState.Script.ContinueWith(code)
-                : CSharpScript.Create(code, scriptingService.ScriptOptions);
+                : CSharpScript.Create(code, optionsToUse);
 
         var diagnostics = script.Compile(cancellationToken);
 
