@@ -50,11 +50,37 @@ if (useHttpTransport)
     var pythonHome = AppContext.BaseDirectory; // Python files are copied to output from GradioModule
     var venvPath = Path.Combine(pythonHome, ".venv");
     
+    // Set environment variable for Python location if not already set
+    if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("Python3_ROOT_DIR")))
+    {
+        Environment.SetEnvironmentVariable("Python3_ROOT_DIR", "/usr");
+    }
+    
+    // Set LD_LIBRARY_PATH to include Python shared library location
+    var pythonLibPath = "/usr/lib/x86_64-linux-gnu";
+    var currentLdPath = Environment.GetEnvironmentVariable("LD_LIBRARY_PATH");
+    if (string.IsNullOrEmpty(currentLdPath))
+    {
+        Environment.SetEnvironmentVariable("LD_LIBRARY_PATH", pythonLibPath);
+    }
+    else if (!currentLdPath.Contains(pythonLibPath))
+    {
+        Environment.SetEnvironmentVariable("LD_LIBRARY_PATH", $"{pythonLibPath}:{currentLdPath}");
+    }
+    
+    // Set PATH to include UV location
+    var uvPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local", "bin");
+    var currentPath = Environment.GetEnvironmentVariable("PATH");
+    if (!string.IsNullOrEmpty(currentPath) && !currentPath.Contains(uvPath))
+    {
+        Environment.SetEnvironmentVariable("PATH", $"{uvPath}:{currentPath}");
+    }
+    
     builder.Services
         .WithPython()
         .WithHome(pythonHome)
         .WithVirtualEnvironment(venvPath)
-        .FromNuGet("3.12.7")  // Use Python from NuGet
+        .FromEnvironmentVariable("Python3_ROOT_DIR", "3.12")  // Use system Python via environment variable
         .WithUvInstaller("pyproject.toml");  // Use UV to install from pyproject.toml
 
     builder.Services.AddHttpClient();
