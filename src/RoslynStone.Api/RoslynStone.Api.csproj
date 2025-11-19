@@ -11,6 +11,14 @@
   <ItemGroup>
     <PackageReference Include="ModelContextProtocol" Version="0.4.0-preview.3" />
     <PackageReference Include="ModelContextProtocol.AspNetCore" Version="0.4.0-preview.3" />
+    <PackageReference Include="CSnakes.Runtime" Version="1.*-*" />
+    <PackageReference Include="python" Version="3.12.7" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <CSharpAnalyzerAdditionalFile Include="Python\gradio_launcher.py" />
+    <None Include="Python\gradio_app.py" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Python\pyproject.toml" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

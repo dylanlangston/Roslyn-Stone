@@ -1,3 +1,4 @@
+using CSnakes.Runtime;
 using RoslynStone.Infrastructure.Resources;
 using RoslynStone.Infrastructure.Services;
 using RoslynStone.Infrastructure.Tools;
@@ -45,6 +46,20 @@ if (useHttpTransport)
     // Register all services, command handlers, and query handlers
     RegisterServices(builder.Services);
 
+    // Configure CSnakes Python environment with UV
+    var pythonBuilder = builder.Services.WithPython();
+    var pythonHome = Path.Join(AppContext.BaseDirectory, "Python");
+    var venv = Path.Join(pythonHome, ".venv");
+    
+    pythonBuilder
+        .WithHome(pythonHome)
+        .WithVirtualEnvironment(venv)
+        .FromNuGet("3.12.7")
+        .WithUvInstaller(); // Use UV for fast package installation
+
+    // Register the generated CSnakes module
+    builder.Services.AddSingleton(sp => sp.GetRequiredService<IPythonEnvironment>().GradioLauncher());
+
     // WARNING: HTTP transport has no authentication by default.
     // Configure authentication, CORS, and rate limiting before exposing publicly.
     // This server can execute arbitrary C# code.
@@ -56,6 +71,47 @@ if (useHttpTransport)
         .WithResourcesFromAssembly(typeof(DocumentationResource).Assembly);
 
     var app = builder.Build();
+
+    // Start Gradio landing page in the background
+    _ = Task.Run(() =>
+    {
+        try
+        {
+            var gradioLauncher = app.Services.GetRequiredService<IGradioLauncher>();
+            var baseUrl = app.Configuration["BASE_URL"] ?? "http://localhost:7071";
+            
+            // Check if Gradio is installed first
+            var isInstalled = gradioLauncher.CheckGradioInstalled();
+            if (!isInstalled)
+            {
+                app.Logger.LogWarning("Gradio is not installed. Gradio landing page will not be available.");
+                return;
+            }
+            
+            var gradioUrl = gradioLauncher.StartGradioServer(baseUrl, 7860);
+            app.Logger.LogInformation("Gradio landing page started at {GradioUrl}", gradioUrl);
+        }
+        catch (Exception ex)
+        {
+            app.Logger.LogError(ex, "Failed to start Gradio landing page");
+        }
+    });
+
+    // Map a simple proxy to Gradio for root path
+    app.MapGet("/", async (HttpContext context) =>
+    {
+        var client = new HttpClient();
+        try
+        {
+            var response = await client.GetAsync("http://127.0.0.1:7860/");
+            context.Response.StatusCode = (int)response.StatusCode;
+            await response.Content.CopyToAsync(context.Response.Body);
+        }
+        catch
+        {
+            context.Response.Redirect("/mcp");
+        }
+    });
 
     // Map default health check endpoints for HTTP transport
     app.MapDefaultEndpoints();

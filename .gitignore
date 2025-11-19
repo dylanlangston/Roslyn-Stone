@@ -53,3 +53,12 @@ CodeCoverage/
 TestResult.xml
 nunit-*.xml
 inspectcode-results.xml
+
+# Python virtual environments
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
