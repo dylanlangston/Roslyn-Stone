@@ -30,7 +30,10 @@
         "eamodio.gitlens",
         "github.vscode-github-actions",
         "bierner.markdown-preview-github-styles",
-        "redhat.vscode-yaml"
+        "redhat.vscode-yaml",
+        "ms-python.autopep8",
+				"ms-python.python",
+				"ms-python.vscode-pylance"
       ],
       "settings": {
         "dotnet.defaultSolution": "RoslynStone.sln",
@@ -46,6 +49,5 @@
     "DOTNET_NOLOGO": "1",
     "DOTNET_USE_POLLING_FILE_WATCHER": "1"
   },
-  
-  "postCreateCommand": "dotnet restore && dotnet build"
+  "postCreateCommand": "sh .devcontainer/postCreate.sh"
 }
