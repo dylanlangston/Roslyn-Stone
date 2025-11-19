@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Runtime.InteropServices;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
@@ -147,12 +148,12 @@ public class ReplTools
                 }
 
                 // Store updated options in context
-                contextManager.UpdateContextOptions(activeContextId!, baseOptions);
+                contextManager.UpdateContextOptions(activeContextId, baseOptions);
             }
             // If this is a new context and no packages were loaded, store the base options
             else if (isNewContext)
             {
-                contextManager.UpdateContextOptions(activeContextId!, baseOptions);
+                contextManager.UpdateContextOptions(activeContextId, baseOptions);
             }
 
             // Execute code with context-specific options
@@ -166,13 +167,13 @@ public class ReplTools
             // Store state if execution succeeded and we're using a context
             if (result.Success && result.ScriptState != null && shouldReturnContextId)
             {
-                contextManager.UpdateContextState(activeContextId!, result.ScriptState);
+                contextManager.UpdateContextState(activeContextId, result.ScriptState);
             }
 
             // Clean up temporary context if single-shot execution
             if (!shouldReturnContextId)
             {
-                contextManager.RemoveContext(activeContextId!);
+                contextManager.RemoveContext(activeContextId);
             }
 
             return new
@@ -214,7 +215,7 @@ public class ReplTools
             // Clean up context if it was just created and something went wrong
             if (isNewContext)
             {
-                contextManager.RemoveContext(activeContextId!);
+                contextManager.RemoveContext(activeContextId);
             }
             throw;
         }
@@ -422,7 +423,7 @@ public class ReplTools
 
         return new
         {
-            frameworkVersion = ".NET 10.0",
+            frameworkVersion = RuntimeInformation.FrameworkDescription,
             language = "C# 14",
             state = "Ready",
             activeSessionCount,

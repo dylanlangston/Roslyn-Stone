@@ -124,12 +124,7 @@ public class McpServerConfigurationTests
     public void AllTools_HaveDescriptions()
     {
         // Verify all tools have [Description] attributes for MCP protocol
-        var toolTypes = new[]
-        {
-            typeof(ReplTools),
-            typeof(NuGetTools),
-            typeof(DocumentationTools),
-        };
+        var toolTypes = new[] { typeof(ReplTools), typeof(NuGetTools), typeof(DocumentationTools) };
 
         foreach (var toolType in toolTypes)
         {

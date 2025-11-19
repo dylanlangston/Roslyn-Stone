@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Runtime.InteropServices;
 using ModelContextProtocol.Server;
 using RoslynStone.Infrastructure.Models;
 using RoslynStone.Infrastructure.Services;
@@ -125,7 +126,7 @@ public class ReplStateResource
         {
             Uri = uri,
             MimeType = "application/json",
-            FrameworkVersion = ".NET 10.0",
+            FrameworkVersion = RuntimeInformation.FrameworkDescription,
             Language = "C# 14",
             State = "Ready",
             ActiveSessionCount = activeSessionCount,

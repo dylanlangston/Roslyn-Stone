@@ -213,18 +213,31 @@ public class NuGetTools
         CancellationToken cancellationToken = default
     )
     {
-        var readme = await nugetService.GetPackageReadmeAsync(
-            packageId,
-            version,
-            cancellationToken
-        );
-
-        return new
+        try
         {
-            found = readme != null,
-            packageId,
-            version = version ?? "latest",
-            content = readme ?? "README not found for this package",
-        };
+            var readme = await nugetService.GetPackageReadmeAsync(
+                packageId,
+                version,
+                cancellationToken
+            );
+
+            return new
+            {
+                found = readme != null,
+                packageId,
+                version = version ?? "latest",
+                content = readme ?? "README not found for this package",
+            };
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return new
+            {
+                found = false,
+                packageId,
+                version = version ?? "latest",
+                message = $"Error retrieving README: {ex.Message}",
+            };
+        }
     }
 }
