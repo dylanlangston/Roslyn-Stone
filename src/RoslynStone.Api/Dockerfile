@@ -57,13 +57,6 @@ RUN dotnet publish "RoslynStone.Api.csproj" \
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 
-# Install curl for UV installation (if needed at runtime)
-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
-
-# Install UV in the runtime image
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-ENV PATH="/root/.local/bin:${PATH}"
-
 # Create non-root user for security
 RUN groupadd -r appuser && useradd -r -g appuser -m -d /home/appuser appuser
 
@@ -86,8 +79,7 @@ ENV DOTNET_ENVIRONMENT=Production \
     MCP_TRANSPORT=stdio \
     ASPNETCORE_URLS= \
     DOTNET_EnableDiagnostics=0 \
-    LD_LIBRARY_PATH=/home/appuser/.config/CSnakes/python3.12.9/python/install/lib:${LD_LIBRARY_PATH} \
-    PATH=/home/appuser/.local/bin:${PATH}
+    LD_LIBRARY_PATH=/home/appuser/.config/CSnakes/python3.12.9/python/install/lib
 
 # Switch to non-root user
 USER appuser

@@ -12,7 +12,7 @@
     <PackageReference Include="ModelContextProtocol" Version="0.4.0-preview.3" />
     <PackageReference Include="ModelContextProtocol.AspNetCore" Version="0.4.0-preview.3" />
     <PackageReference Include="CSnakes.Runtime" Version="1.*-*" />
-    <PackageReference Include="python" Version="3.12.7" />
+    <PackageReference Include="python" Version="3.12.9" />
   </ItemGroup>
 
   <ItemGroup>

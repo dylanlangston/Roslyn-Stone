@@ -14,18 +14,11 @@ public class GradioLandingPageTests : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        // Install Playwright browsers if not already installed
-        var exitCode = Microsoft.Playwright.Program.Main(new[] { "install", "chromium" });
-        if (exitCode != 0)
-        {
-            throw new Exception($"Playwright install failed with exit code {exitCode}");
-        }
-
+        // Assumes Playwright browsers are already installed (see README for setup instructions)
         _playwright = await Playwright.CreateAsync();
-        _browser = await _playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
-        {
-            Headless = true
-        });
+        _browser = await _playwright.Chromium.LaunchAsync(
+            new BrowserTypeLaunchOptions { Headless = true }
+        );
     }
 
     public async Task DisposeAsync()
@@ -49,20 +42,21 @@ public class GradioLandingPageTests : IAsyncLifetime
         try
         {
             // Act
-            var response = await page.GotoAsync(BaseUrl, new PageGotoOptions
-            {
-                WaitUntil = WaitUntilState.NetworkIdle,
-                Timeout = 30000
-            });
+            var response = await page.GotoAsync(
+                BaseUrl,
+                new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle, Timeout = 30000 }
+            );
 
             // Assert
             Assert.NotNull(response);
-            Assert.True(response.Ok, $"Page failed to load: {response.Status} {response.StatusText}");
-            
-            // Wait for Gradio to fully load
-            await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
-            await Task.Delay(2000); // Allow Gradio JS to initialize
-            
+            Assert.True(
+                response.Ok,
+                $"Page failed to load: {response.Status} {response.StatusText}"
+            );
+
+            // Wait for Gradio to fully load by waiting for specific element
+            await page.WaitForSelectorAsync("h1", new() { Timeout = 5000 });
+
             // Verify page title
             var title = await page.TitleAsync();
             Assert.Equal("Roslyn-Stone MCP Server", title);
@@ -84,14 +78,13 @@ public class GradioLandingPageTests : IAsyncLifetime
         try
         {
             // Act
-            await page.GotoAsync(BaseUrl, new PageGotoOptions
-            {
-                WaitUntil = WaitUntilState.NetworkIdle,
-                Timeout = 30000
-            });
+            await page.GotoAsync(
+                BaseUrl,
+                new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle, Timeout = 30000 }
+            );
 
-            await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
-            await Task.Delay(2000);
+            // Wait for specific element instead of fixed delay
+            await page.WaitForSelectorAsync("h1", new() { Timeout = 5000 });
 
             // Assert - Check for main heading
             var heading = await page.Locator("h1").First.TextContentAsync();
@@ -114,14 +107,13 @@ public class GradioLandingPageTests : IAsyncLifetime
         try
         {
             // Act
-            await page.GotoAsync(BaseUrl, new PageGotoOptions
-            {
-                WaitUntil = WaitUntilState.NetworkIdle,
-                Timeout = 30000
-            });
+            await page.GotoAsync(
+                BaseUrl,
+                new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle, Timeout = 30000 }
+            );
 
-            await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
-            await Task.Delay(2000);
+            // Wait for tabs to appear
+            await page.WaitForSelectorAsync("button, [role='tab']", new() { Timeout = 5000 });
 
             // Assert - Check for tabs
             var tabs = await page.Locator("button, [role='tab']").AllTextContentsAsync();
@@ -147,14 +139,13 @@ public class GradioLandingPageTests : IAsyncLifetime
         try
         {
             // Act
-            await page.GotoAsync(BaseUrl, new PageGotoOptions
-            {
-                WaitUntil = WaitUntilState.NetworkIdle,
-                Timeout = 30000
-            });
+            await page.GotoAsync(
+                BaseUrl,
+                new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle, Timeout = 30000 }
+            );
 
-            await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
-            await Task.Delay(2000);
+            // Wait for page content to load
+            await page.WaitForSelectorAsync("h2, h3", new() { Timeout = 5000 });
 
             // Assert - Check for connection instructions
             var pageContent = await page.ContentAsync();
@@ -179,19 +170,25 @@ public class GradioLandingPageTests : IAsyncLifetime
         try
         {
             // Act
-            await page.GotoAsync(BaseUrl, new PageGotoOptions
-            {
-                WaitUntil = WaitUntilState.NetworkIdle,
-                Timeout = 30000
-            });
+            await page.GotoAsync(
+                BaseUrl,
+                new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle, Timeout = 30000 }
+            );
 
-            await page.WaitForLoadStateAsync(LoadState.NetworkIdle);
-            await Task.Delay(2000);
+            // Wait for page to load
+            await page.WaitForSelectorAsync("h1", new() { Timeout = 5000 });
 
             // Click on Features tab
-            var featuresTab = page.Locator("button:has-text('Features'), [role='tab']:has-text('Features')").First;
+            var featuresTab = page.Locator(
+                "button:has-text('Features'), [role='tab']:has-text('Features')"
+            ).First;
             await featuresTab.ClickAsync();
-            await Task.Delay(1000);
+
+            // Wait for features content to load
+            await page.WaitForSelectorAsync(
+                "text=EvaluateCsharp, text=ValidateCsharp",
+                new() { Timeout = 5000 }
+            );
 
             // Assert - Check for MCP tools
             var pageContent = await page.ContentAsync();
@@ -216,10 +213,10 @@ public class GradioLandingPageTests : IAsyncLifetime
         try
         {
             // Act - Test that /mcp endpoint is still accessible
-            var response = await page.GotoAsync($"{BaseUrl}/mcp", new PageGotoOptions
-            {
-                Timeout = 10000
-            });
+            var response = await page.GotoAsync(
+                $"{BaseUrl}/mcp",
+                new PageGotoOptions { Timeout = 10000 }
+            );
 
             // Assert
             Assert.NotNull(response);
