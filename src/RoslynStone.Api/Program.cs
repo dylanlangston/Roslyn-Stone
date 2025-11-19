@@ -46,19 +46,18 @@ if (useHttpTransport)
     // Register all services, command handlers, and query handlers
     RegisterServices(builder.Services);
 
-    // Configure CSnakes Python environment with UV
-    var pythonBuilder = builder.Services.WithPython();
-    var pythonHome = Path.Join(AppContext.BaseDirectory, "Python");
-    var venv = Path.Join(pythonHome, ".venv");
+    // Configure CSnakes Python environment with UV for Gradio
+    var pythonHome = AppContext.BaseDirectory; // Python files are copied to output from GradioModule
+    var venvPath = Path.Combine(pythonHome, ".venv");
     
-    pythonBuilder
+    builder.Services
+        .WithPython()
         .WithHome(pythonHome)
-        .WithVirtualEnvironment(venv)
-        .FromNuGet("3.12.7")
-        .WithUvInstaller(); // Use UV for fast package installation
+        .WithVirtualEnvironment(venvPath)
+        .FromNuGet("3.12.7")  // Use Python from NuGet
+        .WithUvInstaller("pyproject.toml");  // Use UV to install from pyproject.toml
 
-    // Register the generated CSnakes module
-    builder.Services.AddSingleton(sp => sp.GetRequiredService<IPythonEnvironment>().GradioLauncher());
+    builder.Services.AddHttpClient();
 
     // WARNING: HTTP transport has no authentication by default.
     // Configure authentication, CORS, and rate limiting before exposing publicly.
@@ -72,24 +71,27 @@ if (useHttpTransport)
 
     var app = builder.Build();
 
-    // Start Gradio landing page in the background
-    _ = Task.Run(() =>
+    // Start Gradio landing page using CSnakes in the background
+    _ = Task.Run(async () =>
     {
         try
         {
-            var gradioLauncher = app.Services.GetRequiredService<IGradioLauncher>();
+            var env = app.Services.GetRequiredService<IPythonEnvironment>();
+            var gradioLauncher = env.GradioLauncher();
+            
             var baseUrl = app.Configuration["BASE_URL"] ?? "http://localhost:7071";
             
-            // Check if Gradio is installed first
+            // Check if Gradio is installed
             var isInstalled = gradioLauncher.CheckGradioInstalled();
             if (!isInstalled)
             {
-                app.Logger.LogWarning("Gradio is not installed. Gradio landing page will not be available.");
+                app.Logger.LogWarning("Gradio is not installed in the Python environment");
                 return;
             }
             
-            var gradioUrl = gradioLauncher.StartGradioServer(baseUrl, 7860);
-            app.Logger.LogInformation("Gradio landing page started at {GradioUrl}", gradioUrl);
+            // Start Gradio server (runs in a thread inside Python)
+            var result = gradioLauncher.StartGradioServer(baseUrl, 7860);
+            app.Logger.LogInformation("Gradio landing page: {Result}", result);
         }
         catch (Exception ex)
         {
@@ -97,19 +99,22 @@ if (useHttpTransport)
         }
     });
 
-    // Map a simple proxy to Gradio for root path
-    app.MapGet("/", async (HttpContext context) =>
+    // Proxy root path to Gradio
+    app.MapGet("/", async (IHttpClientFactory clientFactory) =>
     {
-        var client = new HttpClient();
+        var client = clientFactory.CreateClient();
         try
         {
             var response = await client.GetAsync("http://127.0.0.1:7860/");
-            context.Response.StatusCode = (int)response.StatusCode;
-            await response.Content.CopyToAsync(context.Response.Body);
+            return Results.Content(
+                await response.Content.ReadAsStringAsync(),
+                response.Content.Headers.ContentType?.ToString()
+            );
         }
-        catch
+        catch (Exception)
         {
-            context.Response.Redirect("/mcp");
+            // If Gradio isn't running, redirect to MCP endpoint
+            return Results.Redirect("/mcp");
         }
     });
 

@@ -16,14 +16,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <CSharpAnalyzerAdditionalFile Include="Python\gradio_launcher.py" />
-    <None Include="Python\gradio_app.py" CopyToOutputDirectory="PreserveNewest" />
-    <None Include="Python\pyproject.toml" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\RoslynStone.Core\RoslynStone.Core.csproj" />
     <ProjectReference Include="..\RoslynStone.Infrastructure\RoslynStone.Infrastructure.csproj" />
     <ProjectReference Include="..\RoslynStone.ServiceDefaults\RoslynStone.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\RoslynStone.GradioModule\RoslynStone.GradioModule.csproj" />
   </ItemGroup>
 </Project>
