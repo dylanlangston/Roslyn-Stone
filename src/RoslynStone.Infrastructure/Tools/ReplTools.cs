@@ -140,6 +140,11 @@ public class ReplTools
                 // Store updated options in context
                 contextManager.UpdateContextOptions(activeContextId!, baseOptions);
             }
+            // If this is a new context and no packages were loaded, store the base options
+            else if (isNewContext)
+            {
+                contextManager.UpdateContextOptions(activeContextId!, baseOptions);
+            }
 
             // Execute code with context-specific options
             var result = await scriptingService.ExecuteWithStateAsync(
@@ -156,9 +161,9 @@ public class ReplTools
             }
 
             // Clean up temporary context if single-shot execution
-            if (!shouldReturnContextId && activeContextId != null)
+            if (!shouldReturnContextId)
             {
-                contextManager.RemoveContext(activeContextId);
+                contextManager.RemoveContext(activeContextId!);
             }
 
             return new
@@ -198,9 +203,9 @@ public class ReplTools
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // Clean up context if it was just created and something went wrong
-            if (isNewContext && activeContextId != null)
+            if (isNewContext)
             {
-                contextManager.RemoveContext(activeContextId);
+                contextManager.RemoveContext(activeContextId!);
             }
             throw;
         }
