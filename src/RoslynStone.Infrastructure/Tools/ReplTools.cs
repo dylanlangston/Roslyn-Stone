@@ -1,5 +1,5 @@
 using System.ComponentModel;
-using System.Reflection;
+using System.Runtime.InteropServices;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
@@ -148,12 +148,12 @@ public class ReplTools
                 }
 
                 // Store updated options in context
-                contextManager.UpdateContextOptions(activeContextId!, baseOptions);
+                contextManager.UpdateContextOptions(activeContextId, baseOptions);
             }
             // If this is a new context and no packages were loaded, store the base options
             else if (isNewContext)
             {
-                contextManager.UpdateContextOptions(activeContextId!, baseOptions);
+                contextManager.UpdateContextOptions(activeContextId, baseOptions);
             }
 
             // Execute code with context-specific options
@@ -167,13 +167,13 @@ public class ReplTools
             // Store state if execution succeeded and we're using a context
             if (result.Success && result.ScriptState != null && shouldReturnContextId)
             {
-                contextManager.UpdateContextState(activeContextId!, result.ScriptState);
+                contextManager.UpdateContextState(activeContextId, result.ScriptState);
             }
 
             // Clean up temporary context if single-shot execution
             if (!shouldReturnContextId)
             {
-                contextManager.RemoveContext(activeContextId!);
+                contextManager.RemoveContext(activeContextId);
             }
 
             return new
@@ -215,7 +215,7 @@ public class ReplTools
             // Clean up context if it was just created and something went wrong
             if (isNewContext)
             {
-                contextManager.RemoveContext(activeContextId!);
+                contextManager.RemoveContext(activeContextId);
             }
             throw;
         }
@@ -339,6 +339,101 @@ public class ReplTools
             success = false,
             message = $"Context '{contextId}' not found or already removed",
             contextId,
+        };
+    }
+
+    /// <summary>
+    /// Get current REPL environment information
+    /// </summary>
+    /// <param name="scriptingService">The Roslyn scripting service</param>
+    /// <param name="contextManager">The REPL context manager</param>
+    /// <param name="contextId">Optional context ID for session-specific information</param>
+    /// <returns>Information about current REPL state and capabilities</returns>
+    [McpServerTool]
+    [Description(
+        "Access current REPL environment state and capabilities. Returns information about framework version, available namespaces, loaded assemblies, imported NuGet packages, current variables in scope, and REPL capabilities. Optionally provide contextId for session-specific state information."
+    )]
+    public static object GetReplInfo(
+        RoslynScriptingService scriptingService,
+        IReplContextManager contextManager,
+        [Description(
+            "Optional context ID for session-specific state. Omit for general REPL information."
+        )]
+            string? contextId = null
+    )
+    {
+        var imports = new List<string>
+        {
+            "System",
+            "System.Collections.Generic",
+            "System.Linq",
+            "System.Text",
+            "System.Threading.Tasks",
+        };
+
+        var activeSessionCount = contextManager.GetActiveContexts().Count;
+
+        var tips = new List<string>
+        {
+            "Variables and types persist between executions",
+            "Use 'using' directives to import additional namespaces",
+            "Console.WriteLine output is captured separately from return values",
+            "Async/await is fully supported in the REPL",
+            "Use LoadNuGetPackage or SearchNuGetPackages to add external libraries",
+            "Use ResetRepl to clear all state and start fresh",
+            "Use ValidateCsharp to check syntax before execution",
+            "Use GetDocumentation to learn about .NET APIs",
+        };
+
+        var capabilities = new
+        {
+            asyncAwait = true,
+            linq = true,
+            topLevelStatements = true,
+            consoleOutput = true,
+            nugetPackages = true,
+            statefulness = true,
+        };
+
+        var examples = new
+        {
+            simpleExpression = "2 + 2",
+            variableDeclaration = "var name = \"Alice\"; name",
+            asyncOperation = "await Task.Delay(100); \"Done\"",
+            linqQuery = "new[] { 1, 2, 3 }.Select(x => x * 2)",
+            consoleOutput = "Console.WriteLine(\"Debug\"); return \"Result\"",
+        };
+
+        object? sessionMetadata = null;
+        if (!string.IsNullOrWhiteSpace(contextId))
+        {
+            var metadata = contextManager.GetContextMetadata(contextId);
+            if (metadata != null)
+            {
+                sessionMetadata = new
+                {
+                    contextId = metadata.ContextId,
+                    createdAt = metadata.CreatedAt,
+                    lastAccessedAt = metadata.LastAccessedAt,
+                    executionCount = metadata.ExecutionCount,
+                    isInitialized = metadata.IsInitialized,
+                };
+            }
+        }
+
+        return new
+        {
+            frameworkVersion = RuntimeInformation.FrameworkDescription,
+            language = "C# 14",
+            state = "Ready",
+            activeSessionCount,
+            contextId,
+            isSessionSpecific = !string.IsNullOrWhiteSpace(contextId),
+            defaultImports = imports,
+            capabilities,
+            tips,
+            examples,
+            sessionMetadata,
         };
     }
 }

@@ -136,6 +136,72 @@ Load a NuGet package into the REPL.
 
 **Behavior**: Package loaded into session, persists until ResetRepl
 
+### GetReplInfo
+
+Get current REPL environment information and capabilities.
+
+**Parameters**:
+- `contextId` (optional): Session context for session-specific information
+
+**Returns**: `{ frameworkVersion, language, state, activeSessionCount, contextId, isSessionSpecific, defaultImports, capabilities, tips, examples, sessionMetadata }`
+
+**Use Cases**:
+- Understand REPL capabilities
+- Check active session count
+- Get session-specific metadata
+
+### SearchNuGetPackages
+
+Search for NuGet packages (Tool alternative to `nuget://search` resource).
+
+**Parameters**:
+- `query`: Search query
+- `skip` (optional): Pagination offset (default: 0)
+- `take` (optional): Results to return (default: 20, max: 100)
+
+**Returns**: `{ packages, totalCount, query, skip, take }`
+
+**Use Cases**: For clients that don't support MCP resources
+
+### GetNuGetPackageVersions
+
+Get all versions of a NuGet package (Tool alternative to `nuget://packages/{id}/versions` resource).
+
+**Parameters**:
+- `packageId`: Package ID to query
+
+**Returns**: `{ found, packageId, versions, totalCount }`
+
+**Use Cases**: For clients that don't support MCP resources
+
+### GetNuGetPackageReadme
+
+Get README content for a NuGet package (Tool alternative to `nuget://packages/{id}/readme` resource).
+
+**Parameters**:
+- `packageId`: Package ID
+- `version` (optional): Specific version (omit for latest)
+
+**Returns**: `{ found, packageId, version, content }`
+
+**Use Cases**: For clients that don't support MCP resources
+
+### GetDocumentation
+
+Get XML documentation for .NET types/methods (Tool alternative to `doc://` resource).
+
+**Parameters**:
+- `symbolName`: Fully qualified type or method name
+- `packageId` (optional): NuGet package ID for package-specific types
+
+**Returns**: `{ found, symbolName, summary, remarks, parameters, returns, exceptions, example }`
+
+**Use Cases**: For clients that don't support MCP resources
+
+**Examples**:
+- GetDocumentation("System.String")
+- GetDocumentation("JsonConvert", "Newtonsoft.Json")
+
 ## Context Management
 
 ### IReplContextManager
