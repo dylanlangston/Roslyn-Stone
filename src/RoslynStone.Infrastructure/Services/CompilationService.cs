@@ -3,6 +3,7 @@ using System.Runtime.Loader;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Scripting;
+using RoslynStone.Infrastructure.Helpers;
 
 namespace RoslynStone.Infrastructure.Services;
 
@@ -19,46 +20,7 @@ public class CompilationService
     /// </summary>
     public CompilationService()
     {
-        // Configure default references using only MetadataReference
-        // This avoids any Assembly.Load() calls
-        // We need both System.Private.CoreLib (actual types) and System.Runtime (facade/reference assembly)
-        var refs = new List<MetadataReference>
-        {
-            MetadataReference.CreateFromFile(typeof(object).Assembly.Location), // System.Private.CoreLib
-            MetadataReference.CreateFromFile(typeof(Enumerable).Assembly.Location), // System.Linq
-            MetadataReference.CreateFromFile(typeof(Console).Assembly.Location), // System.Console
-        };
-
-        // Add System.Runtime facade assembly
-        // In .NET Core/.NET 5+, many assemblies reference System.Runtime even though types are in System.Private.CoreLib
-        var runtimeAssemblyPath = Path.Combine(
-            Path.GetDirectoryName(typeof(object).Assembly.Location)!,
-            "System.Runtime.dll"
-        );
-        if (File.Exists(runtimeAssemblyPath))
-        {
-            refs.Add(MetadataReference.CreateFromFile(runtimeAssemblyPath));
-        }
-
-        // Add System.Collections
-        var collectionsAssemblyPath = Path.Combine(
-            Path.GetDirectoryName(typeof(object).Assembly.Location)!,
-            "System.Collections.dll"
-        );
-        if (File.Exists(collectionsAssemblyPath))
-        {
-            refs.Add(MetadataReference.CreateFromFile(collectionsAssemblyPath));
-        }
-
-        _scriptOptions = ScriptOptions
-            .Default.AddReferences(refs)
-            .WithImports(
-                "System",
-                "System.Collections.Generic",
-                "System.Linq",
-                "System.Text",
-                "System.Threading.Tasks"
-            );
+        _scriptOptions = MetadataReferenceHelper.GetDefaultScriptOptions();
     }
 
     /// <summary>

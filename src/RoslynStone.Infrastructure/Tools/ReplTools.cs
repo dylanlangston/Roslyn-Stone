@@ -27,6 +27,14 @@ public class ReplTools
     /// <param name="nugetPackages">Optional NuGet packages to load before execution</param>
     /// <param name="createContext">Whether to create a persistent context (default: false for single-shot execution)</param>
     /// <param name="cancellationToken">Cancellation token for async operations</param>
+    /// <remarks>
+    /// SECURITY CONSIDERATION: This tool loads NuGet packages based on user input without validation of package sources or integrity checks.
+    /// In production deployments, consider implementing additional security measures such as:
+    /// - Restricting package sources to trusted feeds only
+    /// - Implementing package signature verification
+    /// - Requiring package approval workflows
+    /// - Using a package allow-list for sensitive environments
+    /// </remarks>
     [McpServerTool]
     [Description(
         "Execute C# code in a REPL session. Supports both stateful sessions (createContext=true or with contextId) and single-shot execution (createContext=false, default). For stateful: set createContext=true to get contextId for maintaining variables and types across executions. For single-shot: use default createContext=false for temporary execution that is disposed after completion. Can load NuGet packages before execution using nugetPackages parameter. Packages are isolated to the context they are loaded in and are disposed when the context is removed. In stateful contexts, packages persist across executions. Supports async/await, LINQ, and full .NET 10 API."
@@ -71,8 +79,8 @@ public class ReplTools
                 {
                     success = false,
                     error = "REPL_CONTEXT_INVALID",
-                    message = $"Context '{contextId}' not found or expired. Omit contextId or set createContext=true to create a new session.",
-                    suggestedAction = "EvaluateCsharp with createContext=true or without contextId",
+                    message = $"Context '{contextId}' not found or expired. Set createContext=true to create a new persistent session, or omit contextId for a temporary execution.",
+                    suggestedAction = "EvaluateCsharp with createContext=true for a persistent session, or without contextId for a temporary execution",
                     contextId = (string?)null,
                 };
             }
