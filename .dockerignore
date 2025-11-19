@@ -81,3 +81,5 @@ charts/
 ### Allow README.md to be included if needed
 !README.md
 
+# Python virtual environment
+.venv/
