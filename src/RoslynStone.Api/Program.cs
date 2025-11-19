@@ -1,3 +1,4 @@
+using CSnakes.Runtime;
 using RoslynStone.Infrastructure.Resources;
 using RoslynStone.Infrastructure.Services;
 using RoslynStone.Infrastructure.Tools;
@@ -45,6 +46,56 @@ if (useHttpTransport)
     // Register all services, command handlers, and query handlers
     RegisterServices(builder.Services);
 
+    // Configure CSnakes Python environment with UV for Gradio
+    var pythonHome = AppContext.BaseDirectory; // Python files are copied to output from GradioModule
+    var venvPath = Path.Combine(pythonHome, ".venv");
+
+    // Dynamically determine Python version for CSnakes path
+    var csnakesPythonVersion =
+        Environment.GetEnvironmentVariable("CSNAKES_PYTHON_VERSION") ?? "3.12.9";
+    var csnakesPythonPath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        ".config",
+        "CSnakes",
+        $"python{csnakesPythonVersion}",
+        "python",
+        "install",
+        "lib"
+    );
+    var currentLdPath = Environment.GetEnvironmentVariable("LD_LIBRARY_PATH");
+    if (string.IsNullOrEmpty(currentLdPath))
+    {
+        Environment.SetEnvironmentVariable("LD_LIBRARY_PATH", csnakesPythonPath);
+    }
+    else if (!currentLdPath.Contains(csnakesPythonPath))
+    {
+        Environment.SetEnvironmentVariable(
+            "LD_LIBRARY_PATH",
+            $"{csnakesPythonPath}:{currentLdPath}"
+        );
+    }
+
+    // Set PATH to include UV location
+    var uvPath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        ".local",
+        "bin"
+    );
+    var currentPath = Environment.GetEnvironmentVariable("PATH");
+    if (!string.IsNullOrEmpty(currentPath) && !currentPath.Contains(uvPath))
+    {
+        Environment.SetEnvironmentVariable("PATH", $"{uvPath}:{currentPath}");
+    }
+
+    builder
+        .Services.WithPython()
+        .WithHome(pythonHome)
+        .WithVirtualEnvironment(venvPath)
+        .FromRedistributable() // Use Python from CSnakes redistributable
+        .WithUvInstaller("pyproject.toml"); // Use UV to install from pyproject.toml
+
+    builder.Services.AddHttpClient();
+
     // WARNING: HTTP transport has no authentication by default.
     // Configure authentication, CORS, and rate limiting before exposing publicly.
     // This server can execute arbitrary C# code.
@@ -56,6 +107,90 @@ if (useHttpTransport)
         .WithResourcesFromAssembly(typeof(DocumentationResource).Assembly);
 
     var app = builder.Build();
+
+    // Get Gradio server port from configuration
+    var gradioPort = app.Configuration.GetValue<int>("GradioServerPort", 7860);
+
+    // Start Gradio landing page using CSnakes in the background
+    _ = Task.Run(() =>
+    {
+        try
+        {
+            var env = app.Services.GetRequiredService<IPythonEnvironment>();
+            var gradioLauncher = env.GradioLauncher();
+
+            var baseUrl = app.Configuration["BASE_URL"] ?? "http://localhost:7071";
+
+            // Check if Gradio is installed
+            var isInstalled = gradioLauncher.CheckGradioInstalled();
+            if (!isInstalled)
+            {
+                app.Logger.LogWarning("Gradio is not installed in the Python environment");
+                return;
+            }
+
+            // Start Gradio server (runs in a thread inside Python)
+            var result = gradioLauncher.StartGradioServer(baseUrl, gradioPort);
+            app.Logger.LogInformation("Gradio landing page: {Result}", result);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            app.Logger.LogError(ex, "Failed to start Gradio landing page");
+        }
+    });
+
+    // Proxy root path to Gradio
+    app.MapGet(
+        "/",
+        async (HttpContext context, IHttpClientFactory clientFactory) =>
+        {
+            using var client = clientFactory.CreateClient();
+            client.Timeout = TimeSpan.FromSeconds(5);
+
+            try
+            {
+                var response = await client.GetAsync($"http://127.0.0.1:{gradioPort}/");
+                var contentType = response.Content.Headers.ContentType?.ToString() ?? "text/html";
+
+                // Whitelist of allowed content types for security
+                var allowedContentTypes = new[]
+                {
+                    "text/html",
+                    "text/css",
+                    "application/javascript",
+                    "application/json",
+                    "text/plain",
+                    "image/png",
+                    "image/jpeg",
+                    "image/gif",
+                    "image/svg+xml",
+                };
+                if (
+                    !allowedContentTypes.Any(allowed =>
+                        contentType.Contains(allowed, StringComparison.OrdinalIgnoreCase)
+                    )
+                )
+                {
+                    contentType = "text/plain";
+                }
+
+                var content = await response.Content.ReadAsStringAsync();
+
+                // Set security headers
+                context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+                context.Response.Headers["X-Frame-Options"] = "SAMEORIGIN";
+                context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+
+                return Results.Content(content, contentType);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                // If Gradio isn't running, redirect to MCP endpoint
+                app.Logger.LogWarning(ex, "Failed to proxy to Gradio, redirecting to /mcp");
+                return Results.Redirect("/mcp");
+            }
+        }
+    );
 
     // Map default health check endpoints for HTTP transport
     app.MapDefaultEndpoints();
