@@ -50,22 +50,18 @@ if (useHttpTransport)
     var pythonHome = AppContext.BaseDirectory; // Python files are copied to output from GradioModule
     var venvPath = Path.Combine(pythonHome, ".venv");
     
-    // Set environment variable for Python location if not already set
-    if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("Python3_ROOT_DIR")))
-    {
-        Environment.SetEnvironmentVariable("Python3_ROOT_DIR", "/usr");
-    }
-    
-    // Set LD_LIBRARY_PATH to include Python shared library location
-    var pythonLibPath = "/usr/lib/x86_64-linux-gnu";
+    // Set LD_LIBRARY_PATH to include Python shared library location from redistributable
+    var csnakesPythonPath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        ".config", "CSnakes", "python3.12.9", "python", "install", "lib");
     var currentLdPath = Environment.GetEnvironmentVariable("LD_LIBRARY_PATH");
     if (string.IsNullOrEmpty(currentLdPath))
     {
-        Environment.SetEnvironmentVariable("LD_LIBRARY_PATH", pythonLibPath);
+        Environment.SetEnvironmentVariable("LD_LIBRARY_PATH", csnakesPythonPath);
     }
-    else if (!currentLdPath.Contains(pythonLibPath))
+    else if (!currentLdPath.Contains(csnakesPythonPath))
     {
-        Environment.SetEnvironmentVariable("LD_LIBRARY_PATH", $"{pythonLibPath}:{currentLdPath}");
+        Environment.SetEnvironmentVariable("LD_LIBRARY_PATH", $"{csnakesPythonPath}:{currentLdPath}");
     }
     
     // Set PATH to include UV location
@@ -80,7 +76,7 @@ if (useHttpTransport)
         .WithPython()
         .WithHome(pythonHome)
         .WithVirtualEnvironment(venvPath)
-        .FromEnvironmentVariable("Python3_ROOT_DIR", "3.12")  // Use system Python via environment variable
+        .FromRedistributable()  // Use Python from CSnakes redistributable
         .WithUvInstaller("pyproject.toml");  // Use UV to install from pyproject.toml
 
     builder.Services.AddHttpClient();
