@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Reflection;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
 using ModelContextProtocol.Server;
@@ -121,11 +122,12 @@ public class ReplTools
                             cancellationToken
                         );
 
-                        // Add assemblies to context-specific options
+                        // Add assemblies to context-specific options using MetadataReference
+                        // This avoids loading assemblies into the runtime (Assembly.LoadFrom)
                         foreach (var assemblyPath in assemblyPaths.Where(File.Exists))
                         {
                             baseOptions = baseOptions.AddReferences(
-                                Assembly.LoadFrom(assemblyPath)
+                                MetadataReference.CreateFromFile(assemblyPath)
                             );
                         }
                     }

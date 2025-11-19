@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Reflection;
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
 using RoslynStone.Core.Models;
@@ -39,15 +40,39 @@ public class RoslynScriptingService
     {
         _outputWriter = new StringWriter();
 
-        // Configure script options with common assemblies
+        // Configure script options with common assemblies using only MetadataReference
+        // This avoids any Assembly.Load() calls
+        // We need both System.Private.CoreLib (actual types) and System.Runtime (facade/reference assembly)
+        var refs = new List<MetadataReference>
+        {
+            MetadataReference.CreateFromFile(typeof(object).Assembly.Location), // System.Private.CoreLib
+            MetadataReference.CreateFromFile(typeof(Enumerable).Assembly.Location), // System.Linq
+            MetadataReference.CreateFromFile(typeof(Console).Assembly.Location), // System.Console
+        };
+
+        // Add System.Runtime facade assembly
+        // In .NET Core/.NET 5+, many assemblies reference System.Runtime even though types are in System.Private.CoreLib
+        var runtimeAssemblyPath = Path.Combine(
+            Path.GetDirectoryName(typeof(object).Assembly.Location)!,
+            "System.Runtime.dll"
+        );
+        if (File.Exists(runtimeAssemblyPath))
+        {
+            refs.Add(MetadataReference.CreateFromFile(runtimeAssemblyPath));
+        }
+
+        // Add System.Collections
+        var collectionsAssemblyPath = Path.Combine(
+            Path.GetDirectoryName(typeof(object).Assembly.Location)!,
+            "System.Collections.dll"
+        );
+        if (File.Exists(collectionsAssemblyPath))
+        {
+            refs.Add(MetadataReference.CreateFromFile(collectionsAssemblyPath));
+        }
+
         _scriptOptions = ScriptOptions
-            .Default.WithReferences(
-                typeof(object).Assembly,
-                typeof(Enumerable).Assembly,
-                typeof(Console).Assembly,
-                Assembly.Load("System.Runtime"),
-                Assembly.Load("System.Collections")
-            )
+            .Default.AddReferences(refs)
             .WithImports(
                 "System",
                 "System.Collections.Generic",
@@ -177,10 +202,13 @@ public class RoslynScriptingService
         {
             if (assemblyPaths != null && assemblyPaths.Count > 0)
             {
-                // Add each assembly to script options
+                // Add each assembly to script options using MetadataReference
+                // This avoids loading assemblies into the runtime (Assembly.LoadFrom)
                 foreach (var assemblyPath in assemblyPaths.Where(File.Exists))
                 {
-                    _scriptOptions = _scriptOptions.AddReferences(Assembly.LoadFrom(assemblyPath));
+                    _scriptOptions = _scriptOptions.AddReferences(
+                        MetadataReference.CreateFromFile(assemblyPath)
+                    );
                 }
 
                 // Reset script state to apply new references
