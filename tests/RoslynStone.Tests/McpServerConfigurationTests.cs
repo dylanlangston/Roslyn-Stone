@@ -23,8 +23,8 @@ public class McpServerConfigurationTests
             .Where(m => m.GetCustomAttributes(typeof(McpServerToolAttribute), false).Any())
             .ToList();
 
-        // We expect: EvaluateCsharp, ValidateCsharp, ResetRepl
-        Assert.Equal(3, methods.Count);
+        // We expect: EvaluateCsharp, ValidateCsharp, ResetRepl, GetReplInfo
+        Assert.Equal(4, methods.Count);
     }
 
     [Fact]
@@ -36,7 +36,20 @@ public class McpServerConfigurationTests
             .Where(m => m.GetCustomAttributes(typeof(McpServerToolAttribute), false).Any())
             .ToList();
 
-        // We expect: LoadNuGetPackage (search/versions/readme are now resources)
+        // We expect: LoadNuGetPackage, SearchNuGetPackages, GetNuGetPackageVersions, GetNuGetPackageReadme
+        Assert.Equal(4, methods.Count);
+    }
+
+    [Fact]
+    [Trait("Feature", "ToolDiscovery")]
+    public void DocumentationTools_HasExpectedToolCount()
+    {
+        var methods = typeof(DocumentationTools)
+            .GetMethods()
+            .Where(m => m.GetCustomAttributes(typeof(McpServerToolAttribute), false).Any())
+            .ToList();
+
+        // We expect: GetDocumentation
         Assert.Single(methods);
     }
 
@@ -111,7 +124,12 @@ public class McpServerConfigurationTests
     public void AllTools_HaveDescriptions()
     {
         // Verify all tools have [Description] attributes for MCP protocol
-        var toolTypes = new[] { typeof(ReplTools), typeof(NuGetTools) };
+        var toolTypes = new[]
+        {
+            typeof(ReplTools),
+            typeof(NuGetTools),
+            typeof(DocumentationTools),
+        };
 
         foreach (var toolType in toolTypes)
         {
