@@ -136,6 +136,7 @@ Resources provide URI-based access to passive data sources:
 
 Tools perform operations and can modify state. All tools support optional context management:
 
+**REPL Tools:**
 - **EvaluateCsharp** - Execute C# code in a REPL session
   - Optional `contextId` parameter for stateful sessions
   - Returns `contextId` for session continuity
@@ -143,8 +144,30 @@ Tools perform operations and can modify state. All tools support optional contex
   - Optional `contextId` for context-aware validation
 - **ResetRepl** - Reset REPL sessions
   - Optional `contextId` to reset specific session or all sessions
+- **GetReplInfo** - Get REPL environment information and capabilities
+  - Optional `contextId` for session-specific state
+  - Returns framework version, capabilities, tips, and examples
+
+**NuGet Tools:**
 - **LoadNuGetPackage** - Load NuGet packages into REPL environment
   - Packages persist in session until reset
+- **SearchNuGetPackages** - Search for NuGet packages
+  - Parameters: `query`, `skip`, `take` for pagination
+  - Alternative to `nuget://search` resource for clients without resource support
+- **GetNuGetPackageVersions** - Get all versions of a package
+  - Parameter: `packageId`
+  - Alternative to `nuget://packages/{id}/versions` resource
+- **GetNuGetPackageReadme** - Get package README content
+  - Parameters: `packageId`, optional `version`
+  - Alternative to `nuget://packages/{id}/readme` resource
+
+**Documentation Tools:**
+- **GetDocumentation** - Get XML documentation for .NET types/methods
+  - Parameters: `symbolName`, optional `packageId`
+  - Alternative to `doc://` resource for clients without resource support
+  - Example: GetDocumentation("System.String") or GetDocumentation("JsonConvert", "Newtonsoft.Json")
+
+> **Note:** Both Resources and Tools are provided for maximum client compatibility. Resources are preferred for passive data access, while Tools work in all MCP clients.
 
 ### MCP Prompts
 
@@ -173,16 +196,19 @@ Assistant: [Calls EvaluateCsharp with contextId: "abc-123"] → Returns 20
 **Query documentation:**
 ```
 User: "Show me the documentation for System.Linq.Enumerable"
-Assistant: [Reads doc://System.Linq.Enumerable resource]
+Assistant: [Option 1: Reads doc://System.Linq.Enumerable resource]
+         [Option 2: Calls GetDocumentation("System.Linq.Enumerable")]
 
 User: "What methods are available in Newtonsoft.Json.JsonConvert?"
-Assistant: [Reads doc://Newtonsoft.Json@Newtonsoft.Json.JsonConvert resource]
+Assistant: [Option 1: Reads doc://Newtonsoft.Json@Newtonsoft.Json.JsonConvert resource]
+         [Option 2: Calls GetDocumentation("JsonConvert", "Newtonsoft.Json")]
 ```
 
 **Search and load packages:**
 ```
 User: "Search for JSON parsing packages"
-Assistant: [Reads nuget://search?q=json resource]
+Assistant: [Option 1: Reads nuget://search?q=json resource]
+         [Option 2: Calls SearchNuGetPackages("json")]
 
 User: "Load Newtonsoft.Json"
 Assistant: [Calls LoadNuGetPackage tool]
@@ -191,10 +217,11 @@ Assistant: [Calls LoadNuGetPackage tool]
 **Check REPL state:**
 ```
 User: "How many REPL sessions are active?"
-Assistant: [Reads repl://sessions resource]
+Assistant: [Option 1: Reads repl://sessions resource]
+         [Option 2: Calls GetReplInfo()]
 ```
 
-The AI assistant automatically uses Resources for queries and Tools for operations.
+The AI assistant can use either Resources (preferred) or Tools (for compatibility).
 
 ## For Developers
 
