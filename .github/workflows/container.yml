@@ -6,6 +6,9 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  # For automatic pushes to Hugging Face Spaces, add
+  # 'HF_TOKEN' as a repository secret pointing to a Hugging Face access token
+  # with 'repo' scope for the target space `dylanlangston/Roslyn-Stone_MCP`.
 
 jobs:
   build-and-push:
@@ -13,6 +16,8 @@ jobs:
     environment:
       name: production
     runs-on: ubuntu-latest
+    env:
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
     permissions:
       contents: read
       packages: write
@@ -70,3 +75,57 @@ jobs:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
+
+      # Upload repository or built artifacts to Hugging Face Space
+      - name: Set up Python for `hf` CLI
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install HF CLI
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: |
+          python -m pip install --upgrade pip
+          pip install huggingface-hub
+          # Try to install the `uvx` wrapper if available; do not fail if not published
+          pip install uvx || true
+          command -v uvx || true
+          hf --version || true
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+
+      - name: Login to Hugging Face (non-interactive using token)
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: |
+          set -eux
+          if [ -z "${HF_TOKEN}" ]; then
+            echo "HF_TOKEN missing; skipping 'hf auth login'";
+            exit 0;
+          fi
+          # Try uvx hugging-cli if available
+          if command -v uvx >/dev/null 2>&1; then
+            uvx hugging-cli login --token "${HF_TOKEN}" || true
+          fi
+          hf auth login --token "${HF_TOKEN}"
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+
+      - name: Upload to Hugging Face Space (using uvx if available, else hf)
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: |
+          # Use uvx wrapper if present, otherwise use hf CLI directly.
+          # This uploads the repository root while excluding common build and binary dirs.
+          set -eux
+          if [ -z "${HF_TOKEN}" ]; then
+            echo "HF_TOKEN is not set; skipping Hugging Face upload.";
+            exit 0;
+          fi
+          # Upload the repository root to the Space, excluding common build outputs
+          if command -v uvx >/dev/null 2>&1; then
+            uvx hf upload dylanlangston/Roslyn-Stone_MCP . --repo-type=space --exclude="/.venv/*" --exclude="/bin/*" --exclude="/obj/*" --exclude="/tests/*" --exclude="/.github/*" --delete="*" --commit-message="CI: Sync from GitHub Actions ${GITHUB_SHA}"
+          else
+            hf upload dylanlangston/Roslyn-Stone_MCP . --repo-type=space --exclude="/.venv/*" --exclude="/bin/*" --exclude="/obj/*" --exclude="/tests/*" --exclude="/.github/*" --delete="*" --commit-message="CI: Sync from GitHub Actions ${GITHUB_SHA}"
+          fi
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}

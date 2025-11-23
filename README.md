@@ -1,3 +1,19 @@
+---
+title: Roslyn Stone
+emoji: 🪨
+colorFrom: gray
+colorTo: blue
+sdk: docker
+app_port: 7860
+pinned: false
+tags:
+  - mcp
+  - csharp
+  - roslyn
+  - repl
+  - building-mcp-track-enterprise
+---
+
 # Roslyn-Stone
 
 > **Note**: This project was collaboratively built with GitHub Copilot, embracing the future of AI-assisted development.

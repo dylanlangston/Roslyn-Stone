@@ -42,7 +42,10 @@ ENV PATH="/root/.local/bin:${PATH}"
 
 # Install Gradio and dependencies using UV into the venv
 WORKDIR "/src/src/RoslynStone.GradioModule"
-RUN uv pip install gradio>=6.0.0 --python /app/venv/bin/python
+RUN uv pip install "gradio>=5.0.0,<6.0.0" --python /app/venv/bin/python
+
+# Install uv into the venv itself so CSnakes can use it at runtime
+RUN uv pip install uv --python /app/venv/bin/python
 
 # Publish the application
 WORKDIR "/src/src/RoslynStone.Api"
@@ -62,13 +65,31 @@ RUN groupadd -r appuser && useradd -r -g appuser -m -d /home/appuser appuser
 
 # Copy published application
 COPY --from=publish /app/publish .
+COPY src/RoslynStone.Api/entrypoint.sh .
+RUN chmod +x entrypoint.sh
 
 # Copy CSnakes Python redistributable from build stage
 COPY --from=publish /root/.config/CSnakes /home/appuser/.config/CSnakes
 
+# Some venv scripts created during the publish stage contain shebangs
+# that reference the root user's CSnakes path (/root/.config/CSnakes/...).
+# Create a root-side symlink to the copied location so those shebangs
+# keep working in the runtime image.
+RUN mkdir -p /root/.config \
+    && ln -s /home/appuser/.config/CSnakes /root/.config/CSnakes || true
+
 # Copy Python virtual environment with Gradio
 COPY --from=publish /app/venv .venv
 
+# Also copy the same venv to `/app/venv` so absolute shebangs created during
+# publish stage continue to resolve even if code expects `/app/venv`.
+COPY --from=publish /app/venv /app/venv
+
+# Create a stable path expected by venv shebangs created during publish
+# Many scripts use the absolute path `/app/venv` as their interpreter; the
+# runtime expects the virtualenv at `/app/.venv`. Create a symlink so both
+# locations work.
+RUN ln -s /app/.venv /app/venv || true
 # Change ownership to non-root user
 RUN chown -R appuser:appuser /app /home/appuser/.config
 
@@ -79,7 +100,8 @@ ENV DOTNET_ENVIRONMENT=Production \
     MCP_TRANSPORT=stdio \
     ASPNETCORE_URLS= \
     DOTNET_EnableDiagnostics=0 \
-    LD_LIBRARY_PATH=/home/appuser/.config/CSnakes/python3.12.9/python/install/lib
+    LD_LIBRARY_PATH=/home/appuser/.config/CSnakes/python3.12.9/python/install/lib \
+    PYTHONHOME=/home/appuser/.config/CSnakes/python3.12.9/python/install
 
 # Switch to non-root user
 USER appuser
@@ -95,5 +117,5 @@ USER appuser
 # ENV ASPNETCORE_URLS=http://+:8080
 # EXPOSE 8080
 
-ENTRYPOINT ["dotnet", "RoslynStone.Api.dll"]
+ENTRYPOINT ["./entrypoint.sh"]
 

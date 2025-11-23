@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Gradio landing page for Roslyn-Stone MCP Server"
 requires-python = ">=3.9"
 dependencies = [
-    "gradio>=6.0.0",
+    "gradio>=5.0.0,<6.0.0",
 ]
 
 [build-system]
