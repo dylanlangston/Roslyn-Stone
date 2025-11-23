@@ -109,7 +109,7 @@ if (useHttpTransport)
     var app = builder.Build();
 
     // Get Gradio server port from configuration
-    var gradioPort = app.Configuration.GetValue<int>("GradioServerPort", 7861);
+    var gradioPort = app.Configuration.GetValue<int>("GradioServerPort", 7860);
 
     // Start Gradio landing page using CSnakes in the background
     _ = Task.Run(() =>
