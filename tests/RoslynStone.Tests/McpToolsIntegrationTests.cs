@@ -257,8 +257,8 @@ public class McpToolsIntegrationTests : IDisposable
         Assert.False(resultDict["success"].GetBoolean());
 
         // Check new error structure (errors array)
-        Assert.True(resultDict.ContainsKey("errors"));
-        var errors = resultDict["errors"].EnumerateArray().ToList();
+        Assert.True(resultDict.TryGetValue("errors", out var errorsElement));
+        var errors = errorsElement.EnumerateArray().ToList();
         Assert.NotEmpty(errors);
         Assert.Equal("CONTEXT_NOT_FOUND", errors[0].GetProperty("code").GetString());
         Assert.Contains("not found or expired", errors[0].GetProperty("message").GetString());
@@ -305,8 +305,8 @@ public class McpToolsIntegrationTests : IDisposable
         Assert.False(result2Dict["success"].GetBoolean());
 
         // Check new error structure (errors array)
-        Assert.True(result2Dict.ContainsKey("errors"));
-        var errors = result2Dict["errors"].EnumerateArray().ToList();
+        Assert.True(result2Dict.TryGetValue("errors", out var errorsElement));
+        var errors = errorsElement.EnumerateArray().ToList();
         Assert.NotEmpty(errors);
         Assert.Equal("CONTEXT_NOT_FOUND", errors[0].GetProperty("code").GetString());
     }
@@ -502,8 +502,8 @@ public class McpToolsIntegrationTests : IDisposable
         Assert.False(result1AfterDict["success"].GetBoolean());
 
         // Check new error structure (errors array)
-        Assert.True(result1AfterDict.ContainsKey("errors"));
-        var errors = result1AfterDict["errors"].EnumerateArray().ToList();
+        Assert.True(result1AfterDict.TryGetValue("errors", out var errorsElement));
+        var errors = errorsElement.EnumerateArray().ToList();
         Assert.NotEmpty(errors);
         Assert.Equal("CONTEXT_NOT_FOUND", errors[0].GetProperty("code").GetString());
 

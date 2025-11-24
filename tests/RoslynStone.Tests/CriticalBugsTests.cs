@@ -72,8 +72,8 @@ public class CriticalBugsTests : IDisposable
 
         // Context should not be returned (it was temporary)
         Assert.False(
-            resultDict.ContainsKey("contextId")
-                && resultDict["contextId"].ValueKind != JsonValueKind.Null,
+            resultDict.TryGetValue("contextId", out var contextIdElement)
+                && contextIdElement.ValueKind != JsonValueKind.Null,
             "Temporary context should not return contextId"
         );
     }

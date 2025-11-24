@@ -592,7 +592,6 @@ doc://System.Linq.Enumerable
 ```
 
 ## Complete Program Checklist
-## Complete Program Checklist
 
 ✓ **Package directives** at the very top (`#:package` if needed)
 ✓ **Using directives** after package directives
@@ -1088,8 +1087,6 @@ catch (Exception ex)
     return 1;
 }
 ```
-
-### 4. Fake Data Generator
 
 ### 4. Fake Data Generator
 

@@ -269,22 +269,15 @@ public class DocumentationService
                 $"E:{symbolName}", // Event
             };
 
-            foreach (var refAssemblyPath in _dotnetRefAssemblyPaths)
-            {
-                var xmlFiles = GetXmlFilesFromDirectory(refAssemblyPath);
+            var docInfo = _dotnetRefAssemblyPaths
+                .SelectMany(GetXmlFilesFromDirectory)
+                .Select(xmlFile => (xmlFile, xmlDoc: LoadOrGetCachedXmlDocument(xmlFile, $"sdk:{xmlFile}")))
+                .Where(tuple => tuple.xmlDoc != null)
+                .Select(tuple => FindMemberDocumentation(tuple.xmlDoc!, possibleMemberNames, symbolName))
+                .FirstOrDefault(doc => doc != null);
 
-                foreach (var xmlFile in xmlFiles)
-                {
-                    var xmlDoc = LoadOrGetCachedXmlDocument(xmlFile, $"sdk:{xmlFile}");
-                    if (xmlDoc == null)
-                        continue;
-
-                    // Search for the member in this XML file
-                    var docInfo = FindMemberDocumentation(xmlDoc, possibleMemberNames, symbolName);
-                    if (docInfo != null)
-                        return docInfo;
-                }
-            }
+            if (docInfo != null)
+                return docInfo;
 
             return null;
         }

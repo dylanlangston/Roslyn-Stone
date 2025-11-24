@@ -126,7 +126,7 @@ public class ReplTools
                 if (existingState != null && !string.IsNullOrWhiteSpace(contextId))
                 {
                     packageErrors.Add(
-                        "Warning: Adding packages to an existing context resets the session. All variables and previous state will be lost. For best results, specify packages when creating the context (createContext=true with nugetPackages)."
+                        "Warning: Adding packages to an existing context resets the session. All previously defined variables, types, and state will be lost due to Roslyn Scripting API limitations (ScriptState.ContinueWithAsync doesn't accept new options). For best results, specify packages when creating the context (createContext=true with nugetPackages at the same time)."
                     );
                 }
 
@@ -410,10 +410,12 @@ public class ReplTools
             "Use 'using' directives at the top to import namespaces",
             "Console.WriteLine output is captured separately from return values",
             "Async/await is fully supported for async operations",
-            "Use LoadNuGetPackage or SearchNuGetPackages to add external libraries",
+            "Use nugetPackages parameter to load external libraries inline during testing",
+            "Use LoadNuGetPackage or SearchNuGetPackages to discover and add libraries",
             "Use ValidateCsharp to check your utility program before execution",
             "Use GetDocumentation to learn about .NET APIs",
             "Build complete, runnable .cs files that work with 'dotnet run app.cs'",
+            "For final self-contained apps, use #:package directive instead of nugetPackages",
         };
 
         var capabilities = new
@@ -433,6 +435,7 @@ public class ReplTools
             asyncOperation = "await Task.Delay(100); Console.WriteLine(\"Done\");",
             linqQuery = "var numbers = new[] { 1, 2, 3, 4, 5 }; var doubled = numbers.Select(x => x * 2); Console.WriteLine(string.Join(\", \", doubled));",
             fileBasedApp = "// Single-file utility program\nusing System.IO;\nvar files = Directory.GetFiles(\".\");\nforeach (var file in files) Console.WriteLine(Path.GetFileName(file));",
+            withPackages = "// Testing with package loading\n// EvaluateCsharp with nugetPackages: [{packageName: 'Humanizer', version: '3.0.1'}]\nusing Humanizer;\n\"test\".Humanize()",
         };
 
         object? sessionMetadata = null;
