@@ -1,5 +1,5 @@
 using Microsoft.Playwright;
-using System.Diagnostics;
+using Xunit.Abstractions;
 
 namespace RoslynStone.GradioTests;
 
@@ -11,17 +11,28 @@ namespace RoslynStone.GradioTests;
 /// </summary>
 public class GradioLandingPageTests : IAsyncLifetime
 {
+    private readonly ITestOutputHelper _output;
+    private readonly McpServerFixture _serverFixture;
     private IPlaywright? _playwright;
     private IBrowser? _browser;
-    private Process? _serverProcess;
-    private const string BaseUrl = "http://localhost:7077"; // Test server URL
-    private const int ServerStartupTimeoutSeconds = 60;
+
+    public GradioLandingPageTests(ITestOutputHelper output)
+    {
+        ArgumentNullException.ThrowIfNull(output);
+
+        _output = output;
+        _serverFixture = new McpServerFixture(
+            output: _output,
+            baseUrl: "http://localhost:7077",
+            serverStartupTimeoutSeconds: 60
+        );
+    }
 
     public async Task InitializeAsync()
     {
         // Start the MCP server
-        await StartServerAsync();
-        
+        await _serverFixture.InitializeAsync();
+
         // Initialize Playwright
         _playwright = await Playwright.CreateAsync();
         _browser = await _playwright.Chromium.LaunchAsync(
@@ -38,101 +49,12 @@ public class GradioLandingPageTests : IAsyncLifetime
             await _browser.DisposeAsync();
         }
         _playwright?.Dispose();
-        
+
         // Stop the server
-        StopServer();
+        await _serverFixture.DisposeAsync();
     }
 
-    private async Task StartServerAsync()
-    {
-        // Find the API project directory
-        var projectDir = Path.Combine(
-            Directory.GetCurrentDirectory(),
-            "..", "..", "..", "..", "..", "src", "RoslynStone.Api"
-        );
-        projectDir = Path.GetFullPath(projectDir);
-
-        if (!Directory.Exists(projectDir))
-        {
-            throw new DirectoryNotFoundException($"API project directory not found: {projectDir}");
-        }
-
-        // Start the server process
-        _serverProcess = new Process
-        {
-            StartInfo = new ProcessStartInfo
-            {
-                FileName = "dotnet",
-                Arguments = "run --no-build --urls=http://localhost:7077",
-                WorkingDirectory = projectDir,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                CreateNoWindow = true,
-                Environment =
-                {
-                    ["MCP_TRANSPORT"] = "http"
-                }
-            }
-        };
-
-        _serverProcess.Start();
-
-        // Wait for server to be ready
-        var startTime = DateTime.UtcNow;
-        var isReady = false;
-
-        while ((DateTime.UtcNow - startTime).TotalSeconds < ServerStartupTimeoutSeconds)
-        {
-            try
-            {
-                using var httpClient = new HttpClient();
-                httpClient.Timeout = TimeSpan.FromSeconds(2);
-                var response = await httpClient.GetAsync(BaseUrl);
-                if (response.IsSuccessStatusCode || response.StatusCode == System.Net.HttpStatusCode.NotFound)
-                {
-                    isReady = true;
-                    break;
-                }
-            }
-            catch
-            {
-                // Server not ready yet, continue waiting
-            }
-
-            await Task.Delay(1000);
-        }
-
-        if (!isReady)
-        {
-            StopServer();
-            throw new TimeoutException($"Server failed to start within {ServerStartupTimeoutSeconds} seconds");
-        }
-
-        // Give Gradio a moment to fully initialize
-        await Task.Delay(3000);
-    }
-
-    private void StopServer()
-    {
-        if (_serverProcess != null && !_serverProcess.HasExited)
-        {
-            try
-            {
-                _serverProcess.Kill(entireProcessTree: true);
-                _serverProcess.WaitForExit(5000);
-            }
-            catch
-            {
-                // Best effort cleanup
-            }
-            finally
-            {
-                _serverProcess.Dispose();
-                _serverProcess = null;
-            }
-        }
-    }
+    private string BaseUrl => _serverFixture.BaseUrl;
 
     [Fact]
     [Trait("Category", "Integration")]
@@ -288,7 +210,10 @@ public class GradioLandingPageTests : IAsyncLifetime
             await resourcesTab.ClickAsync();
 
             // Wait for tab content to load
-            await page.WaitForSelectorAsync("button:has-text('Refresh Resources')", new() { Timeout = 5000 });
+            await page.WaitForSelectorAsync(
+                "button:has-text('Refresh Resources')",
+                new() { Timeout = 5000 }
+            );
 
             // Assert - Check for Refresh Resources button
             var refreshButton = page.Locator("button:has-text('Refresh Resources')");
@@ -326,7 +251,10 @@ public class GradioLandingPageTests : IAsyncLifetime
             await promptsTab.ClickAsync();
 
             // Wait for tab content to load
-            await page.WaitForSelectorAsync("button:has-text('Refresh Prompts')", new() { Timeout = 5000 });
+            await page.WaitForSelectorAsync(
+                "button:has-text('Refresh Prompts')",
+                new() { Timeout = 5000 }
+            );
 
             // Assert - Check for Refresh Prompts button
             var refreshButton = page.Locator("button:has-text('Refresh Prompts')");
@@ -400,7 +328,10 @@ public class GradioLandingPageTests : IAsyncLifetime
             await resourcesTab.ClickAsync();
 
             // Wait for tab content to load
-            await page.WaitForSelectorAsync("button:has-text('Example Resource URIs')", new() { Timeout = 5000 });
+            await page.WaitForSelectorAsync(
+                "button:has-text('Example Resource URIs')",
+                new() { Timeout = 5000 }
+            );
 
             // Assert - Check for Example Resource URIs accordion
             var accordion = page.Locator("button:has-text('Example Resource URIs')");
