@@ -26,12 +26,26 @@ EvaluateCsharp(code: ""Console.WriteLine(\""Hello, World!\"");"")
 ```
 
 **File-based app pattern** - top-level statements:
-```
-// This is how a runnable .cs file looks
+```csharp
+// hello.cs - Simple utility with no dependencies
 Console.WriteLine(""Starting utility..."");
 var files = Directory.GetFiles(""."");
 foreach (var file in files)
     Console.WriteLine(file);
+// Run with: dotnet run hello.cs
+```
+
+**File-based app with NuGet package** - use `#:package` directive:
+```csharp
+// text-humanizer.cs - Self-contained utility with package
+#:package Humanizer@2.14.1
+
+using Humanizer;
+
+var text = args.Length > 0 ? args[0] : ""HelloWorld"";
+Console.WriteLine($""Original: {text}"");
+Console.WriteLine($""Humanized: {text.Humanize()}"");
+// Run with: dotnet run text-humanizer.cs PascalCaseText
 ```
 
 **Iterative development** - build incrementally:
@@ -51,14 +65,18 @@ EvaluateCsharp(code: ""foreach (var f in files) Console.WriteLine(f);"", context
 - `EvaluateCsharp` - Execute and test utility code
 - `ValidateCsharp` - Check syntax before running
 - Resource: `doc://{symbol}` - Look up .NET APIs (e.g., doc://System.IO.File)
-- `LoadNuGetPackage` - Add libraries for extended functionality
+- `LoadNuGetPackage` - Add libraries for REPL testing (for final apps, use `#:package` directive)
 
 **Resources:**
 - `doc://{symbol}` - API documentation
 - `nuget://search?q={query}` - Find packages
 
+**New .NET 10 Syntax:**
+- `#:package <PackageName>@<Version>` - Include NuGet packages directly in .cs files (no .csproj needed)
+- `#:sdk <SdkName>` - Change project SDK (e.g., Microsoft.NET.Sdk.Web for web apps)
+
 **Workflow:**
-1. Look up APIs → 2. Write utility code → 3. Test → 4. Refine → 5. Complete single-file program"
+1. Look up APIs → 2. Write utility code → 3. Test with EvaluateCsharp → 4. Add `#:package` directives → 5. Complete self-contained .cs file"
         );
     }
 
@@ -138,18 +156,56 @@ foreach (var file in files)
 - Resource: `doc://{symbol}` - Get XML docs (e.g., doc://System.IO.File, doc://System.Linq.Enumerable)
 
 **Packages:**
-- `LoadNuGetPackage(packageName, version?)` - Add libraries
+- `LoadNuGetPackage(packageName, version?)` - Add libraries for REPL testing
 - Resources: `nuget://search?q={query}` - Find packages
+- **For final apps:** Use `#:package` directive in .cs file (no LoadNuGetPackage needed)
+
+## .NET 10 File-Based App Syntax
+
+**Self-contained apps with packages** - use `#:package` directive:
+```csharp
+// json-reader.cs - Completely self-contained with package
+#:package Newtonsoft.Json@13.0.3
+
+using System;
+using System.IO;
+using Newtonsoft.Json;
+
+var jsonFile = args.Length > 0 ? args[0] : ""data.json"";
+if (!File.Exists(jsonFile))
+{
+    Console.WriteLine($""File not found: {jsonFile}"");
+    return 1;
+}
+
+var json = File.ReadAllText(jsonFile);
+var data = JsonConvert.DeserializeObject<dynamic>(json);
+Console.WriteLine($""Loaded {data.Count} items"");
+return 0;
+```
+**Run with:** `dotnet run json-reader.cs data.json` (no .csproj needed!)
+
+**Web apps** - use `#:sdk` directive:
+```csharp
+// web-server.cs - Minimal web API in a single file
+#:sdk Microsoft.NET.Sdk.Web
+
+var app = WebApplication.Create(args);
+app.MapGet(""/"", () => ""Hello from a single-file web app!"");
+app.Run();
+```
+**Run with:** `dotnet run web-server.cs`
 
 ## Example Utility Programs
 
 **1. Simple calculator:**
 ```csharp
+// calculator.cs - No dependencies needed
 var args = Environment.GetCommandLineArgs();
 if (args.Length < 4)
 {
-    Console.WriteLine(""Usage: calc <num1> <op> <num2>"");
-    return;
+    Console.WriteLine(""Usage: calculator <num1> <op> <num2>"");
+    return 1;
 }
 
 var num1 = double.Parse(args[1]);
@@ -166,33 +222,46 @@ var result = op switch
 };
 
 Console.WriteLine($""{num1} {op} {num2} = {result}"");
+return 0;
 ```
 
-**2. JSON file processor:**
+**2. JSON file processor (with package):**
 ```csharp
-// Requires: LoadNuGetPackage(""Newtonsoft.Json"")
+// json-pretty.cs - Self-contained with package reference
+#:package Newtonsoft.Json@13.0.3
+
+using System;
 using System.IO;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
-var jsonFile = ""data.json"";
-if (!File.Exists(jsonFile))
+if (args.Length < 2)
 {
-    Console.WriteLine($""File not found: {jsonFile}"");
-    return;
+    Console.WriteLine(""Usage: json-pretty <input.json>"");
+    return 1;
 }
 
-var json = File.ReadAllText(jsonFile);
-var data = JsonConvert.DeserializeObject<dynamic>(json);
-Console.WriteLine($""Loaded {data.Count} items"");
+var json = File.ReadAllText(args[1]);
+var formatted = JToken.Parse(json).ToString(Formatting.Indented);
+Console.WriteLine(formatted);
+return 0;
 ```
 
 **3. Async HTTP client:**
 ```csharp
+// fetch-url.cs - Built-in HttpClient, no packages needed
 using System.Net.Http;
 
+if (args.Length < 2)
+{
+    Console.WriteLine(""Usage: fetch-url <url>"");
+    return 1;
+}
+
 var client = new HttpClient();
-var response = await client.GetStringAsync(""https://api.github.com/repos/dotnet/runtime"");
+var response = await client.GetStringAsync(args[1]);
 Console.WriteLine(response);
+return 0;
 ```
 
 ## Key Capabilities
@@ -228,8 +297,10 @@ EvaluateCsharp(code: ""await Task.Delay(100); Console.WriteLine(\""Done\"");"")
 - **Start simple:** Begin with Console.WriteLine, then add complexity
 - **Use top-level statements:** No need for class Program { static void Main() }
 - **Import namespaces:** Add `using` directives at the top
+- **For dependencies:** Use `#:package <PackageName>@<Version>` directive for self-contained apps
 - **Validate first:** Use ValidateCsharp before executing complex code
 - **Iterate:** Build programs step by step using contextId
+- **Test in REPL:** Use LoadNuGetPackage for testing, then switch to `#:package` for final app
 - **Complete programs:** Aim for runnable .cs files, not just code snippets"
         );
     }
@@ -519,20 +590,23 @@ doc://System.Linq.Enumerable
 ```
 
 ## Complete Program Checklist
+## Complete Program Checklist
 
-✓ **Using directives** at the top
+✓ **Package directives** at the very top (`#:package` if needed)
+✓ **Using directives** after package directives
 ✓ **Top-level statements** (no class/Main)
 ✓ **Error handling** for robustness
 ✓ **Console output** for user feedback
 ✓ **Return codes** for success/failure (optional)
 ✓ **Argument validation** if using args
 ✓ **Comments** for clarity
-✓ **Single file** - complete and runnable
+✓ **Single file** - complete and self-contained
 
 ## Tips
 
 - **One file, one purpose:** Keep utilities focused
 - **Test incrementally:** Build and test step by step
+- **Use `#:package` for dependencies:** Makes files self-contained (no .csproj needed)
 - **Use standard libraries:** Avoid dependencies when possible
 - **Handle edge cases:** Empty input, missing files, etc.
 - **Clear output:** Users should understand what happened
@@ -553,29 +627,13 @@ doc://System.Linq.Enumerable
         return Task.FromResult(
             @"# Using NuGet Packages in Single-File C# Utilities
 
-## Package Workflow
+## .NET 10: Self-Contained Apps with `#:package`
 
-**1. Search** - Find packages via resource:
-```
-Resource: nuget://search?q=json+serialization
-```
-
-**2. Research** - Get package info via resources:
-```
-Resource: nuget://packages/Newtonsoft.Json/versions
-
-Resource: nuget://packages/Newtonsoft.Json/readme
-```
-
-**3. Load** - Add package:
-```
-LoadNuGetPackage(packageName: ""Newtonsoft.Json"", version: ""13.0.3"")
-// Version is optional - omit for latest stable
-```
-
-**4. Use** - Create utility program:
+**New syntax** - Include packages directly in your .cs file:
 ```csharp
-// json-formatter.cs
+// json-formatter.cs - Completely self-contained!
+#:package Newtonsoft.Json@13.0.3
+
 using System;
 using System.IO;
 using Newtonsoft.Json;
@@ -594,40 +652,78 @@ var formatted = JsonConvert.SerializeObject(
 Console.WriteLine(formatted);
 return 0;
 ```
+**Run with:** `dotnet run json-formatter.cs input.json` (no .csproj needed!)
+
+## Package Development Workflow
+
+**1. Search** - Find packages via resource:
+```
+Resource: nuget://search?q=json+serialization
+```
+
+**2. Research** - Get package info:
+```
+Resource: nuget://packages/Newtonsoft.Json/versions
+Resource: nuget://packages/Newtonsoft.Json/readme
+```
+
+**3. Test in REPL** - Verify package works:
+```
+LoadNuGetPackage(packageName: ""Newtonsoft.Json"", version: ""13.0.3"")
+EvaluateCsharp(code: @""
+    using Newtonsoft.Json;
+    var obj = new { Name = \""Test\"" };
+    Console.WriteLine(JsonConvert.SerializeObject(obj));
+"")
+```
+
+**4. Create final app** - Use `#:package` directive:
+```csharp
+// Final self-contained utility
+#:package Newtonsoft.Json@13.0.3
+
+using Newtonsoft.Json;
+// ... rest of your code
+```
 
 ## Complete Example: CSV Processing Utility
 
+**Step 1: Find and research package**
 ```
-// Step 1: Find package
 Resource: nuget://search?q=csv+parser
-
-// Step 2: Check versions (avoid prereleases)
 Resource: nuget://packages/CsvHelper/versions
-
-// Step 3: Read docs to understand usage
 Resource: nuget://packages/CsvHelper/readme
+```
 
-// Step 4: Load stable version
+**Step 2: Test in REPL (optional)**
+```
 LoadNuGetPackage(packageName: ""CsvHelper"", version: ""30.0.1"")
-
-// Step 5: Create utility program
 EvaluateCsharp(code: @""
+    using CsvHelper;
+    // Test basic functionality
+"")
+```
+
+**Step 3: Create self-contained utility**
+```csharp
+// csv-reader.cs - Self-contained with package
+#:package CsvHelper@30.0.1
+
 using System;
 using System.IO;
 using System.Globalization;
 using CsvHelper;
 
-// csv-reader.cs - Read and display CSV file
 if (args.Length < 2)
 {
-    Console.WriteLine(\""Usage: csv-reader <file.csv>\"");
+    Console.WriteLine(""Usage: csv-reader <file.csv>"");
     return 1;
 }
 
 var filename = args[1];
 if (!File.Exists(filename))
 {
-    Console.WriteLine($\""File not found: {filename}\"");
+    Console.WriteLine($""File not found: {filename}"");
     return 1;
 }
 
@@ -641,8 +737,8 @@ foreach (var record in records)
 }
 
 return 0;
-"")
 ```
+**Run with:** `dotnet run csv-reader.cs data.csv`
 
 ## Common Packages for Utilities
 
@@ -671,7 +767,9 @@ return 0;
 
 **1. JSON file validator:**
 ```csharp
-// json-validate.cs
+// json-validate.cs - Self-contained with package
+#:package Newtonsoft.Json@13.0.3
+
 using System;
 using System.IO;
 using Newtonsoft.Json;
@@ -694,7 +792,7 @@ catch (JsonException ex)
 
 **2. HTTP status checker:**
 ```csharp
-// http-check.cs  
+// http-check.cs - No package needed, uses built-in HttpClient
 using System;
 using System.Net.Http;
 
@@ -716,7 +814,9 @@ catch (Exception ex)
 
 **3. Text humanizer:**
 ```csharp
-// humanize.cs
+// humanize.cs - Self-contained with package
+#:package Humanizer@2.14.1
+
 using System;
 using Humanizer;
 
@@ -728,12 +828,13 @@ Console.WriteLine($""Titleized: {text.Titleize()}"");
 
 ## Best Practices
 
+- **Use `#:package` for final apps:** Makes files self-contained (no .csproj)
+- **Test with LoadNuGetPackage:** Verify package in REPL before adding to app
 - **Choose stable versions:** Avoid prerelease packages
 - **Check download counts:** Popular = reliable
-- **Read README first:** Understand API before loading
-- **Test simple example:** Verify package works
+- **Read README first:** Understand API before using
 - **Minimal dependencies:** Use built-in libraries when possible
-- **Dependencies auto-load:** Don't manually load package dependencies
+- **Package placement:** `#:package` must be at the very top of the file
 
 ## Troubleshooting
 
@@ -742,16 +843,17 @@ Console.WriteLine($""Titleized: {text.Titleize()}"");
 - Check versions via `nuget://packages/{id}/versions`
 
 **Using directive errors?**
-- Add `using` statement after loading package
+- Add `using` statement after `#:package` directive
 - Check README for correct namespace
-- Example: `using Newtonsoft.Json;`
+- Example: `#:package Newtonsoft.Json@13.0.3` then `using Newtonsoft.Json;`
 
-**Version conflict?**
-- Reset and reload: `ResetRepl()` then `LoadNuGetPackage(...)`
+**REPL vs File-based:**
+- **REPL testing:** Use `LoadNuGetPackage` tool
+- **Final app:** Use `#:package` directive in .cs file
 
 ## Package Persistence
 
-Packages remain loaded until reset:
+**In REPL:** Packages remain loaded until reset:
 ```
 LoadNuGetPackage(packageName: ""Humanizer"")
 // Available in all subsequent executions
@@ -806,18 +908,21 @@ README typically includes:
 
 ## Integration Workflow
 
-**Load package:**
+**Test in REPL (optional):**
 ```
-// Latest stable
-LoadNuGetPackage(packageName: ""Humanizer"")
-
-// Specific version
+// Test package functionality
 LoadNuGetPackage(packageName: ""Humanizer"", version: ""2.14.1"")
+EvaluateCsharp(code: @""
+    using Humanizer;
+    Console.WriteLine(\""PascalCase\"".Humanize());
+"")
 ```
 
-**Create utility program:**
+**Create self-contained utility:**
 ```csharp
-// word-humanizer.cs
+// word-humanizer.cs - Self-contained with package
+#:package Humanizer@2.14.1
+
 using System;
 using Humanizer;
 
@@ -825,19 +930,17 @@ var text = args.Length > 1 ? args[1] : ""PascalCaseText"";
 Console.WriteLine($""Original: {text}"");
 Console.WriteLine($""Humanized: {text.Humanize()}"");
 ```
+**Run with:** `dotnet run word-humanizer.cs HelloWorld`
 
 ## Complete Utility Examples
 
 ### 1. JSON File Processor
 
-**Load package:**
-```
-LoadNuGetPackage(packageName: ""Newtonsoft.Json"", version: ""13.0.3"")
-```
-
-**Create utility:**
+**Final self-contained utility:**
 ```csharp
-// json-pretty.cs - Pretty-print JSON files
+// json-pretty.cs - Completely self-contained
+#:package Newtonsoft.Json@13.0.3
+
 using System;
 using System.IO;
 using Newtonsoft.Json;
@@ -884,14 +987,11 @@ catch (IOException ex)
 
 ### 2. HTTP API Client
 
-**Load package:**
-```
-LoadNuGetPackage(packageName: ""Flurl.Http"")
-```
-
-**Create utility:**
+**Final self-contained utility:**
 ```csharp
-// github-info.cs - Fetch GitHub repository info
+// github-info.cs - Self-contained with package
+#:package Flurl.Http@4.0.0
+
 using System;
 using Flurl.Http;
 
@@ -929,14 +1029,11 @@ catch (FlurlHttpException ex)
 
 ### 3. CSV Data Analyzer
 
-**Load package:**
-```
-LoadNuGetPackage(packageName: ""CsvHelper"")
-```
-
-**Create utility:**
+**Final self-contained utility:**
 ```csharp
-// csv-stats.cs - Analyze CSV file
+// csv-stats.cs - Self-contained with package
+#:package CsvHelper@30.0.1
+
 using System;
 using System.IO;
 using System.Linq;
@@ -990,14 +1087,13 @@ catch (Exception ex)
 
 ### 4. Fake Data Generator
 
-**Load package:**
-```
-LoadNuGetPackage(packageName: ""Bogus"")
-```
+### 4. Fake Data Generator
 
-**Create utility:**
+**Final self-contained utility:**
 ```csharp
-// generate-users.cs - Generate fake user data
+// generate-users.cs - Self-contained with package
+#:package Bogus@35.0.0
+
 using System;
 using Bogus;
 
@@ -1073,7 +1169,7 @@ nuget://packages/Markdig/readme
 nuget://packages/Markdig/versions
 ```
 
-**3. Load and test:**
+**3. Test in REPL (optional):**
 ```
 LoadNuGetPackage(packageName: ""Markdig"")
 
@@ -1086,9 +1182,11 @@ Console.WriteLine(html);
 "")
 ```
 
-**4. Build utility:**
+**4. Create self-contained utility:**
 ```csharp
-// md2html.cs - Convert Markdown to HTML
+// md2html.cs - Self-contained with package
+#:package Markdig@0.37.0
+
 using System;
 using System.IO;
 using Markdig;
@@ -1112,31 +1210,38 @@ return 0;
 
 ## Best Practices
 
-✓ **Start simple:** Test package with basic example first
+✓ **Use `#:package` directive:** Makes utilities self-contained (no .csproj)
+✓ **Test in REPL first:** Use LoadNuGetPackage to verify functionality
+✓ **Start simple:** Test package with basic example before building utility
 ✓ **Read docs:** Understand API before building utility
 ✓ **Stable versions:** Prefer stable over prerelease
 ✓ **Error handling:** Utilities should handle failures gracefully
 ✓ **User feedback:** Clear console output about what's happening
 ✓ **Single purpose:** One utility, one task
-✓ **Dependencies auto-load:** Don't manually load package dependencies
+✓ **Package placement:** `#:package` must be at the very top
 
-## Performance Tips
+## REPL vs File-Based Development
 
-- Load packages once per development session
-- Dependencies auto-resolve (don't load manually)
-- Avoid loading multiple versions of same package (causes conflicts)
-- Use `ResetRepl()` to clear all packages and start fresh
-
-## State & Packages
-
-Packages persist in session:
+**REPL (for testing):**
 ```
 LoadNuGetPackage(packageName: ""Humanizer"")
 // Available in all subsequent code executions
 
+EvaluateCsharp with contextId
+// Package persists in session
+
 ResetRepl()  // Clears packages
-// Must reload packages after reset
-```"
+```
+
+**File-based app (final):**
+```csharp
+// utility.cs - Self-contained
+#:package Humanizer@2.14.1
+
+using Humanizer;
+// Use package in your code
+```
+**Run with:** `dotnet run utility.cs` (package automatically fetched)"
         );
     }
 }

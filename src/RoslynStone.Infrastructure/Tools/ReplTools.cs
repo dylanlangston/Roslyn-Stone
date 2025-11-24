@@ -37,7 +37,7 @@ public class ReplTools
     /// </remarks>
     [McpServerTool]
     [Description(
-        "Execute C# code to create and test single-file utility programs (file-based C# apps using top-level statements). Ideal for building small utilities, scripts, and tools in a single .cs file. Supports both stateful sessions (createContext=true or with contextId) for iterative development and single-shot execution (createContext=false, default) for testing complete programs. Can load NuGet packages before execution using nugetPackages parameter. Supports async/await, LINQ, and full .NET 10 API. Use this to develop file-based C# apps that can be run with 'dotnet run app.cs'."
+        "Execute C# code to create and test single-file utility programs (file-based C# apps using top-level statements). Ideal for building small utilities, scripts, and tools in a single .cs file. Supports both stateful sessions (createContext=true or with contextId) for iterative development and single-shot execution (createContext=false, default) for testing complete programs. Can load NuGet packages before execution using nugetPackages parameter. Supports async/await, LINQ, and full .NET 10 API. Use this to develop file-based C# apps that can be run with 'dotnet run app.cs'. For final self-contained apps, use the #:package directive in your .cs file instead of nugetPackages parameter (e.g., '#:package Newtonsoft.Json@13.0.3' at the top of the file)."
     )]
     public static async Task<object> EvaluateCsharp(
         RoslynScriptingService scriptingService,
