@@ -71,9 +71,9 @@ public static class MetadataReferenceHelper
     /// <returns>Configured CSharpParseOptions instance</returns>
     public static CSharpParseOptions GetFileBasedProgramParseOptions()
     {
-        return CSharpParseOptions.Default
-            .WithLanguageVersion(LanguageVersion.Preview)
-            .WithFeatures(new[] { new KeyValuePair<string, string>("FileBasedProgram", "") });
+        return CSharpParseOptions
+            .Default.WithLanguageVersion(LanguageVersion.Preview)
+            .WithFeatures([new KeyValuePair<string, string>("FileBasedProgram", "")]);
     }
 
     /// <summary>
@@ -90,7 +90,7 @@ public static class MetadataReferenceHelper
         }
 
         // Split on all common line ending styles to handle cross-platform code
-        var lines = code.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
+        var lines = code.Split(["\r\n", "\r", "\n"], StringSplitOptions.None);
         var filteredLines = new List<string>();
 
         foreach (var line in lines)
@@ -98,14 +98,20 @@ public static class MetadataReferenceHelper
             var trimmedLine = line.TrimStart();
             // Skip lines that start with #: (file-based program directives)
             // Also skip shebang lines (#!)
-            if (!trimmedLine.StartsWith("#:") && !trimmedLine.StartsWith("#!"))
+            if (
+                !trimmedLine.StartsWith("#:", StringComparison.Ordinal)
+                && !trimmedLine.StartsWith("#!", StringComparison.Ordinal)
+            )
             {
                 filteredLines.Add(line);
             }
         }
 
         // Preserve the original line ending style by detecting it from the input
-        var lineEnding = code.Contains("\r\n") ? "\r\n" : "\n";
+        var lineEnding =
+            code.Contains("\r\n") ? "\r\n"
+            : code.Contains("\r") ? "\r"
+            : "\n";
         return string.Join(lineEnding, filteredLines);
     }
 }

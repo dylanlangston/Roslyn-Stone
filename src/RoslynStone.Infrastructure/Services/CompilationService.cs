@@ -46,7 +46,7 @@ public class CompilationService
         // Create compilation
         var compilation = CSharpCompilation.Create(
             assemblyName,
-            syntaxTrees: new[] { syntaxTree },
+            syntaxTrees: [syntaxTree],
             references: references,
             options: new CSharpCompilationOptions(
                 OutputKind.ConsoleApplication, // Changed from DynamicallyLinkedLibrary to support top-level statements

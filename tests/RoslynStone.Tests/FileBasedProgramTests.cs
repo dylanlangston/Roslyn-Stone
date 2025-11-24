@@ -16,7 +16,8 @@ public class FileBasedProgramTests
     {
         // Arrange
         var service = new CompilationService();
-        var code = @"
+        var code =
+            @"
 #:package Newtonsoft.Json@13.0.3
 using System;
 Console.WriteLine(""Hello, World!"");
@@ -38,7 +39,8 @@ Console.WriteLine(""Hello, World!"");
     {
         // Arrange
         var service = new CompilationService();
-        var code = @"
+        var code =
+            @"
 #:package ClosedXML@0.100.0
 #:package MimeKit@4.3.0
 using System;
@@ -61,7 +63,8 @@ Console.WriteLine(""Hello, World!"");
     {
         // Arrange
         var service = new CompilationService();
-        var code = @"
+        var code =
+            @"
 #:sdk Microsoft.NET.Sdk.Web
 using System;
 Console.WriteLine(""Hello, World!"");
@@ -83,7 +86,8 @@ Console.WriteLine(""Hello, World!"");
     {
         // Arrange
         var service = new CompilationService();
-        var code = @"
+        var code =
+            @"
 #:property TargetFramework=net10.0
 #:property LangVersion=preview
 using System;
@@ -106,7 +110,8 @@ Console.WriteLine(""Hello, World!"");
     {
         // Arrange
         var service = new CompilationService();
-        var code = @"#!/usr/bin/env dotnet run
+        var code =
+            @"#!/usr/bin/env dotnet run
 #:package System.CommandLine@2.0.0
 using System;
 Console.WriteLine(""Hello, World!"");
@@ -128,7 +133,8 @@ Console.WriteLine(""Hello, World!"");
     {
         // Arrange
         var service = new CompilationService();
-        var code = @"#!/usr/bin/env dotnet run
+        var code =
+            @"#!/usr/bin/env dotnet run
 #:package Humanizer@2.14.1
 using System;
 using Humanizer;
@@ -145,8 +151,10 @@ Console.WriteLine(dateTime.Humanize());
         // but it should NOT fail with CS9298 (file-based program feature error)
         if (!result.Success)
         {
-            Assert.DoesNotContain(result.Diagnostics ?? new List<Microsoft.CodeAnalysis.Diagnostic>(),
-                d => d.Id == "CS9298");
+            Assert.DoesNotContain(
+                result.Diagnostics ?? new List<Microsoft.CodeAnalysis.Diagnostic>(),
+                d => d.Id == "CS9298"
+            );
         }
     }
 }

@@ -16,7 +16,8 @@ public class FileBasedProgramScriptingTests
     {
         // Arrange
         var service = new RoslynScriptingService();
-        var code = @"#:package Newtonsoft.Json@13.0.3
+        var code =
+            @"#:package Newtonsoft.Json@13.0.3
 using System;
 Console.WriteLine(""Hello, World!"");
 ""success""";
@@ -25,7 +26,10 @@ Console.WriteLine(""Hello, World!"");
         var result = await service.ExecuteAsync(code);
 
         // Assert
-        Assert.True(result.Success, $"Execution failed: {string.Join(", ", result.Errors.Select(e => e.Message))}");
+        Assert.True(
+            result.Success,
+            $"Execution failed: {string.Join(", ", result.Errors.Select(e => e.Message))}"
+        );
         Assert.Equal("success", result.ReturnValue);
         Assert.Contains("Hello, World!", result.Output);
     }
@@ -35,7 +39,8 @@ Console.WriteLine(""Hello, World!"");
     {
         // Arrange
         var service = new RoslynScriptingService();
-        var code = @"#:package ClosedXML@0.100.0
+        var code =
+            @"#:package ClosedXML@0.100.0
 #:package MimeKit@4.3.0
 #:sdk Microsoft.NET.Sdk.Web
 #:property TargetFramework=net10.0
@@ -57,7 +62,8 @@ Console.WriteLine(""Test"");
     {
         // Arrange
         var service = new RoslynScriptingService();
-        var code = @"#!/usr/bin/env dotnet run
+        var code =
+            @"#!/usr/bin/env dotnet run
 #:package System.CommandLine@2.0.0
 using System;
 Console.WriteLine(""Shebang test"");
@@ -77,7 +83,8 @@ Console.WriteLine(""Shebang test"");
     {
         // Arrange
         var service = new RoslynScriptingService();
-        var code = @"#:package Humanizer@2.14.1
+        var code =
+            @"#:package Humanizer@2.14.1
 var x = 10;
 x * 2";
 
@@ -95,7 +102,8 @@ x * 2";
     {
         // Arrange
         var service = new RoslynScriptingService();
-        var code = @"var a = 5;
+        var code =
+            @"var a = 5;
 #:package Test@1.0.0
 var b = 10;
 a + b";
@@ -113,9 +121,10 @@ a + b";
     {
         // Arrange
         var service = new RoslynScriptingService();
-        var code = @"using System;
-var result = ""no directives"";
-result";
+        var code =
+            @"using System;
+var value = ""no directives"";
+value";
 
         // Act
         var result = await service.ExecuteAsync(code);
@@ -130,7 +139,8 @@ result";
     {
         // Arrange
         var service = new RoslynScriptingService();
-        var code = @"// This is a comment: #:package Test@1.0.0
+        var code =
+            @"// This is a comment: #:package Test@1.0.0
 var x = ""comment test"";
 x";
 
@@ -147,7 +157,8 @@ x";
     {
         // Arrange
         var service = new RoslynScriptingService();
-        var code = @"var text = ""This contains #:package in string"";
+        var code =
+            @"var text = ""This contains #:package in string"";
 text";
 
         // Act
