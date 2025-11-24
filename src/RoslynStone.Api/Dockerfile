@@ -32,22 +32,21 @@ ARG BUILD_CONFIGURATION=Release
 RUN dotnet tool install --global CSnakes.Stage
 ENV PATH="/root/.dotnet/tools:${PATH}"
 
-# Set up Python environment with CSnakes and install dependencies with UV
-# This downloads Python redistributable and creates venv with Gradio installed
-RUN setup-python --python 3.12 --venv /app/venv --verbose
+# Set up Python environment with CSnakes
+# This downloads Python 3.12 redistributable and creates a venv
+RUN setup-python --python 3.12 --venv /app/.venv --verbose
 
-# Install UV (fast Python package installer)
+# Install UV (fast Python package installer) - only needed in build stage
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.local/bin:${PATH}"
 
 # Install Gradio and dependencies using UV into the venv
+# This happens at build time, not runtime
 WORKDIR "/src/src/RoslynStone.GradioModule"
-# Copy pyproject.toml to ensure consistent version
-COPY ["src/RoslynStone.GradioModule/pyproject.toml", "/app/"]
-RUN uv pip install "gradio>=5.0.0,<6.0.0" --python /app/venv/bin/python
+RUN uv pip install "gradio>=5.0.0,<6.0.0" --python /app/.venv/bin/python
 
-# Install uv into the venv itself so CSnakes can use it at runtime
-RUN uv pip install uv --python /app/venv/bin/python
+# Verify Gradio is installed correctly
+RUN /app/.venv/bin/python3 -c "import gradio; print(f'Gradio {gradio.__version__} installed successfully')"
 
 # Publish the application
 WORKDIR "/src/src/RoslynStone.Api"
@@ -80,18 +79,15 @@ COPY --from=publish /root/.config/CSnakes /home/appuser/.config/CSnakes
 RUN mkdir -p /root/.config \
     && ln -s /home/appuser/.config/CSnakes /root/.config/CSnakes || true
 
-# Copy Python virtual environment with Gradio
-COPY --from=publish /app/venv .venv
+# Copy Python virtual environment with pre-installed Gradio from build stage
+COPY --from=publish /app/.venv .venv
 
-# Also copy the same venv to `/app/venv` so absolute shebangs created during
-# publish stage continue to resolve even if code expects `/app/venv`.
-COPY --from=publish /app/venv /app/venv
+# Verify venv was copied correctly
+RUN test -f /app/.venv/bin/python3 && test -f /app/.venv/bin/pip || \
+    (echo "ERROR: Virtual environment not copied correctly!" && exit 1)
 
-# Create a stable path expected by venv shebangs created during publish
-# Many scripts use the absolute path `/app/venv` as their interpreter; the
-# runtime expects the virtualenv at `/app/.venv`. Create a symlink so both
-# locations work.
-RUN ln -s /app/.venv /app/venv || true
+# Create symlink for backward compatibility (some code may reference /app/venv)
+RUN ln -s /app/.venv /app/venv
 # Change ownership to non-root user
 RUN chown -R appuser:appuser /app /home/appuser/.config
 

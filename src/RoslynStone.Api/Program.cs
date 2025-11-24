@@ -144,14 +144,6 @@ if (useHttpTransport)
                             }
                         },
                     },
-                    HealthCheck = new Yarp.ReverseProxy.Configuration.HealthCheckConfig
-                    {
-                        Passive = new Yarp.ReverseProxy.Configuration.PassiveHealthCheckConfig
-                        {
-                            Enabled = true,
-                            Policy = "ConsecutiveFailures",
-                        },
-                    },
                 },
             }
         );
