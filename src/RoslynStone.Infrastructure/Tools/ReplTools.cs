@@ -78,9 +78,15 @@ public class ReplTools
                 return new
                 {
                     success = false,
-                    error = "REPL_CONTEXT_INVALID",
-                    message = $"Context '{contextId}' not found or expired. Set createContext=true to create a new persistent session, or omit contextId for a temporary execution.",
-                    suggestedAction = "EvaluateCsharp with createContext=true for a persistent session, or without contextId for a temporary execution",
+                    errors = new[]
+                    {
+                        new
+                        {
+                            code = "CONTEXT_NOT_FOUND",
+                            message = $"Context '{contextId}' not found or expired. Create a new context with createContext: true, or omit contextId to start fresh.",
+                            severity = "Error"
+                        }
+                    },
                     contextId = (string?)null,
                 };
             }
@@ -109,10 +115,19 @@ public class ReplTools
         {
             // Get base script options (from context or service default)
             var baseOptions = contextOptions ?? scriptingService.ScriptOptions;
+            bool packagesAdded = false;
 
             // Load NuGet packages if provided
             if (nugetPackages != null && nugetPackages.Length > 0)
             {
+                // If trying to add packages to an existing context with state, warn that variables will be lost
+                if (existingState != null && !string.IsNullOrWhiteSpace(contextId))
+                {
+                    packageErrors.Add(
+                        "Warning: Adding packages to an existing context resets the session. All variables and previous state will be lost. For best results, specify packages when creating the context (createContext=true with nugetPackages)."
+                    );
+                }
+
                 foreach (var package in nugetPackages)
                 {
                     if (string.IsNullOrWhiteSpace(package.PackageName))
@@ -137,6 +152,7 @@ public class ReplTools
                             baseOptions = baseOptions.AddReferences(
                                 MetadataReference.CreateFromFile(assemblyPath)
                             );
+                            packagesAdded = true;
                         }
                     }
                     catch (Exception ex) when (ex is not OperationCanceledException)
@@ -149,6 +165,15 @@ public class ReplTools
 
                 // Store updated options in context
                 contextManager.UpdateContextOptions(activeContextId, baseOptions);
+                
+                // CRITICAL: Reset script state when packages are added
+                // ScriptState.ContinueWithAsync() doesn't accept new options,
+                // so we must start fresh to use the updated options with new packages
+                // This means all variables/state will be lost, which is why we warn above
+                if (packagesAdded && existingState != null)
+                {
+                    existingState = null;
+                }
             }
             // If this is a new context and no packages were loaded, store the base options
             else if (isNewContext)

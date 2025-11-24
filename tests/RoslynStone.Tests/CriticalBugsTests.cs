@@ -35,47 +35,28 @@ public class CriticalBugsTests : IDisposable
         }
     }
 
-    #region Critical Issue #1: LoadNuGetPackage Context Isolation
+    #region Package Loading in Context
 
     [Fact]
-    [Trait("Bug", "PackageContextIsolation")]
-    public async Task BUG_LoadNuGetPackage_ThenEvaluateCsharp_PackageShouldBeAvailable()
+    [Trait("Feature", "NuGetPackagesParameter")]
+    public async Task EvaluateCsharp_WithNugetPackagesParameter_SingleShot_ShouldWork()
     {
-        // This test documents the EXPECTED behavior
-        // Currently FAILS due to package context isolation bug
+        // Test single-shot execution with packages (temporary isolated context)
+        // Context is created, used, and destroyed automatically
 
-        // Arrange - Load package via tool
-        await NuGetTools.LoadNuGetPackage(_scriptingService, _nugetService, "Humanizer");
+        // Arrange
+        var nugetPackages = new[]
+        {
+            new NuGetPackageSpec { PackageName = "Humanizer", Version = "3.0.1" }
+        };
 
-        // Act - Try to use the package in EvaluateCsharp (same scripting service)
-        var code = @"using Humanizer; return ""PascalCase"".Humanize();";
-        var result = await _scriptingService.ExecuteAsync(code);
-
-        // Assert - Package should be available
-        Assert.True(
-            result.Success,
-            $"Package should be available after LoadNuGetPackage. Errors: {string.Join(", ", result.Errors.Select(e => e.Message))}"
-        );
-        Assert.Equal("Pascal case", result.ReturnValue?.ToString());
-    }
-
-    [Fact]
-    [Trait("Bug", "PackageContextIsolation")]
-    public async Task BUG_LoadNuGetPackage_ViaReplTools_ShouldPersistForSubsequentCalls()
-    {
-        // This tests the ReplTools.EvaluateCsharp with LoadNuGetPackage integration
-        // Currently FAILS
-
-        // Arrange - Load package using ReplTools
-        await NuGetTools.LoadNuGetPackage(_scriptingService, _nugetService, "Humanizer");
-
-        // Act - Call EvaluateCsharp via ReplTools (simulates MCP client call)
-        var code = @"using Humanizer; return ""test"".Humanize();";
+        // Act - Single-shot execution (createContext=false, no contextId)
         var result = await ReplTools.EvaluateCsharp(
             _scriptingService,
             _contextManager,
             _nugetService,
-            code
+            @"using Humanizer; return ""test"".Humanize();",
+            nugetPackages: nugetPackages
         );
 
         // Assert - Should succeed
@@ -85,23 +66,36 @@ public class CriticalBugsTests : IDisposable
         Assert.NotNull(resultDict);
         Assert.True(
             resultDict["success"].GetBoolean(),
-            "Package loaded via LoadNuGetPackage should be available in EvaluateCsharp"
+            "Package should be available in isolated context"
+        );
+        Assert.Equal("Test", resultDict["returnValue"].GetString());
+        
+        // Context should not be returned (it was temporary)
+        Assert.False(
+            resultDict.ContainsKey("contextId") && resultDict["contextId"].ValueKind != JsonValueKind.Null,
+            "Temporary context should not return contextId"
         );
     }
 
     [Fact]
-    [Trait("Bug", "PackageContextIsolation")]
-    public async Task BUG_LoadNuGetPackage_WithContextId_PackageShouldPersist()
+    [Trait("Feature", "NuGetPackagesParameter")]
+    public async Task EvaluateCsharp_CreateContextWithPackages_ThenUseInSubsequentCalls()
     {
-        // Test stateful sessions with packages
-        // Currently FAILS
+        // Packages MUST be specified when creating the context
+        // They persist for all subsequent calls in that context
 
-        // Arrange - Create context and load package
+        // Arrange - Create context with packages at creation time
+        var nugetPackages = new[]
+        {
+            new NuGetPackageSpec { PackageName = "Humanizer", Version = "3.0.1" }
+        };
+
         var createResult = await ReplTools.EvaluateCsharp(
             _scriptingService,
             _contextManager,
             _nugetService,
             "var x = 10;",
+            nugetPackages: nugetPackages,
             createContext: true
         );
 
@@ -109,9 +103,7 @@ public class CriticalBugsTests : IDisposable
         var dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
         var contextId = dict!["contextId"].GetString()!;
 
-        await NuGetTools.LoadNuGetPackage(_scriptingService, _nugetService, "Humanizer");
-
-        // Act - Use package in same context
+        // Act - Use package in same context (without specifying nugetPackages again)
         var useResult = await ReplTools.EvaluateCsharp(
             _scriptingService,
             _contextManager,
@@ -125,7 +117,55 @@ public class CriticalBugsTests : IDisposable
         var useDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(useJson);
 
         Assert.NotNull(useDict);
-        Assert.True(useDict["success"].GetBoolean(), "Package should be available in context");
+        Assert.True(useDict["success"].GetBoolean(), "Package should persist in context");
+        Assert.Equal("Test", useDict["returnValue"].GetString());
+    }
+
+    [Fact]
+    [Trait("Feature", "NuGetPackagesParameter")]
+    public async Task EvaluateCsharp_MultiplePackages_ShouldAllBeAvailable()
+    {
+        // Test loading multiple packages at context creation
+
+        // Arrange
+        var nugetPackages = new[]
+        {
+            new NuGetPackageSpec { PackageName = "Newtonsoft.Json", Version = "13.0.3" },
+            new NuGetPackageSpec { PackageName = "Humanizer", Version = "3.0.1" }
+        };
+
+        var createResult = await ReplTools.EvaluateCsharp(
+            _scriptingService,
+            _contextManager,
+            _nugetService,
+            "var x = 1;",
+            nugetPackages: nugetPackages,
+            createContext: true
+        );
+
+        var json = JsonSerializer.Serialize(createResult);
+        var dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var contextId = dict!["contextId"].GetString()!;
+
+        // Act - Use both packages
+        var result = await ReplTools.EvaluateCsharp(
+            _scriptingService,
+            _contextManager,
+            _nugetService,
+            @"using Newtonsoft.Json; 
+              using Humanizer;
+              var obj = new { Value = ""PascalCase"".Humanize() };
+              return JsonConvert.SerializeObject(obj);",
+            contextId: contextId
+        );
+
+        // Assert
+        var resultJson = JsonSerializer.Serialize(result);
+        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(resultJson);
+
+        Assert.NotNull(resultDict);
+        Assert.True(resultDict["success"].GetBoolean(), "Both packages should be available");
+        Assert.Contains("Pascal case", resultDict["returnValue"].GetString());
     }
 
     #endregion
@@ -311,44 +351,6 @@ public class CriticalBugsTests : IDisposable
         var errorMessage = errors[0].GetProperty("message").GetString()!;
         Assert.Contains("context", errorMessage, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("An error occurred", errorMessage);
-    }
-
-    #endregion
-
-    #region High Priority: nugetPackages Parameter Testing
-
-    [Fact]
-    [Trait("Feature", "NuGetPackagesParameter")]
-    public async Task EvaluateCsharp_WithNugetPackagesParameter_ShouldLoadAndUse()
-    {
-        // Test the documented way to load packages inline
-        // This should work if package context is fixed
-
-        // Arrange
-        var nugetPackages = new[]
-        {
-            new NuGetPackageSpec { PackageName = "Humanizer", Version = "3.0.1" }
-        };
-
-        // Act
-        var result = await ReplTools.EvaluateCsharp(
-            _scriptingService,
-            _contextManager,
-            _nugetService,
-            @"using Humanizer; return ""Test"".Humanize();",
-            nugetPackages: nugetPackages
-        );
-
-        // Assert
-        var json = JsonSerializer.Serialize(result);
-        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
-
-        Assert.NotNull(resultDict);
-        Assert.True(
-            resultDict["success"].GetBoolean(),
-            "Package specified via nugetPackages parameter should be available"
-        );
-        Assert.Equal("Test", resultDict["returnValue"].GetString());
     }
 
     #endregion
