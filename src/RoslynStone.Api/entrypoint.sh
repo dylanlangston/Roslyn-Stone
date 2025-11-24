@@ -27,8 +27,9 @@ if [ -n "$PY_INTERP" ] && [ -x "$PY_INTERP" ]; then
         echo "Installing uv into venv..."
         /app/.venv/bin/pip install --quiet uv
         
-        # Install gradio using uv
+        # Install gradio using uv (match pyproject.toml version)
         echo "Installing gradio..."
+        cd /app && /app/.venv/bin/uv pip install -r /app/pyproject.toml --python /app/.venv/bin/python3 2>/dev/null || \
         /app/.venv/bin/uv pip install "gradio>=5.0.0,<6.0.0" --python /app/.venv/bin/python3
     fi
     

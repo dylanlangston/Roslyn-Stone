@@ -115,7 +115,7 @@ if (useHttpTransport)
     var gradioPort = app.Configuration.GetValue<int>("GradioServerPort", defaultGradioPort);
 
     // Start Gradio landing page using CSnakes in the background
-    _ = Task.Run(() =>
+    _ = Task.Run(async () =>
     {
         try
         {
@@ -132,9 +132,23 @@ if (useHttpTransport)
                 return;
             }
 
+            app.Logger.LogInformation(
+                "Starting Gradio server on port {GradioPort} with base URL {BaseUrl}",
+                gradioPort,
+                baseUrl
+            );
+
             // Start Gradio server (runs in a thread inside Python)
             var result = gradioLauncher.StartGradioServer(baseUrl, gradioPort);
-            app.Logger.LogInformation("Gradio landing page: {Result}", result);
+            app.Logger.LogInformation("Gradio landing page result: {Result}", result);
+
+            // Give Gradio a moment to start up
+            await Task.Delay(2000);
+
+            app.Logger.LogInformation(
+                "Gradio landing page should now be accessible at http://127.0.0.1:{GradioPort}",
+                gradioPort
+            );
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

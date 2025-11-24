@@ -19,6 +19,8 @@ def start_gradio_server(base_url: str = "http://localhost:7071", server_port: in
         import gradio as gr
         from gradio_app import create_landing_page
         
+        print(f"[Gradio Launcher] Starting Gradio server on port {server_port} with base_url={base_url}", flush=True)
+        
         # Create the landing page
         demo = create_landing_page(base_url)
         
@@ -31,9 +33,13 @@ def start_gradio_server(base_url: str = "http://localhost:7071", server_port: in
             show_error=True
         )
         
-        return f"http://127.0.0.1:{server_port}"
+        result = f"http://127.0.0.1:{server_port}"
+        print(f"[Gradio Launcher] Successfully started Gradio at {result}", flush=True)
+        return result
     except Exception as e:
-        return f"Error: {str(e)}"
+        error_msg = f"Error: {str(e)}"
+        print(f"[Gradio Launcher] Failed to start: {error_msg}", flush=True)
+        return error_msg
 
 
 def check_gradio_installed() -> bool:

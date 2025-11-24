@@ -42,6 +42,8 @@ ENV PATH="/root/.local/bin:${PATH}"
 
 # Install Gradio and dependencies using UV into the venv
 WORKDIR "/src/src/RoslynStone.GradioModule"
+# Copy pyproject.toml to ensure consistent version
+COPY ["src/RoslynStone.GradioModule/pyproject.toml", "/app/"]
 RUN uv pip install "gradio>=5.0.0,<6.0.0" --python /app/venv/bin/python
 
 # Install uv into the venv itself so CSnakes can use it at runtime
