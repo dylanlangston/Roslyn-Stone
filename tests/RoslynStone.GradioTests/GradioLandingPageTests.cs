@@ -5,6 +5,7 @@ namespace RoslynStone.GradioTests;
 /// <summary>
 /// Playwright tests for the Gradio landing page.
 /// These tests verify that the Gradio UI is accessible and displays the expected content.
+/// Tests run as part of the standard CI pipeline to ensure UI functionality.
 /// </summary>
 public class GradioLandingPageTests : IAsyncLifetime
 {
@@ -31,7 +32,7 @@ public class GradioLandingPageTests : IAsyncLifetime
         _playwright?.Dispose();
     }
 
-    [Fact(Skip = "Requires running server - enable for integration tests")]
+    [Fact]
     [Trait("Category", "Integration")]
     [Trait("Component", "Gradio")]
     public async Task GradioLandingPage_LoadsSuccessfully()
@@ -59,7 +60,7 @@ public class GradioLandingPageTests : IAsyncLifetime
 
             // Verify page title
             var title = await page.TitleAsync();
-            Assert.Equal("Roslyn-Stone MCP Server", title);
+            Assert.Equal("Roslyn-Stone MCP Testing UI", title);
         }
         finally
         {
@@ -67,7 +68,7 @@ public class GradioLandingPageTests : IAsyncLifetime
         }
     }
 
-    [Fact(Skip = "Requires running server - enable for integration tests")]
+    [Fact]
     [Trait("Category", "Integration")]
     [Trait("Component", "Gradio")]
     public async Task GradioLandingPage_DisplaysExpectedHeading()
@@ -89,6 +90,7 @@ public class GradioLandingPageTests : IAsyncLifetime
             // Assert - Check for main heading
             var heading = await page.Locator("h1").First.TextContentAsync();
             Assert.Contains("Roslyn-Stone MCP Server", heading);
+            Assert.Contains("Interactive Testing UI", heading);
         }
         finally
         {
@@ -96,7 +98,7 @@ public class GradioLandingPageTests : IAsyncLifetime
         }
     }
 
-    [Fact(Skip = "Requires running server - enable for integration tests")]
+    [Fact]
     [Trait("Category", "Integration")]
     [Trait("Component", "Gradio")]
     public async Task GradioLandingPage_ContainsTabs()
@@ -115,11 +117,11 @@ public class GradioLandingPageTests : IAsyncLifetime
             // Wait for tabs to appear
             await page.WaitForSelectorAsync("button, [role='tab']", new() { Timeout = 5000 });
 
-            // Assert - Check for tabs
+            // Assert - Check for tabs (Tools, Resources, Prompts, About)
             var tabs = await page.Locator("button, [role='tab']").AllTextContentsAsync();
-            Assert.Contains(tabs, t => t.Contains("Quick Start"));
-            Assert.Contains(tabs, t => t.Contains("Features"));
-            Assert.Contains(tabs, t => t.Contains("Examples"));
+            Assert.Contains(tabs, t => t.Contains("Tools"));
+            Assert.Contains(tabs, t => t.Contains("Resources"));
+            Assert.Contains(tabs, t => t.Contains("Prompts"));
             Assert.Contains(tabs, t => t.Contains("About"));
         }
         finally
@@ -128,41 +130,10 @@ public class GradioLandingPageTests : IAsyncLifetime
         }
     }
 
-    [Fact(Skip = "Requires running server - enable for integration tests")]
+    [Fact]
     [Trait("Category", "Integration")]
     [Trait("Component", "Gradio")]
-    public async Task GradioLandingPage_DisplaysConnectionInstructions()
-    {
-        // Arrange
-        var page = await _browser!.NewPageAsync();
-
-        try
-        {
-            // Act
-            await page.GotoAsync(
-                BaseUrl,
-                new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle, Timeout = 30000 }
-            );
-
-            // Wait for page content to load
-            await page.WaitForSelectorAsync("h2, h3", new() { Timeout = 5000 });
-
-            // Assert - Check for connection instructions
-            var pageContent = await page.ContentAsync();
-            Assert.Contains("Connect to This Server", pageContent);
-            Assert.Contains("HTTP mode", pageContent);
-            Assert.Contains("/mcp", pageContent);
-        }
-        finally
-        {
-            await page.CloseAsync();
-        }
-    }
-
-    [Fact(Skip = "Requires running server - enable for integration tests")]
-    [Trait("Category", "Integration")]
-    [Trait("Component", "Gradio")]
-    public async Task GradioLandingPage_FeaturesTab_DisplaysToolsList()
+    public async Task GradioLandingPage_ToolsTab_HasRefreshButton()
     {
         // Arrange
         var page = await _browser!.NewPageAsync();
@@ -178,23 +149,10 @@ public class GradioLandingPageTests : IAsyncLifetime
             // Wait for page to load
             await page.WaitForSelectorAsync("h1", new() { Timeout = 5000 });
 
-            // Click on Features tab
-            var featuresTab = page.Locator(
-                "button:has-text('Features'), [role='tab']:has-text('Features')"
-            ).First;
-            await featuresTab.ClickAsync();
-
-            // Wait for features content to load
-            await page.WaitForSelectorAsync(
-                "text=EvaluateCsharp, text=ValidateCsharp",
-                new() { Timeout = 5000 }
-            );
-
-            // Assert - Check for MCP tools
-            var pageContent = await page.ContentAsync();
-            Assert.Contains("EvaluateCsharp", pageContent);
-            Assert.Contains("ValidateCsharp", pageContent);
-            Assert.Contains("LoadNuGetPackage", pageContent);
+            // Assert - Check for Refresh Tools button
+            var refreshButton = page.Locator("button:has-text('Refresh Tools')");
+            await refreshButton.WaitForAsync(new() { Timeout = 5000 });
+            Assert.True(await refreshButton.IsVisibleAsync());
         }
         finally
         {
@@ -202,7 +160,193 @@ public class GradioLandingPageTests : IAsyncLifetime
         }
     }
 
-    [Fact(Skip = "Requires running server - enable for integration tests")]
+    [Fact]
+    [Trait("Category", "Integration")]
+    [Trait("Component", "Gradio")]
+    public async Task GradioLandingPage_ResourcesTab_HasRefreshButton()
+    {
+        // Arrange
+        var page = await _browser!.NewPageAsync();
+
+        try
+        {
+            // Act
+            await page.GotoAsync(
+                BaseUrl,
+                new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle, Timeout = 30000 }
+            );
+
+            // Wait for page to load
+            await page.WaitForSelectorAsync("h1", new() { Timeout = 5000 });
+
+            // Click on Resources tab
+            var resourcesTab = page.Locator(
+                "button:has-text('Resources'), [role='tab']:has-text('Resources')"
+            ).First;
+            await resourcesTab.ClickAsync();
+
+            // Wait for tab content to load
+            await page.WaitForSelectorAsync("button:has-text('Refresh Resources')", new() { Timeout = 5000 });
+
+            // Assert - Check for Refresh Resources button
+            var refreshButton = page.Locator("button:has-text('Refresh Resources')");
+            Assert.True(await refreshButton.IsVisibleAsync());
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    [Trait("Component", "Gradio")]
+    public async Task GradioLandingPage_PromptsTab_HasRefreshButton()
+    {
+        // Arrange
+        var page = await _browser!.NewPageAsync();
+
+        try
+        {
+            // Act
+            await page.GotoAsync(
+                BaseUrl,
+                new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle, Timeout = 30000 }
+            );
+
+            // Wait for page to load
+            await page.WaitForSelectorAsync("h1", new() { Timeout = 5000 });
+
+            // Click on Prompts tab
+            var promptsTab = page.Locator(
+                "button:has-text('Prompts'), [role='tab']:has-text('Prompts')"
+            ).First;
+            await promptsTab.ClickAsync();
+
+            // Wait for tab content to load
+            await page.WaitForSelectorAsync("button:has-text('Refresh Prompts')", new() { Timeout = 5000 });
+
+            // Assert - Check for Refresh Prompts button
+            var refreshButton = page.Locator("button:has-text('Refresh Prompts')");
+            Assert.True(await refreshButton.IsVisibleAsync());
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    [Trait("Component", "Gradio")]
+    public async Task GradioLandingPage_ToolsTab_HasExampleAccordion()
+    {
+        // Arrange
+        var page = await _browser!.NewPageAsync();
+
+        try
+        {
+            // Act
+            await page.GotoAsync(
+                BaseUrl,
+                new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle, Timeout = 30000 }
+            );
+
+            // Wait for page to load
+            await page.WaitForSelectorAsync("h1", new() { Timeout = 5000 });
+
+            // Assert - Check for Example Tool Calls accordion
+            var accordion = page.Locator("button:has-text('Example Tool Calls')");
+            await accordion.WaitForAsync(new() { Timeout = 5000 });
+            Assert.True(await accordion.IsVisibleAsync());
+
+            // Check that examples contain EvaluateCsharp, ValidateCsharp, SearchNuGetPackages
+            var pageContent = await page.ContentAsync();
+            Assert.Contains("EvaluateCsharp", pageContent);
+            Assert.Contains("ValidateCsharp", pageContent);
+            Assert.Contains("SearchNuGetPackages", pageContent);
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    [Trait("Component", "Gradio")]
+    public async Task GradioLandingPage_ResourcesTab_HasExampleAccordion()
+    {
+        // Arrange
+        var page = await _browser!.NewPageAsync();
+
+        try
+        {
+            // Act
+            await page.GotoAsync(
+                BaseUrl,
+                new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle, Timeout = 30000 }
+            );
+
+            // Wait for page to load
+            await page.WaitForSelectorAsync("h1", new() { Timeout = 5000 });
+
+            // Click on Resources tab
+            var resourcesTab = page.Locator(
+                "button:has-text('Resources'), [role='tab']:has-text('Resources')"
+            ).First;
+            await resourcesTab.ClickAsync();
+
+            // Wait for tab content to load
+            await page.WaitForSelectorAsync("button:has-text('Example Resource URIs')", new() { Timeout = 5000 });
+
+            // Assert - Check for Example Resource URIs accordion
+            var accordion = page.Locator("button:has-text('Example Resource URIs')");
+            Assert.True(await accordion.IsVisibleAsync());
+
+            // Check that examples contain doc://, nuget://, repl:// URIs
+            var pageContent = await page.ContentAsync();
+            Assert.Contains("doc://", pageContent);
+            Assert.Contains("nuget://", pageContent);
+            Assert.Contains("repl://", pageContent);
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    [Trait("Component", "Gradio")]
+    public async Task GradioLandingPage_StatusIndicator_IsVisible()
+    {
+        // Arrange
+        var page = await _browser!.NewPageAsync();
+
+        try
+        {
+            // Act
+            await page.GotoAsync(
+                BaseUrl,
+                new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle, Timeout = 30000 }
+            );
+
+            // Wait for page to load
+            await page.WaitForSelectorAsync("h1", new() { Timeout = 5000 });
+
+            // Assert - Check for status indicator
+            var pageContent = await page.ContentAsync();
+            Assert.Contains("Status", pageContent);
+            Assert.Contains("Connected to MCP server", pageContent);
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
     [Trait("Category", "Integration")]
     [Trait("Component", "Gradio")]
     public async Task McpEndpoint_ReturnsValidResponse()

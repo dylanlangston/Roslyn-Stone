@@ -6,7 +6,7 @@ Provides dynamic testing interface for MCP tools, resources, and prompts.
 import gradio as gr
 import httpx
 import json
-from typing import Optional, Dict, List, Any, Tuple
+from typing import Optional, Dict, List, Any
 from pygments import highlight
 from pygments.lexers import CSharpLexer, JsonLexer
 from pygments.formatters import HtmlFormatter
@@ -20,6 +20,16 @@ class McpHttpClient:
         self.base_url = base_url.rstrip('/')
         self.mcp_url = f"{self.base_url}/mcp"
         self.client = httpx.Client(timeout=30.0)
+    
+    def close(self):
+        """Close the HTTP client and release resources."""
+        self.client.close()
+    
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
     
     def _send_request(self, method: str, params: Optional[Dict] = None) -> Dict[str, Any]:
         """Send a JSON-RPC request to the MCP server"""
@@ -55,7 +65,12 @@ class McpHttpClient:
                     return {"error": result["error"]}
                 return result.get("result", {})
                 
+        except (httpx.HTTPError, json.JSONDecodeError) as e:
+            return {"error": str(e)}
         except Exception as e:
+            # Re-raise system-exiting exceptions
+            if isinstance(e, (KeyboardInterrupt, SystemExit)):
+                raise
             return {"error": str(e)}
     
     def list_tools(self) -> List[Dict[str, Any]]:
@@ -98,7 +113,7 @@ def format_csharp_code(code: str) -> str:
         formatter = HtmlFormatter(style='monokai', noclasses=True, cssclass='highlight')
         highlighted = highlight(code, CSharpLexer(), formatter)
         return f'<div style="background: #272822; padding: 10px; border-radius: 8px; overflow-x: auto;">{highlighted}</div>'
-    except:
+    except Exception:
         return f'<pre style="background: #272822; color: #f8f8f2; padding: 10px; border-radius: 8px; overflow-x: auto;"><code>{code}</code></pre>'
 
 
@@ -109,7 +124,7 @@ def format_json_output(data: Any) -> str:
         formatter = HtmlFormatter(style='monokai', noclasses=True, cssclass='highlight')
         highlighted = highlight(json_str, JsonLexer(), formatter)
         return f'<div style="background: #272822; padding: 10px; border-radius: 8px; overflow-x: auto;">{highlighted}</div>'
-    except:
+    except Exception:
         return f'<pre style="background: #272822; color: #f8f8f2; padding: 10px; border-radius: 8px; overflow-x: auto;"><code>{json.dumps(data, indent=2)}</code></pre>'
 
 
@@ -248,6 +263,11 @@ def create_landing_page(base_url: Optional[str] = None) -> gr.Blocks:
     """
     
     with gr.Blocks(title="Roslyn-Stone MCP Testing UI", theme=gr.themes.Soft(), css=custom_css) as demo:
+        # State management for storing tools, resources, and prompts data
+        tools_state = gr.State({})
+        resources_state = gr.State({})
+        prompts_state = gr.State({})
+        
         gr.Markdown(
             """
             # 🪨 Roslyn-Stone MCP Server - Interactive Testing UI
@@ -295,10 +315,6 @@ def create_landing_page(base_url: Optional[str] = None) -> gr.Blocks:
                             lines=20,
                             interactive=False
                         )
-                        tool_result_html = gr.HTML(
-                            label="Formatted Result",
-                            visible=False
-                        )
                 
                 # Tool examples with better formatting
                 with gr.Accordion("📝 Example Tool Calls", open=True):
@@ -334,20 +350,19 @@ def create_landing_page(base_url: Optional[str] = None) -> gr.Blocks:
                     """Refresh the list of available tools"""
                     tools = mcp_client.list_tools()
                     if not tools:
-                        return "⚠️ No tools found or error connecting to server", gr.update(choices=[])
+                        return "⚠️ No tools found or error connecting to server", gr.update(choices=[]), {}
                     
                     tool_names = [t.get("name", "Unknown") for t in tools]
-                    # Store tools data for later use
-                    demo.tools_data = {t.get("name"): t for t in tools}
+                    tools_data = {t.get("name"): t for t in tools}
                     
-                    return f"✅ Loaded {len(tools)} tools", gr.update(choices=tool_names)
+                    return f"✅ Loaded {len(tools)} tools", gr.update(choices=tool_names), tools_data
                 
-                def on_tool_selected(tool_name):
+                def on_tool_selected(tool_name, tools_data):
                     """When a tool is selected, show its description and input schema"""
-                    if not tool_name or not hasattr(demo, 'tools_data'):
+                    if not tool_name or not tools_data:
                         return "", "{}"
                     
-                    tool = demo.tools_data.get(tool_name, {})
+                    tool = tools_data.get(tool_name, {})
                     description = tool.get("description", "No description available")
                     
                     # Extract input schema to help user understand parameters
@@ -355,8 +370,10 @@ def create_landing_page(base_url: Optional[str] = None) -> gr.Blocks:
                     properties = input_schema.get("properties", {})
                     required = input_schema.get("required", [])
                     
-                    # Create example JSON with parameter descriptions
+                    # Create both example and description in one pass
                     example = {}
+                    param_descriptions = []
+                    
                     for prop_name, prop_info in properties.items():
                         prop_desc = prop_info.get("description", "")
                         prop_type = prop_info.get("type", "string")
@@ -373,15 +390,13 @@ def create_landing_page(base_url: Optional[str] = None) -> gr.Blocks:
                             example[prop_name] = []
                         elif prop_type == "object":
                             example[prop_name] = {}
+                        
+                        # Build description
+                        req_marker = "⚠️ REQUIRED" if is_required else "optional"
+                        param_descriptions.append(f"- `{prop_name}` ({req_marker}): {prop_desc}")
                     
                     example_json = json.dumps(example, indent=2)
-                    
-                    full_description = f"{description}\n\n**Parameters:**\n"
-                    for prop_name, prop_info in properties.items():
-                        prop_desc = prop_info.get("description", "")
-                        is_required = prop_name in required
-                        req_marker = "⚠️ REQUIRED" if is_required else "optional"
-                        full_description += f"- `{prop_name}` ({req_marker}): {prop_desc}\n"
+                    full_description = f"{description}\n\n**Parameters:**\n" + "\n".join(param_descriptions)
                     
                     return full_description, example_json
                 
@@ -416,12 +431,12 @@ def create_landing_page(base_url: Optional[str] = None) -> gr.Blocks:
                 # Wire up tool tab events
                 refresh_tools_btn.click(
                     fn=refresh_tools,
-                    outputs=[tools_status, tool_dropdown]
+                    outputs=[tools_status, tool_dropdown, tools_state]
                 )
                 
                 tool_dropdown.change(
                     fn=on_tool_selected,
-                    inputs=[tool_dropdown],
+                    inputs=[tool_dropdown, tools_state],
                     outputs=[tool_description, tool_params_json]
                 )
                 
@@ -528,19 +543,19 @@ def create_landing_page(base_url: Optional[str] = None) -> gr.Blocks:
                     """Refresh the list of available resources"""
                     resources = mcp_client.list_resources()
                     if not resources:
-                        return "⚠️ No resources found or error connecting to server", gr.update(choices=[])
+                        return "⚠️ No resources found or error connecting to server", gr.update(choices=[]), {}
                     
                     resource_names = [r.get("name", "Unknown") for r in resources]
-                    demo.resources_data = {r.get("name"): r for r in resources}
+                    resources_data = {r.get("name"): r for r in resources}
                     
-                    return f"✅ Loaded {len(resources)} resource templates", gr.update(choices=resource_names)
+                    return f"✅ Loaded {len(resources)} resource templates", gr.update(choices=resource_names), resources_data
                 
-                def on_resource_selected(resource_name):
+                def on_resource_selected(resource_name, resources_data):
                     """When a resource is selected, show its description and example URI"""
-                    if not resource_name or not hasattr(demo, 'resources_data'):
+                    if not resource_name or not resources_data:
                         return "", ""
                     
-                    resource = demo.resources_data.get(resource_name, {})
+                    resource = resources_data.get(resource_name, {})
                     description = resource.get("description", "No description available")
                     uri_template = resource.get("uriTemplate", resource.get("uri", ""))
                     
@@ -563,7 +578,7 @@ def create_landing_page(base_url: Optional[str] = None) -> gr.Blocks:
                                 try:
                                     parsed = json.loads(content["text"])
                                     return json.dumps(parsed, indent=2)
-                                except:
+                                except json.JSONDecodeError:
                                     return content["text"]
                             return content.get("text", json.dumps(content, indent=2))
                         return json.dumps(contents, indent=2)
@@ -573,12 +588,12 @@ def create_landing_page(base_url: Optional[str] = None) -> gr.Blocks:
                 # Wire up resource tab events
                 refresh_resources_btn.click(
                     fn=refresh_resources,
-                    outputs=[resources_status, resource_dropdown]
+                    outputs=[resources_status, resource_dropdown, resources_state]
                 )
                 
                 resource_dropdown.change(
                     fn=on_resource_selected,
-                    inputs=[resource_dropdown],
+                    inputs=[resource_dropdown, resources_state],
                     outputs=[resource_description, resource_uri]
                 )
                 
@@ -625,19 +640,19 @@ def create_landing_page(base_url: Optional[str] = None) -> gr.Blocks:
                     """Refresh the list of available prompts"""
                     prompts = mcp_client.list_prompts()
                     if not prompts:
-                        return "⚠️ No prompts found or error connecting to server", gr.update(choices=[])
+                        return "⚠️ No prompts found or error connecting to server", gr.update(choices=[]), {}
                     
                     prompt_names = [p.get("name", "Unknown") for p in prompts]
-                    demo.prompts_data = {p.get("name"): p for p in prompts}
+                    prompts_data = {p.get("name"): p for p in prompts}
                     
-                    return f"✅ Loaded {len(prompts)} prompts", gr.update(choices=prompt_names)
+                    return f"✅ Loaded {len(prompts)} prompts", gr.update(choices=prompt_names), prompts_data
                 
-                def on_prompt_selected(prompt_name):
+                def on_prompt_selected(prompt_name, prompts_data):
                     """When a prompt is selected, show its description"""
-                    if not prompt_name or not hasattr(demo, 'prompts_data'):
+                    if not prompt_name or not prompts_data:
                         return ""
                     
-                    prompt = demo.prompts_data.get(prompt_name, {})
+                    prompt = prompts_data.get(prompt_name, {})
                     description = prompt.get("description", "No description available")
                     
                     return description
@@ -668,12 +683,12 @@ def create_landing_page(base_url: Optional[str] = None) -> gr.Blocks:
                 # Wire up prompts tab events
                 refresh_prompts_btn.click(
                     fn=refresh_prompts,
-                    outputs=[prompts_status, prompt_dropdown]
+                    outputs=[prompts_status, prompt_dropdown, prompts_state]
                 )
                 
                 prompt_dropdown.change(
                     fn=on_prompt_selected,
-                    inputs=[prompt_dropdown],
+                    inputs=[prompt_dropdown, prompts_state],
                     outputs=[prompt_description]
                 )
                 
