@@ -1,0 +1,1 @@
+src/RoslynStone.Api/Dockerfile

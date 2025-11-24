@@ -1,0 +1,12 @@
+[project]
+name = "roslyn-stone-gradio"
+version = "0.1.0"
+description = "Gradio landing page for Roslyn-Stone MCP Server"
+requires-python = ">=3.9"
+dependencies = [
+    "gradio>=5.0.0,<6.0.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
