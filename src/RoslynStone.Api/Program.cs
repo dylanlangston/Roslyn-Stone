@@ -109,7 +109,10 @@ if (useHttpTransport)
     var app = builder.Build();
 
     // Get Gradio server port from configuration
-    var gradioPort = app.Configuration.GetValue<int>("GradioServerPort", 7860);
+    // In HuggingFace Spaces, the C# app runs on 7860, so Gradio must use a different port
+    var isHuggingFaceSpace = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SPACE_ID"));
+    var defaultGradioPort = isHuggingFaceSpace ? 7861 : 7860;
+    var gradioPort = app.Configuration.GetValue<int>("GradioServerPort", defaultGradioPort);
 
     // Start Gradio landing page using CSnakes in the background
     _ = Task.Run(() =>
