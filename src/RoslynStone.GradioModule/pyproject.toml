@@ -1,10 +1,10 @@
 [project]
 name = "roslyn-stone-gradio"
-version = "0.4.0"
+version = "0.5.0"
 description = "Interactive Gradio UI for Roslyn-Stone MCP Server testing with chat interface"
 requires-python = ">=3.9"
 dependencies = [
-    "gradio>=5.0.0,<6.0.0",
+    "gradio>=6.0.0",
     "httpx>=0.27.0",
     "pygments>=2.17.0",
     "openai>=1.0.0",

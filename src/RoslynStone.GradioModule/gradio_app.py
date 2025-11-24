@@ -129,50 +129,53 @@ def format_json_output(data: Any) -> str:
         return f'<pre style="background: #272822; color: #f8f8f2; padding: 10px; border-radius: 8px; overflow-x: auto;"><code>{json.dumps(data, indent=2)}</code></pre>'
 
 
-def call_openai_chat(messages: List[Dict], api_key: str, model: str, tools: List[Dict], mcp_client) -> str:
+def call_openai_chat(messages: List[Dict], api_key: str, model: str, tools: List[Dict], mcp_client: McpHttpClient) -> str:
     """Call OpenAI API with MCP tools"""
     try:
         import openai
         client = openai.OpenAI(api_key=api_key)
         
-        response = client.chat.completions.create(
-            model=model,
-            messages=messages,
-            tools=tools if tools else None
-        )
-        
-        message = response.choices[0].message
-        
-        # Handle tool calls
-        if message.tool_calls:
-            for tool_call in message.tool_calls:
-                tool_name = tool_call.function.name
-                tool_args = json.loads(tool_call.function.arguments)
-                
-                # Call MCP tool
-                result = mcp_client.call_tool(tool_name, tool_args)
-                
-                # Add tool result to messages
-                messages.append({
-                    "role": "assistant",
-                    "content": None,
-                    "tool_calls": [{"id": tool_call.id, "function": {"name": tool_name, "arguments": tool_call.function.arguments}, "type": "function"}]
-                })
-                messages.append({
-                    "role": "tool",
-                    "tool_call_id": tool_call.id,
-                    "content": json.dumps(result)
-                })
+        max_iterations = 10
+        for _ in range(max_iterations):
+            response = client.chat.completions.create(
+                model=model,
+                messages=messages,
+                tools=tools if tools else None
+            )
             
-            # Make another call with tool results
-            return call_openai_chat(messages, api_key, model, tools, mcp_client)
+            message = response.choices[0].message
+            
+            # Handle tool calls
+            if message.tool_calls:
+                for tool_call in message.tool_calls:
+                    tool_name = tool_call.function.name
+                    tool_args = json.loads(tool_call.function.arguments)
+                    
+                    # Call MCP tool
+                    result = mcp_client.call_tool(tool_name, tool_args)
+                    
+                    # Add tool result to messages
+                    messages.append({
+                        "role": "assistant",
+                        "content": None,
+                        "tool_calls": [{"id": tool_call.id, "function": {"name": tool_name, "arguments": tool_call.function.arguments}, "type": "function"}]
+                    })
+                    messages.append({
+                        "role": "tool",
+                        "tool_call_id": tool_call.id,
+                        "content": json.dumps(result)
+                    })
+                # Continue loop to make another call with tool results
+                continue
+            
+            return message.content or "No response"
         
-        return message.content or "No response"
+        return "Error: Maximum tool call iterations exceeded"
     except Exception as e:
         return f"Error: {str(e)}"
 
 
-def call_anthropic_chat(messages: List[Dict], api_key: str, model: str, tools: List[Dict], mcp_client) -> str:
+def call_anthropic_chat(messages: List[Dict], api_key: str, model: str, tools: List[Dict], mcp_client: McpHttpClient) -> str:
     """Call Anthropic API with MCP tools"""
     try:
         import anthropic
@@ -185,46 +188,49 @@ def call_anthropic_chat(messages: List[Dict], api_key: str, model: str, tools: L
                 continue
             anthropic_messages.append({"role": msg["role"], "content": msg["content"]})
         
-        response = client.messages.create(
-            model=model,
-            max_tokens=4096,
-            messages=anthropic_messages,
-            tools=tools if tools else None
-        )
-        
-        # Handle tool calls
-        if response.stop_reason == "tool_use":
-            for content in response.content:
-                if content.type == "tool_use":
-                    tool_name = content.name
-                    tool_args = content.input
-                    
-                    # Call MCP tool
-                    result = mcp_client.call_tool(tool_name, tool_args)
-                    
-                    # Add tool result and continue
-                    anthropic_messages.append({
-                        "role": "assistant",
-                        "content": response.content
-                    })
-                    anthropic_messages.append({
-                        "role": "user",
-                        "content": [{
-                            "type": "tool_result",
-                            "tool_use_id": content.id,
-                            "content": json.dumps(result)
-                        }]
-                    })
+        max_iterations = 10
+        for _ in range(max_iterations):
+            response = client.messages.create(
+                model=model,
+                max_tokens=4096,
+                messages=anthropic_messages,
+                tools=tools if tools else None
+            )
             
-            # Make another call with tool results
-            return call_anthropic_chat([{"role": "system", "content": ""}] + anthropic_messages, api_key, model, tools, mcp_client)
+            # Handle tool calls
+            if response.stop_reason == "tool_use":
+                for content in response.content:
+                    if content.type == "tool_use":
+                        tool_name = content.name
+                        tool_args = content.input
+                        
+                        # Call MCP tool
+                        result = mcp_client.call_tool(tool_name, tool_args)
+                        
+                        # Add tool result and continue
+                        anthropic_messages.append({
+                            "role": "assistant",
+                            "content": response.content
+                        })
+                        anthropic_messages.append({
+                            "role": "user",
+                            "content": [{
+                                "type": "tool_result",
+                                "tool_use_id": content.id,
+                                "content": json.dumps(result)
+                            }]
+                        })
+                # Continue loop to make another call with tool results
+                continue
+            
+            return response.content[0].text if response.content else "No response"
         
-        return response.content[0].text if response.content else "No response"
+        return "Error: Maximum tool call iterations exceeded"
     except Exception as e:
         return f"Error: {str(e)}"
 
 
-def call_gemini_chat(messages: List[Dict], api_key: str, model: str, tools: List[Dict], mcp_client) -> str:
+def call_gemini_chat(messages: List[Dict], api_key: str, model: str, tools: List[Dict], mcp_client: McpHttpClient) -> str:
     """Call Google Gemini API with MCP tools"""
     try:
         import google.generativeai as genai
@@ -241,7 +247,7 @@ def call_gemini_chat(messages: List[Dict], api_key: str, model: str, tools: List
         return f"Error: {str(e)}"
 
 
-def call_huggingface_chat(messages: List[Dict], api_key: str, model: str, mcp_client) -> str:
+def call_huggingface_chat(messages: List[Dict], api_key: str, model: str, mcp_client: McpHttpClient) -> str:
     """Call HuggingFace Inference API (supports serverless)"""
     try:
         from huggingface_hub import InferenceClient
@@ -281,11 +287,18 @@ def create_landing_page(base_url: Optional[str] = None) -> gr.Blocks:
     Returns:
         A Gradio Blocks interface
     """
+    import atexit
+    
     if base_url is None:
         base_url = "http://localhost:7071"
     
     # Initialize MCP client
     mcp_client = McpHttpClient(base_url)
+    
+    # Register cleanup to close the HTTP client on exit
+    def cleanup():
+        mcp_client.close()
+    atexit.register(cleanup)
     
     # CSS for better styling with syntax highlighting support
     pygments_css = HtmlFormatter(style='monokai').get_style_defs('.highlight')
@@ -557,17 +570,6 @@ def create_landing_page(base_url: Optional[str] = None) -> gr.Blocks:
                     
                     # Format result nicely
                     result_json = json.dumps(result, indent=2)
-                    
-                    # If result contains C# code, show it with syntax highlighting
-                    if isinstance(result, dict) and 'content' in result:
-                        content = result.get('content', [])
-                        if isinstance(content, list) and len(content) > 0:
-                            first_content = content[0]
-                            if isinstance(first_content, dict) and first_content.get('type') == 'text':
-                                text = first_content.get('text', '')
-                                if 'code' in params:
-                                    # Show the original code with syntax highlighting
-                                    return result_json
                     
                     return result_json
                 

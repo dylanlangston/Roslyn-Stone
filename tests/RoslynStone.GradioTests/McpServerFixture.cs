@@ -81,9 +81,8 @@ public sealed class McpServerFixture : IAsyncDisposable
                 );
             }
 
-            // Extract port from BaseUrl
+            // Extract port from BaseUrl (used in environment variable below)
             var uri = new Uri(BaseUrl);
-            var port = uri.Port;
 
             // Configure the server process
             _serverProcess = new Process
@@ -311,23 +310,25 @@ public sealed class McpServerFixture : IAsyncDisposable
         }
 
         WriteMessage("Stopping MCP server...");
+        var process = _serverProcess;
+        _serverProcess = null;
 
         try
         {
-            if (!_serverProcess.HasExited)
+            if (!process.HasExited)
             {
                 // Kill the entire process tree to ensure Python/Gradio processes are terminated
-                _serverProcess.Kill(entireProcessTree: true);
+                process.Kill(entireProcessTree: true);
 
                 // Wait for graceful exit with timeout
                 using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-                await _serverProcess.WaitForExitAsync(cts.Token).ConfigureAwait(false);
+                await process.WaitForExitAsync(cts.Token).ConfigureAwait(false);
 
-                WriteMessage($"Server stopped gracefully. Exit code: {_serverProcess.ExitCode}");
+                WriteMessage($"Server stopped gracefully. Exit code: {process.ExitCode}");
             }
             else
             {
-                WriteMessage($"Server already exited with code: {_serverProcess.ExitCode}");
+                WriteMessage($"Server already exited with code: {process.ExitCode}");
             }
         }
         catch (InvalidOperationException)
@@ -341,9 +342,9 @@ public sealed class McpServerFixture : IAsyncDisposable
             WriteMessage("[WARNING] Server did not stop gracefully, forcing termination");
             try
             {
-                if (!_serverProcess.HasExited)
+                if (!process.HasExited)
                 {
-                    _serverProcess.Kill(entireProcessTree: true);
+                    process.Kill(entireProcessTree: true);
                 }
             }
             catch (InvalidOperationException)
@@ -357,8 +358,7 @@ public sealed class McpServerFixture : IAsyncDisposable
         }
         finally
         {
-            _serverProcess.Dispose();
-            _serverProcess = null;
+            process.Dispose();
         }
     }
 
