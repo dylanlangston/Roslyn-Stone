@@ -255,9 +255,13 @@ public class McpToolsIntegrationTests : IDisposable
         // Assert
         Assert.NotNull(resultDict);
         Assert.False(resultDict["success"].GetBoolean());
-        Assert.Equal("REPL_CONTEXT_INVALID", resultDict["error"].GetString());
-        Assert.Contains("not found or expired", resultDict["message"].GetString());
-        Assert.Contains("contextId", resultDict["suggestedAction"].GetString());
+
+        // Check new error structure (errors array)
+        Assert.True(resultDict.TryGetValue("errors", out var errorsElement));
+        var errors = errorsElement.EnumerateArray().ToList();
+        Assert.NotEmpty(errors);
+        Assert.Equal("CONTEXT_NOT_FOUND", errors[0].GetProperty("code").GetString());
+        Assert.Contains("not found or expired", errors[0].GetProperty("message").GetString());
     }
 
     [Fact]
@@ -299,7 +303,12 @@ public class McpToolsIntegrationTests : IDisposable
         // Assert
         Assert.NotNull(result2Dict);
         Assert.False(result2Dict["success"].GetBoolean());
-        Assert.Equal("REPL_CONTEXT_INVALID", result2Dict["error"].GetString());
+
+        // Check new error structure (errors array)
+        Assert.True(result2Dict.TryGetValue("errors", out var errorsElement));
+        var errors = errorsElement.EnumerateArray().ToList();
+        Assert.NotEmpty(errors);
+        Assert.Equal("CONTEXT_NOT_FOUND", errors[0].GetProperty("code").GetString());
     }
 
     [Fact]
@@ -491,7 +500,12 @@ public class McpToolsIntegrationTests : IDisposable
         // Context1 should be invalid
         Assert.NotNull(result1AfterDict);
         Assert.False(result1AfterDict["success"].GetBoolean());
-        Assert.Equal("REPL_CONTEXT_INVALID", result1AfterDict["error"].GetString());
+
+        // Check new error structure (errors array)
+        Assert.True(result1AfterDict.TryGetValue("errors", out var errorsElement));
+        var errors = errorsElement.EnumerateArray().ToList();
+        Assert.NotEmpty(errors);
+        Assert.Equal("CONTEXT_NOT_FOUND", errors[0].GetProperty("code").GetString());
 
         // Context2 should still work
         Assert.NotNull(result2AfterDict);

@@ -37,14 +37,14 @@ public class ReplTools
     /// </remarks>
     [McpServerTool]
     [Description(
-        "Execute C# code in a REPL session. Supports both stateful sessions (createContext=true or with contextId) and single-shot execution (createContext=false, default). For stateful: set createContext=true to get contextId for maintaining variables and types across executions. For single-shot: use default createContext=false for temporary execution that is disposed after completion. Can load NuGet packages before execution using nugetPackages parameter. Packages are isolated to the context they are loaded in and are disposed when the context is removed. In stateful contexts, packages persist across executions. Supports async/await, LINQ, and full .NET 10 API."
+        "Execute C# code to create and test single-file utility programs (file-based C# apps using top-level statements). Ideal for building small utilities, scripts, and tools in a single .cs file. Supports both stateful sessions (createContext=true or with contextId) for iterative development and single-shot execution (createContext=false, default) for testing complete programs. Can load NuGet packages before execution using nugetPackages parameter. Supports async/await, LINQ, and full .NET 10 API. Use this to develop file-based C# apps that can be run with 'dotnet run app.cs'. For final self-contained apps, use the #:package directive in your .cs file instead of nugetPackages parameter (e.g., '#:package Newtonsoft.Json@13.0.3' at the top of the file)."
     )]
     public static async Task<object> EvaluateCsharp(
         RoslynScriptingService scriptingService,
         IReplContextManager contextManager,
         NuGetService nugetService,
         [Description(
-            "C# code to execute. Can be expressions, statements, or complete programs. Variables persist in stateful sessions."
+            "C# code to execute. Use top-level statements to create single-file utility programs. Can be expressions, statements, or complete programs. Variables persist in stateful sessions for iterative development."
         )]
             string code,
         [Description(
@@ -62,11 +62,13 @@ public class ReplTools
         CancellationToken cancellationToken = default
     )
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(code);
+
         ScriptState? existingState = null;
         ScriptOptions? contextOptions = null;
         bool isNewContext = false;
-        bool shouldReturnContextId = false;
-        string? activeContextId = null;
+        bool shouldReturnContextId;
+        string activeContextId;
         var packageErrors = new List<string>();
 
         // Handle context logic
@@ -78,9 +80,15 @@ public class ReplTools
                 return new
                 {
                     success = false,
-                    error = "REPL_CONTEXT_INVALID",
-                    message = $"Context '{contextId}' not found or expired. Set createContext=true to create a new persistent session, or omit contextId for a temporary execution.",
-                    suggestedAction = "EvaluateCsharp with createContext=true for a persistent session, or without contextId for a temporary execution",
+                    errors = new[]
+                    {
+                        new
+                        {
+                            code = "CONTEXT_NOT_FOUND",
+                            message = $"Context '{contextId}' not found or expired. Create a new context with createContext: true, or omit contextId to start fresh.",
+                            severity = "Error",
+                        },
+                    },
                     contextId = (string?)null,
                 };
             }
@@ -109,10 +117,19 @@ public class ReplTools
         {
             // Get base script options (from context or service default)
             var baseOptions = contextOptions ?? scriptingService.ScriptOptions;
+            bool packagesAdded = false;
 
             // Load NuGet packages if provided
             if (nugetPackages != null && nugetPackages.Length > 0)
             {
+                // If trying to add packages to an existing context with state, warn that variables will be lost
+                if (existingState != null && !string.IsNullOrWhiteSpace(contextId))
+                {
+                    packageErrors.Add(
+                        "Warning: Adding packages to an existing context resets the session. All previously defined variables, types, and state will be lost due to Roslyn Scripting API limitations (ScriptState.ContinueWithAsync doesn't accept new options). For best results, specify packages when creating the context (createContext=true with nugetPackages at the same time)."
+                    );
+                }
+
                 foreach (var package in nugetPackages)
                 {
                     if (string.IsNullOrWhiteSpace(package.PackageName))
@@ -137,6 +154,7 @@ public class ReplTools
                             baseOptions = baseOptions.AddReferences(
                                 MetadataReference.CreateFromFile(assemblyPath)
                             );
+                            packagesAdded = true;
                         }
                     }
                     catch (Exception ex) when (ex is not OperationCanceledException)
@@ -149,6 +167,15 @@ public class ReplTools
 
                 // Store updated options in context
                 contextManager.UpdateContextOptions(activeContextId, baseOptions);
+
+                // CRITICAL: Reset script state when packages are added
+                // ScriptState.ContinueWithAsync() doesn't accept new options,
+                // so we must start fresh to use the updated options with new packages
+                // This means all variables/state will be lost, which is why we warn above
+                if (packagesAdded && existingState != null)
+                {
+                    existingState = null;
+                }
             }
             // If this is a new context and no packages were loaded, store the base options
             else if (isNewContext)
@@ -231,12 +258,14 @@ public class ReplTools
     /// <param name="cancellationToken">Cancellation token for async operations</param>
     [McpServerTool]
     [Description(
-        "Validate C# code syntax and semantics WITHOUT executing it. Supports context-aware validation (with contextId) to check against session variables, or context-free validation (without contextId). Returns detailed error/warning information. Fast and safe."
+        "Validate C# code syntax and semantics WITHOUT executing it. Use this to check single-file utility programs before execution. Supports context-aware validation (with contextId) to check against session variables, or context-free validation (without contextId). Returns detailed error/warning information. Fast and safe."
     )]
     public static Task<object> ValidateCsharp(
         RoslynScriptingService scriptingService,
         IReplContextManager contextManager,
-        [Description("C# code to validate. Checks syntax and semantics without executing.")]
+        [Description(
+            "C# code to validate. Use top-level statements for single-file utility programs. Checks syntax and semantics without executing."
+        )]
             string code,
         [Description(
             "Optional context ID for context-aware validation. Omit for context-free syntax checking."
@@ -245,6 +274,8 @@ public class ReplTools
         CancellationToken cancellationToken = default
     )
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(code);
+
         ScriptState? existingState = null;
         ScriptOptions? contextOptions = null;
 
@@ -351,7 +382,7 @@ public class ReplTools
     /// <returns>Information about current REPL state and capabilities</returns>
     [McpServerTool]
     [Description(
-        "Access current REPL environment state and capabilities. Returns information about framework version, available namespaces, loaded assemblies, imported NuGet packages, current variables in scope, and REPL capabilities. Optionally provide contextId for session-specific state information."
+        "Access current execution environment state and capabilities. Returns information about framework version, available namespaces, loaded assemblies, imported NuGet packages, and capabilities for building single-file C# utility programs. Optionally provide contextId for session-specific state information."
     )]
     public static object GetReplInfo(
         RoslynScriptingService scriptingService,
@@ -375,14 +406,16 @@ public class ReplTools
 
         var tips = new List<string>
         {
-            "Variables and types persist between executions",
-            "Use 'using' directives to import additional namespaces",
+            "Create single-file utility programs using top-level statements",
+            "Use 'using' directives at the top to import namespaces",
             "Console.WriteLine output is captured separately from return values",
-            "Async/await is fully supported in the REPL",
-            "Use LoadNuGetPackage or SearchNuGetPackages to add external libraries",
-            "Use ResetRepl to clear all state and start fresh",
-            "Use ValidateCsharp to check syntax before execution",
+            "Async/await is fully supported for async operations",
+            "Use nugetPackages parameter to load external libraries inline during testing",
+            "Use LoadNuGetPackage or SearchNuGetPackages to discover and add libraries",
+            "Use ValidateCsharp to check your utility program before execution",
             "Use GetDocumentation to learn about .NET APIs",
+            "Build complete, runnable .cs files that work with 'dotnet run app.cs'",
+            "For final self-contained apps, use #:package directive instead of nugetPackages",
         };
 
         var capabilities = new
@@ -397,11 +430,12 @@ public class ReplTools
 
         var examples = new
         {
-            simpleExpression = "2 + 2",
-            variableDeclaration = "var name = \"Alice\"; name",
-            asyncOperation = "await Task.Delay(100); \"Done\"",
-            linqQuery = "new[] { 1, 2, 3 }.Select(x => x * 2)",
-            consoleOutput = "Console.WriteLine(\"Debug\"); return \"Result\"",
+            helloWorld = "Console.WriteLine(\"Hello, World!\");",
+            simpleUtility = "var args = Environment.GetCommandLineArgs(); Console.WriteLine($\"Args: {string.Join(\", \", args)}\");",
+            asyncOperation = "await Task.Delay(100); Console.WriteLine(\"Done\");",
+            linqQuery = "var numbers = new[] { 1, 2, 3, 4, 5 }; var doubled = numbers.Select(x => x * 2); Console.WriteLine(string.Join(\", \", doubled));",
+            fileBasedApp = "// Single-file utility program\nusing System.IO;\nvar files = Directory.GetFiles(\".\");\nforeach (var file in files) Console.WriteLine(Path.GetFileName(file));",
+            withPackages = "// Testing with package loading\n// EvaluateCsharp with nugetPackages: [{packageName: 'Humanizer', version: '3.0.1'}]\nusing Humanizer;\n\"test\".Humanize()",
         };
 
         object? sessionMetadata = null;

@@ -76,6 +76,8 @@ public class NuGetService : IDisposable
         CancellationToken cancellationToken = default
     )
     {
+        ArgumentNullException.ThrowIfNull(query);
+
         var searchResource = await _repository.GetResourceAsync<PackageSearchResource>(
             cancellationToken
         );
@@ -120,11 +122,13 @@ public class NuGetService : IDisposable
     /// <param name="packageId">Package ID</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of package versions</returns>
-    public async Task<List<PackageVersion>> GetPackageVersionsAsync(
+    public async Task<IReadOnlyList<PackageVersion>> GetPackageVersionsAsync(
         string packageId,
         CancellationToken cancellationToken = default
     )
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(packageId);
+
         var metadataResource = await _repository.GetResourceAsync<PackageMetadataResource>(
             cancellationToken
         );
@@ -163,6 +167,7 @@ public class NuGetService : IDisposable
         CancellationToken cancellationToken = default
     )
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(packageId);
         // Get package metadata to find the version
         var metadataResource = await _repository.GetResourceAsync<PackageMetadataResource>(
             cancellationToken
@@ -257,12 +262,35 @@ public class NuGetService : IDisposable
     /// <param name="version">Package version (optional, uses latest if not specified)</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of assembly file paths</returns>
-    public async Task<List<string>> DownloadPackageAsync(
+    public async Task<IReadOnlyList<string>> DownloadPackageAsync(
         string packageId,
         string? version = null,
         CancellationToken cancellationToken = default
     )
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(packageId);
+
+        return await DownloadPackageWithDependenciesAsync(
+            packageId,
+            version,
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase),
+            cancellationToken
+        );
+    }
+
+    private async Task<List<string>> DownloadPackageWithDependenciesAsync(
+        string packageId,
+        string? version,
+        HashSet<string> visitedPackages,
+        CancellationToken cancellationToken
+    )
+    {
+        // Avoid infinite loops and duplicate processing
+        if (!visitedPackages.Add(packageId))
+        {
+            return new List<string>();
+        }
+
         // Get package metadata
         var metadataResource = await _repository.GetResourceAsync<PackageMetadataResource>(
             cancellationToken
@@ -325,6 +353,47 @@ public class NuGetService : IDisposable
         // Get lib files that match the current framework
         var libItems = packageReader.GetLibItems().ToList();
 
+        // ALWAYS resolve and download dependencies first (depth-first)
+        var dependencies = packageMetadata
+            .DependencySets.SelectMany(ds => ds.Packages)
+            .Select(p => p.Id)
+            .Distinct()
+            .ToList();
+
+        if (dependencies.Count > 0)
+        {
+            // Recursively download each dependency
+            foreach (var depId in dependencies)
+            {
+                try
+                {
+                    var depAssemblies = await DownloadPackageWithDependenciesAsync(
+                        depId,
+                        null,
+                        visitedPackages,
+                        cancellationToken
+                    );
+                    assemblies.AddRange(depAssemblies);
+                }
+                catch (InvalidOperationException)
+                {
+                    // Package not found or download failed - dependencies are optional
+                    // Log would go here if logger was available
+                }
+                catch (IOException)
+                {
+                    // File system error - dependencies are optional
+                    // Log would go here if logger was available
+                }
+            }
+        }
+
+        // If this is a metapackage (no lib items), we're done (dependencies already processed above)
+        if (libItems.Count == 0)
+        {
+            return assemblies;
+        }
+
         // Use NuGet framework compatibility logic to select the best framework
         var currentFramework = NuGetFramework.Parse($"net{Environment.Version.Major}.0");
         var reducer = new FrameworkReducer();
@@ -371,6 +440,7 @@ public class NuGetService : IDisposable
         CancellationToken cancellationToken = default
     )
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(packageId);
         try
         {
             var metadataResource = await _repository.GetResourceAsync<PackageMetadataResource>(

@@ -27,20 +27,17 @@ public static class MetadataReferenceHelper
 
         // Add System.Runtime facade assembly
         // In .NET Core/.NET 5+, many assemblies reference System.Runtime even though types are in System.Private.CoreLib
-        var runtimeAssemblyPath = Path.Combine(
-            Path.GetDirectoryName(typeof(object).Assembly.Location)!,
-            "System.Runtime.dll"
-        );
+        var coreLibDirectory = Path.GetDirectoryName(typeof(object).Assembly.Location);
+        ArgumentNullException.ThrowIfNull(coreLibDirectory);
+
+        var runtimeAssemblyPath = Path.Combine(coreLibDirectory, "System.Runtime.dll");
         if (File.Exists(runtimeAssemblyPath))
         {
             refs.Add(MetadataReference.CreateFromFile(runtimeAssemblyPath));
         }
 
         // Add System.Collections
-        var collectionsAssemblyPath = Path.Combine(
-            Path.GetDirectoryName(typeof(object).Assembly.Location)!,
-            "System.Collections.dll"
-        );
+        var collectionsAssemblyPath = Path.Combine(coreLibDirectory, "System.Collections.dll");
         if (File.Exists(collectionsAssemblyPath))
         {
             refs.Add(MetadataReference.CreateFromFile(collectionsAssemblyPath));

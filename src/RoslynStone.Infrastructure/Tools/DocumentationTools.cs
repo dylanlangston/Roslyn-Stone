@@ -35,6 +35,8 @@ public class DocumentationTools
         CancellationToken cancellationToken = default
     )
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(symbolName);
+
         var doc = await documentationService.GetDocumentationAsync(
             symbolName,
             packageId,

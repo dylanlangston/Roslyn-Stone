@@ -11,6 +11,7 @@ public class DocumentationService
 {
     private readonly Dictionary<string, XDocument> _documentationCache = new();
     private readonly NuGetService? _nugetService;
+    private readonly List<string> _dotnetRefAssemblyPaths = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DocumentationService"/> class
@@ -19,6 +20,77 @@ public class DocumentationService
     public DocumentationService(NuGetService? nugetService = null)
     {
         _nugetService = nugetService;
+        InitializeDotnetRefAssemblyPaths();
+    }
+
+    /// <summary>
+    /// Initialize paths to .NET SDK reference assembly XML documentation
+    /// </summary>
+    private void InitializeDotnetRefAssemblyPaths()
+    {
+        try
+        {
+            // Common locations for .NET reference assemblies across platforms
+            var possibleBasePaths = new[]
+            {
+                "/usr/share/dotnet/packs", // Linux
+                Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+                    "dotnet",
+                    "packs"
+                ), // Windows
+                Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86),
+                    "dotnet",
+                    "packs"
+                ), // Windows x86
+                "/usr/local/share/dotnet/packs", // macOS
+            };
+
+            var refAssemblyPaths = possibleBasePaths
+                .Where(Directory.Exists)
+                .Select(basePath => Path.Combine(basePath, "Microsoft.NETCore.App.Ref"))
+                .Where(Directory.Exists)
+                .SelectMany(GetRefAssemblyPathsFromPack)
+                .ToList();
+
+            _dotnetRefAssemblyPaths.AddRange(refAssemblyPaths);
+        }
+        catch (Exception ex)
+            when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            // If initialization fails, we'll fall back to standard assembly location lookup
+            // Gracefully degrade rather than failing the entire service
+        }
+    }
+
+    /// <summary>
+    /// Get reference assembly paths from a .NET pack directory
+    /// </summary>
+    private static IEnumerable<string> GetRefAssemblyPathsFromPack(string packPath)
+    {
+        try
+        {
+            // Get all version directories, sorted descending (newest first)
+            return Directory
+                .GetDirectories(packPath)
+                .OrderByDescending(d => d)
+                .SelectMany(versionDir =>
+                {
+                    var refDir = Path.Combine(versionDir, "ref");
+                    return Directory.Exists(refDir)
+                        ? Directory
+                            .GetDirectories(refDir)
+                            .OrderByDescending(d => d)
+                            .Where(tfmDir => Directory.GetFiles(tfmDir, "*.xml").Length > 0)
+                        : [];
+                });
+        }
+        catch (Exception ex)
+            when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            return [];
+        }
     }
 
     /// <summary>
@@ -32,6 +104,10 @@ public class DocumentationService
         CancellationToken cancellationToken = default
     )
     {
+        ArgumentNullException.ThrowIfNull(symbolName);
+        if (string.IsNullOrWhiteSpace(symbolName))
+            return null;
+
         return await GetDocumentationAsync(symbolName, packageId: null, cancellationToken);
     }
 
@@ -48,6 +124,10 @@ public class DocumentationService
         CancellationToken cancellationToken = default
     )
     {
+        ArgumentNullException.ThrowIfNull(symbolName);
+        if (string.IsNullOrWhiteSpace(symbolName))
+            return null;
+
         try
         {
             // First, try the standard approach (loaded assemblies)
@@ -64,19 +144,16 @@ public class DocumentationService
 
                     if (memberElement != null)
                     {
-                        return new DocumentationInfo
-                        {
-                            SymbolName = symbolName,
-                            Summary = GetElementValue(memberElement, "summary"),
-                            Remarks = GetElementValue(memberElement, "remarks"),
-                            Parameters = GetParameters(memberElement),
-                            Returns = GetElementValue(memberElement, "returns"),
-                            Exceptions = GetExceptions(memberElement),
-                            Example = GetElementValue(memberElement, "example"),
-                            FullDocumentation = memberElement.ToString(),
-                        };
+                        return CreateDocumentationInfo(memberElement, symbolName);
                     }
                 }
+            }
+
+            // If not found in loaded assemblies, search .NET SDK reference assemblies
+            var sdkDocumentation = SearchDotnetRefAssemblies(symbolName);
+            if (sdkDocumentation != null)
+            {
+                return sdkDocumentation;
             }
 
             // If not found and packageId is provided, try NuGet package documentation
@@ -91,8 +168,9 @@ public class DocumentationService
 
             return null;
         }
-        catch
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            // Gracefully degrade on any unexpected errors
             return null;
         }
     }
@@ -111,15 +189,24 @@ public class DocumentationService
                 // Try searching for types with the name
                 var types = assembly
                     .GetTypes()
-                    .Where(t => t.FullName?.Contains(symbolName) == true || t.Name == symbolName)
+                    .Where(t =>
+                        t.FullName?.Contains(symbolName, StringComparison.Ordinal) == true
+                        || t.Name == symbolName
+                    )
                     .ToList(); // Materialize to avoid multiple enumeration
 
                 if (types.Count > 0)
                     return types[0];
             }
-            catch
+            catch (Exception ex)
+                when (ex
+                        is ReflectionTypeLoadException
+                            or FileNotFoundException
+                            or FileLoadException
+                            or BadImageFormatException
+                )
             {
-                // Skip assemblies that can't be loaded
+                // Skip assemblies that can't be loaded or inspected
             }
         }
 
@@ -137,8 +224,12 @@ public class DocumentationService
 
         try
         {
+            var assemblyLocation = assembly.Location;
+            if (string.IsNullOrEmpty(assemblyLocation))
+                return null;
+
             var xmlPath = Path.Combine(
-                Path.GetDirectoryName(assembly.Location) ?? "",
+                Path.GetDirectoryName(assemblyLocation) ?? "",
                 $"{assemblyName}.xml"
             );
 
@@ -149,12 +240,137 @@ public class DocumentationService
                 return doc;
             }
         }
-        catch
+        catch (Exception ex)
+            when (ex is IOException or UnauthorizedAccessException or System.Xml.XmlException)
         {
-            // XML documentation not available
+            // XML documentation not available or can't be loaded
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Search .NET SDK reference assemblies for documentation
+    /// </summary>
+    private DocumentationInfo? SearchDotnetRefAssemblies(string symbolName)
+    {
+        if (_dotnetRefAssemblyPaths.Count == 0)
+            return null;
+
+        try
+        {
+            // Try different member name formats
+            var possibleMemberNames = new[]
+            {
+                $"T:{symbolName}", // Type
+                $"M:{symbolName}", // Method
+                $"P:{symbolName}", // Property
+                $"F:{symbolName}", // Field
+                $"E:{symbolName}", // Event
+            };
+
+            var docInfo = _dotnetRefAssemblyPaths
+                .SelectMany(GetXmlFilesFromDirectory)
+                .Select(xmlFile =>
+                    (xmlFile, xmlDoc: LoadOrGetCachedXmlDocument(xmlFile, $"sdk:{xmlFile}"))
+                )
+                .Where(tuple => tuple.xmlDoc != null)
+                .Select(tuple =>
+                    FindMemberDocumentation(tuple.xmlDoc!, possibleMemberNames, symbolName)
+                )
+                .FirstOrDefault(doc => doc != null);
+
+            if (docInfo != null)
+                return docInfo;
+
+            return null;
+        }
+        catch (Exception ex)
+            when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            // Gracefully degrade on file system errors
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Get all XML files from a directory, handling I/O errors gracefully
+    /// </summary>
+    private static string[] GetXmlFilesFromDirectory(string directory)
+    {
+        try
+        {
+            return Directory.GetFiles(directory, "*.xml");
+        }
+        catch (Exception ex)
+            when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            return [];
+        }
+    }
+
+    /// <summary>
+    /// Load XML document from file or get from cache
+    /// </summary>
+    private XDocument? LoadOrGetCachedXmlDocument(string xmlFile, string cacheKey)
+    {
+        if (_documentationCache.TryGetValue(cacheKey, out var cached))
+            return cached;
+
+        try
+        {
+            var xmlDoc = XDocument.Load(xmlFile);
+            _documentationCache[cacheKey] = xmlDoc;
+            return xmlDoc;
+        }
+        catch (Exception ex)
+            when (ex is IOException or UnauthorizedAccessException or System.Xml.XmlException)
+        {
+            // Skip files that can't be loaded
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Find documentation for a member in an XML document
+    /// </summary>
+    private DocumentationInfo? FindMemberDocumentation(
+        XDocument xmlDoc,
+        string[] possibleMemberNames,
+        string symbolName
+    )
+    {
+        foreach (var memberName in possibleMemberNames)
+        {
+            var memberElement = xmlDoc
+                .Descendants("member")
+                .FirstOrDefault(m => m.Attribute("name")?.Value == memberName);
+
+            if (memberElement != null)
+            {
+                return CreateDocumentationInfo(memberElement, symbolName);
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Create a DocumentationInfo object from an XML member element
+    /// </summary>
+    private DocumentationInfo CreateDocumentationInfo(XElement memberElement, string symbolName)
+    {
+        return new DocumentationInfo
+        {
+            SymbolName = symbolName,
+            Summary = GetElementValue(memberElement, "summary"),
+            Remarks = GetElementValue(memberElement, "remarks"),
+            Parameters = GetParameters(memberElement),
+            Returns = GetElementValue(memberElement, "returns"),
+            Exceptions = GetExceptions(memberElement),
+            Example = GetElementValue(memberElement, "example"),
+            FullDocumentation = memberElement.ToString(),
+        };
     }
 
     private string GetMemberName(Type type, string symbolName)
@@ -228,31 +444,7 @@ public class DocumentationService
                 $"E:{symbolName}", // Event
             };
 
-            XElement? memberElement = null;
-            foreach (var memberName in possibleMemberNames)
-            {
-                memberElement = xmlDoc
-                    .Descendants("member")
-                    .FirstOrDefault(m => m.Attribute("name")?.Value == memberName);
-
-                if (memberElement != null)
-                    break;
-            }
-
-            if (memberElement == null)
-                return null;
-
-            return new DocumentationInfo
-            {
-                SymbolName = symbolName,
-                Summary = GetElementValue(memberElement, "summary"),
-                Remarks = GetElementValue(memberElement, "remarks"),
-                Parameters = GetParameters(memberElement),
-                Returns = GetElementValue(memberElement, "returns"),
-                Exceptions = GetExceptions(memberElement),
-                Example = GetElementValue(memberElement, "example"),
-                FullDocumentation = memberElement.ToString(),
-            };
+            return FindMemberDocumentation(xmlDoc, possibleMemberNames, symbolName);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

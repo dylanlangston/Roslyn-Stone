@@ -3,46 +3,46 @@ namespace RoslynStone.Core.Models;
 /// <summary>
 /// XML documentation information for a symbol
 /// </summary>
-public class DocumentationInfo
+public record DocumentationInfo
 {
     /// <summary>
-    /// Gets or sets the symbol name
+    /// Gets the symbol name
     /// </summary>
-    public string SymbolName { get; init; } = string.Empty;
+    public required string SymbolName { get; init; }
 
     /// <summary>
-    /// Gets or sets the summary documentation
+    /// Gets the summary documentation
     /// </summary>
     public string? Summary { get; init; }
 
     /// <summary>
-    /// Gets or sets the remarks documentation
+    /// Gets the remarks documentation
     /// </summary>
     public string? Remarks { get; init; }
 
     /// <summary>
-    /// Gets or sets the parameter documentation
+    /// Gets the parameter documentation
     /// </summary>
-    public Dictionary<string, string> Parameters { get; init; } = new();
+    public IReadOnlyDictionary<string, string> Parameters { get; init; } =
+        new Dictionary<string, string>();
 
     /// <summary>
-    /// Gets or sets the return value documentation
+    /// Gets the return value documentation
     /// </summary>
     public string? Returns { get; init; }
 
     /// <summary>
-    /// Gets or sets the exception documentation
+    /// Gets the exception documentation
     /// </summary>
-    public List<string> Exceptions { get; init; } = new();
+    public IReadOnlyList<string> Exceptions { get; init; } = Array.Empty<string>();
 
     /// <summary>
-    /// Gets or sets the example documentation
+    /// Gets the example documentation
     /// </summary>
     public string? Example { get; init; }
 
     /// <summary>
-    /// Gets or sets the full XML documentation
+    /// Gets the full XML documentation
     /// </summary>
-    // ReSharper disable once UnusedAutoPropertyAccessor.Global
     public string? FullDocumentation { get; init; }
 }
