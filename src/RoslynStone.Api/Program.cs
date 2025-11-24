@@ -121,9 +121,29 @@ if (useHttpTransport)
                     ClusterId = "gradio-cluster",
                     Match = new Yarp.ReverseProxy.Configuration.RouteMatch
                     {
+                        Path = "/assets/{**catch-all}",
+                    },
+                    Order = 100, // High priority for assets (JS, CSS, fonts)
+                },
+                new Yarp.ReverseProxy.Configuration.RouteConfig
+                {
+                    RouteId = "gradio-files",
+                    ClusterId = "gradio-cluster",
+                    Match = new Yarp.ReverseProxy.Configuration.RouteMatch
+                    {
+                        Path = "/file/{**catch-all}",
+                    },
+                    Order = 100, // High priority for Gradio file serving
+                },
+                new Yarp.ReverseProxy.Configuration.RouteConfig
+                {
+                    RouteId = "gradio-api",
+                    ClusterId = "gradio-cluster",
+                    Match = new Yarp.ReverseProxy.Configuration.RouteMatch
+                    {
                         Path = "/gradio/{**catch-all}",
                     },
-                    Order = 100, // High priority for Gradio assets
+                    Order = 100, // High priority for Gradio API routes
                 },
             },
             new[]
@@ -209,16 +229,45 @@ if (useHttpTransport)
         async (context, next) =>
         {
             // Add security headers for proxied Gradio responses
-            if (
+            // But allow more permissive settings for HuggingFace Spaces iframe embedding
+            var isGradioRequest =
                 context.Request.Path.StartsWithSegments("/")
                 || context.Request.Path.StartsWithSegments("/gradio")
-            )
+                || context.Request.Path.StartsWithSegments("/assets")
+                || context.Request.Path.StartsWithSegments("/file");
+
+            if (isGradioRequest)
             {
                 context.Response.OnStarting(() =>
                 {
-                    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
-                    context.Response.Headers["X-Frame-Options"] = "SAMEORIGIN";
+                    // Allow content sniffing for proper MIME type detection
+                    // This is needed because Gradio serves JS modules
+                    if (!context.Response.Headers.ContainsKey("X-Content-Type-Options"))
+                    {
+                        context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+                    }
+
+                    // Allow iframe embedding in HuggingFace Spaces
+                    // Use ALLOWALL for HF Spaces, SAMEORIGIN for others
+                    if (isHuggingFaceSpace)
+                    {
+                        context.Response.Headers["X-Frame-Options"] = "ALLOWALL";
+                    }
+                    else
+                    {
+                        context.Response.Headers["X-Frame-Options"] = "SAMEORIGIN";
+                    }
+
+                    // Set permissive CSP for Gradio assets (needs unsafe-inline, unsafe-eval)
+                    // Gradio uses inline scripts and eval for dynamic UI
+                    context.Response.Headers["Content-Security-Policy"] =
+                        "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https:; "
+                        + "img-src 'self' data: blob: https:; "
+                        + "font-src 'self' data: https:; "
+                        + "connect-src 'self' https: wss: ws:;";
+
                     context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+
                     return Task.CompletedTask;
                 });
             }
