@@ -20,7 +20,7 @@ public class GuidancePromptsTests
         Assert.NotNull(result);
         Assert.NotEmpty(result);
         Assert.Contains("Roslyn-Stone", result);
-        Assert.Contains("REPL", result);
+        Assert.Contains("Single-File", result);
         Assert.Contains("EvaluateCsharp", result);
         Assert.Contains("ValidateCsharp", result);
         Assert.Contains("doc://", result);
@@ -70,8 +70,8 @@ public class GuidancePromptsTests
         Assert.NotNull(result);
         Assert.NotEmpty(result);
         Assert.Contains("Best Practices", result);
-        Assert.Contains("Session Management", result);
-        Assert.Contains("Incremental Development", result);
+        Assert.Contains("File-Based App", result);
+        Assert.Contains("Iterative", result);
         Assert.Contains("contextId", result);
     }
 

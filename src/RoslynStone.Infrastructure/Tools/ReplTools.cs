@@ -37,14 +37,14 @@ public class ReplTools
     /// </remarks>
     [McpServerTool]
     [Description(
-        "Execute C# code in a REPL session. Supports both stateful sessions (createContext=true or with contextId) and single-shot execution (createContext=false, default). For stateful: set createContext=true to get contextId for maintaining variables and types across executions. For single-shot: use default createContext=false for temporary execution that is disposed after completion. Can load NuGet packages before execution using nugetPackages parameter. Packages are isolated to the context they are loaded in and are disposed when the context is removed. In stateful contexts, packages persist across executions. Supports async/await, LINQ, and full .NET 10 API."
+        "Execute C# code to create and test single-file utility programs (file-based C# apps using top-level statements). Ideal for building small utilities, scripts, and tools in a single .cs file. Supports both stateful sessions (createContext=true or with contextId) for iterative development and single-shot execution (createContext=false, default) for testing complete programs. Can load NuGet packages before execution using nugetPackages parameter. Supports async/await, LINQ, and full .NET 10 API. Use this to develop file-based C# apps that can be run with 'dotnet run app.cs'."
     )]
     public static async Task<object> EvaluateCsharp(
         RoslynScriptingService scriptingService,
         IReplContextManager contextManager,
         NuGetService nugetService,
         [Description(
-            "C# code to execute. Can be expressions, statements, or complete programs. Variables persist in stateful sessions."
+            "C# code to execute. Use top-level statements to create single-file utility programs. Can be expressions, statements, or complete programs. Variables persist in stateful sessions for iterative development."
         )]
             string code,
         [Description(
@@ -231,12 +231,12 @@ public class ReplTools
     /// <param name="cancellationToken">Cancellation token for async operations</param>
     [McpServerTool]
     [Description(
-        "Validate C# code syntax and semantics WITHOUT executing it. Supports context-aware validation (with contextId) to check against session variables, or context-free validation (without contextId). Returns detailed error/warning information. Fast and safe."
+        "Validate C# code syntax and semantics WITHOUT executing it. Use this to check single-file utility programs before execution. Supports context-aware validation (with contextId) to check against session variables, or context-free validation (without contextId). Returns detailed error/warning information. Fast and safe."
     )]
     public static Task<object> ValidateCsharp(
         RoslynScriptingService scriptingService,
         IReplContextManager contextManager,
-        [Description("C# code to validate. Checks syntax and semantics without executing.")]
+        [Description("C# code to validate. Use top-level statements for single-file utility programs. Checks syntax and semantics without executing.")]
             string code,
         [Description(
             "Optional context ID for context-aware validation. Omit for context-free syntax checking."
@@ -351,7 +351,7 @@ public class ReplTools
     /// <returns>Information about current REPL state and capabilities</returns>
     [McpServerTool]
     [Description(
-        "Access current REPL environment state and capabilities. Returns information about framework version, available namespaces, loaded assemblies, imported NuGet packages, current variables in scope, and REPL capabilities. Optionally provide contextId for session-specific state information."
+        "Access current execution environment state and capabilities. Returns information about framework version, available namespaces, loaded assemblies, imported NuGet packages, and capabilities for building single-file C# utility programs. Optionally provide contextId for session-specific state information."
     )]
     public static object GetReplInfo(
         RoslynScriptingService scriptingService,
@@ -375,14 +375,14 @@ public class ReplTools
 
         var tips = new List<string>
         {
-            "Variables and types persist between executions",
-            "Use 'using' directives to import additional namespaces",
+            "Create single-file utility programs using top-level statements",
+            "Use 'using' directives at the top to import namespaces",
             "Console.WriteLine output is captured separately from return values",
-            "Async/await is fully supported in the REPL",
+            "Async/await is fully supported for async operations",
             "Use LoadNuGetPackage or SearchNuGetPackages to add external libraries",
-            "Use ResetRepl to clear all state and start fresh",
-            "Use ValidateCsharp to check syntax before execution",
+            "Use ValidateCsharp to check your utility program before execution",
             "Use GetDocumentation to learn about .NET APIs",
+            "Build complete, runnable .cs files that work with 'dotnet run app.cs'",
         };
 
         var capabilities = new
@@ -397,11 +397,11 @@ public class ReplTools
 
         var examples = new
         {
-            simpleExpression = "2 + 2",
-            variableDeclaration = "var name = \"Alice\"; name",
-            asyncOperation = "await Task.Delay(100); \"Done\"",
-            linqQuery = "new[] { 1, 2, 3 }.Select(x => x * 2)",
-            consoleOutput = "Console.WriteLine(\"Debug\"); return \"Result\"",
+            helloWorld = "Console.WriteLine(\"Hello, World!\");",
+            simpleUtility = "var args = Environment.GetCommandLineArgs(); Console.WriteLine($\"Args: {string.Join(\", \", args)}\");",
+            asyncOperation = "await Task.Delay(100); Console.WriteLine(\"Done\");",
+            linqQuery = "var numbers = new[] { 1, 2, 3, 4, 5 }; var doubled = numbers.Select(x => x * 2); Console.WriteLine(string.Join(\", \", doubled));",
+            fileBasedApp = "// Single-file utility program\nusing System.IO;\nvar files = Directory.GetFiles(\".\");\nforeach (var file in files) Console.WriteLine(Path.GetFileName(file));",
         };
 
         object? sessionMetadata = null;
