@@ -263,6 +263,23 @@ public class NuGetService : IDisposable
         CancellationToken cancellationToken = default
     )
     {
+        return await DownloadPackageWithDependenciesAsync(packageId, version, new HashSet<string>(StringComparer.OrdinalIgnoreCase), cancellationToken);
+    }
+
+    private async Task<List<string>> DownloadPackageWithDependenciesAsync(
+        string packageId,
+        string? version,
+        HashSet<string> visitedPackages,
+        CancellationToken cancellationToken
+    )
+    {
+        // Avoid infinite loops and duplicate processing
+        if (visitedPackages.Contains(packageId))
+        {
+            return new List<string>();
+        }
+        visitedPackages.Add(packageId);
+        
         // Get package metadata
         var metadataResource = await _repository.GetResourceAsync<PackageMetadataResource>(
             cancellationToken
@@ -324,6 +341,40 @@ public class NuGetService : IDisposable
 
         // Get lib files that match the current framework
         var libItems = packageReader.GetLibItems().ToList();
+        foreach (var item in libItems)
+        {
+        }
+
+        // ALWAYS resolve and download dependencies first (depth-first)
+        var dependencies = packageMetadata.DependencySets
+            .SelectMany(ds => ds.Packages)
+            .Select(p => p.Id)
+            .Distinct()
+            .ToList();
+        
+        if (dependencies.Count > 0)
+        {
+            
+            // Recursively download each dependency
+            foreach (var depId in dependencies)
+            {
+                try
+                {
+                    var depAssemblies = await DownloadPackageWithDependenciesAsync(depId, null, visitedPackages, cancellationToken);
+                    assemblies.AddRange(depAssemblies);
+                }
+                catch (Exception)
+                {
+                    // Silently skip dependencies that fail to download
+                }
+            }
+        }
+        
+        // If this is a metapackage (no lib items), we're done (dependencies already processed above)
+        if (libItems.Count == 0)
+        {
+            return assemblies;
+        }
 
         // Use NuGet framework compatibility logic to select the best framework
         var currentFramework = NuGetFramework.Parse($"net{Environment.Version.Major}.0");
@@ -338,6 +389,7 @@ public class NuGetService : IDisposable
                 ? libItems.FirstOrDefault(l => l.TargetFramework.Equals(nearestFramework))
                 : libItems.OrderByDescending(g => g.TargetFramework.Version).FirstOrDefault();
 
+
         if (targetFramework != null)
         {
             var packagePath = Path.Combine(
@@ -345,6 +397,7 @@ public class NuGetService : IDisposable
                 packageId.ToLowerInvariant(),
                 packageMetadata.Identity.Version.ToNormalizedString()
             );
+
 
             assemblies.AddRange(
                 targetFramework
@@ -355,6 +408,7 @@ public class NuGetService : IDisposable
                     .Select(file => Path.Combine(packagePath, file))
                     .Where(File.Exists)
             );
+            
         }
 
         return assemblies;

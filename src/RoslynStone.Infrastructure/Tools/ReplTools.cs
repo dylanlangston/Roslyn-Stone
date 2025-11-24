@@ -117,9 +117,11 @@ public class ReplTools
             var baseOptions = contextOptions ?? scriptingService.ScriptOptions;
             bool packagesAdded = false;
 
+
             // Load NuGet packages if provided
             if (nugetPackages != null && nugetPackages.Length > 0)
             {
+                
                 // If trying to add packages to an existing context with state, warn that variables will be lost
                 if (existingState != null && !string.IsNullOrWhiteSpace(contextId))
                 {
@@ -145,6 +147,12 @@ public class ReplTools
                             cancellationToken
                         );
 
+                        
+                        if (assemblyPaths == null)
+                        {
+                            continue;
+                        }
+                        
                         // Add assemblies to context-specific options using MetadataReference
                         // This avoids loading assemblies into the runtime (Assembly.LoadFrom)
                         foreach (var assemblyPath in assemblyPaths.Where(File.Exists))
@@ -154,6 +162,7 @@ public class ReplTools
                             );
                             packagesAdded = true;
                         }
+                        
                     }
                     catch (Exception ex) when (ex is not OperationCanceledException)
                     {
