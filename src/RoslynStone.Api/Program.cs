@@ -96,6 +96,66 @@ if (useHttpTransport)
 
     builder.Services.AddHttpClient();
 
+    // Get Gradio server port configuration early for YARP setup
+    var configuration = builder.Configuration;
+    var isHuggingFaceSpace = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SPACE_ID"));
+    var defaultGradioPort = isHuggingFaceSpace ? 7861 : 7860;
+    var gradioPort = configuration.GetValue<int>("GradioServerPort", defaultGradioPort);
+
+    // Add YARP reverse proxy for Gradio landing page
+    builder
+        .Services.AddReverseProxy()
+        .LoadFromMemory(
+            new[]
+            {
+                new Yarp.ReverseProxy.Configuration.RouteConfig
+                {
+                    RouteId = "gradio-root",
+                    ClusterId = "gradio-cluster",
+                    Match = new Yarp.ReverseProxy.Configuration.RouteMatch { Path = "/" },
+                    Order = 100, // High priority for exact root match
+                },
+                new Yarp.ReverseProxy.Configuration.RouteConfig
+                {
+                    RouteId = "gradio-assets",
+                    ClusterId = "gradio-cluster",
+                    Match = new Yarp.ReverseProxy.Configuration.RouteMatch
+                    {
+                        Path = "/gradio/{**catch-all}",
+                    },
+                    Order = 100, // High priority for Gradio assets
+                },
+            },
+            new[]
+            {
+                new Yarp.ReverseProxy.Configuration.ClusterConfig
+                {
+                    ClusterId = "gradio-cluster",
+                    Destinations = new Dictionary<
+                        string,
+                        Yarp.ReverseProxy.Configuration.DestinationConfig
+                    >
+                    {
+                        {
+                            "gradio-destination",
+                            new Yarp.ReverseProxy.Configuration.DestinationConfig
+                            {
+                                Address = $"http://127.0.0.1:{gradioPort}",
+                            }
+                        },
+                    },
+                    HealthCheck = new Yarp.ReverseProxy.Configuration.HealthCheckConfig
+                    {
+                        Passive = new Yarp.ReverseProxy.Configuration.PassiveHealthCheckConfig
+                        {
+                            Enabled = true,
+                            Policy = "ConsecutiveFailures",
+                        },
+                    },
+                },
+            }
+        );
+
     // WARNING: HTTP transport has no authentication by default.
     // Configure authentication, CORS, and rate limiting before exposing publicly.
     // This server can execute arbitrary C# code.
@@ -108,11 +168,7 @@ if (useHttpTransport)
 
     var app = builder.Build();
 
-    // Get Gradio server port from configuration
-    // In HuggingFace Spaces, the C# app runs on 7860, so Gradio must use a different port
-    var isHuggingFaceSpace = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SPACE_ID"));
-    var defaultGradioPort = isHuggingFaceSpace ? 7861 : 7860;
-    var gradioPort = app.Configuration.GetValue<int>("GradioServerPort", defaultGradioPort);
+    // Gradio port was already calculated during builder configuration for YARP
 
     // Start Gradio landing page using CSnakes in the background
     _ = Task.Run(async () =>
@@ -156,58 +212,30 @@ if (useHttpTransport)
         }
     });
 
-    // Proxy root path to Gradio
-    app.MapGet(
-        "/",
-        async (HttpContext context, IHttpClientFactory clientFactory) =>
+    // Add security headers transform for YARP proxy
+    app.Use(
+        async (context, next) =>
         {
-            using var client = clientFactory.CreateClient();
-            client.Timeout = TimeSpan.FromSeconds(5);
-
-            try
+            // Add security headers for proxied Gradio responses
+            if (
+                context.Request.Path.StartsWithSegments("/")
+                || context.Request.Path.StartsWithSegments("/gradio")
+            )
             {
-                var response = await client.GetAsync($"http://127.0.0.1:{gradioPort}/");
-                var contentType = response.Content.Headers.ContentType?.ToString() ?? "text/html";
-
-                // Whitelist of allowed content types for security
-                var allowedContentTypes = new[]
+                context.Response.OnStarting(() =>
                 {
-                    "text/html",
-                    "text/css",
-                    "application/javascript",
-                    "application/json",
-                    "text/plain",
-                    "image/png",
-                    "image/jpeg",
-                    "image/gif",
-                    "image/svg+xml",
-                };
-                if (
-                    !allowedContentTypes.Any(allowed =>
-                        contentType.Contains(allowed, StringComparison.OrdinalIgnoreCase)
-                    )
-                )
-                {
-                    contentType = "text/plain";
-                }
-
-                var content = await response.Content.ReadAsStringAsync();
-
-                // Set security headers
-                context.Response.Headers["X-Content-Type-Options"] = "nosniff";
-                context.Response.Headers["X-Frame-Options"] = "SAMEORIGIN";
-                context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
-
-                return Results.Content(content, contentType);
+                    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+                    context.Response.Headers["X-Frame-Options"] = "SAMEORIGIN";
+                    context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+                    return Task.CompletedTask;
+                });
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                // If Gradio isn't running, redirect to MCP endpoint
-                app.Logger.LogWarning(ex, "Failed to proxy to Gradio, redirecting to /mcp");
-                return Results.Redirect("/mcp");
-            }
+            await next();
         }
     );
+
+    // Map YARP reverse proxy routes (Gradio)
+    app.MapReverseProxy();
 
     // Map default health check endpoints for HTTP transport
     app.MapDefaultEndpoints();

@@ -13,6 +13,7 @@
     <PackageReference Include="ModelContextProtocol.AspNetCore" Version="0.4.0-preview.3" />
     <PackageReference Include="CSnakes.Runtime" Version="1.*-*" />
     <PackageReference Include="python" Version="3.12.9" />
+    <PackageReference Include="Yarp.ReverseProxy" Version="2.3.0" />
   </ItemGroup>
 
   <ItemGroup>
