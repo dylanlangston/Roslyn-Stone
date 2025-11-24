@@ -33,7 +33,12 @@ public class CompilationService
     {
         assemblyName ??= $"DynamicAssembly_{Guid.NewGuid():N}";
 
-        var syntaxTree = CSharpSyntaxTree.ParseText(code);
+        // Enable file-based program features to support #:package, #:sdk, #:property directives
+        var parseOptions = CSharpParseOptions.Default
+            .WithLanguageVersion(LanguageVersion.Preview)
+            .WithFeatures(new[] { new KeyValuePair<string, string>("FileBasedProgram", "") });
+
+        var syntaxTree = CSharpSyntaxTree.ParseText(code, parseOptions);
 
         // Get metadata references from script options (already configured in constructor)
         var references = _scriptOptions
