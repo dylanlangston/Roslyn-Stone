@@ -7,6 +7,9 @@ import gradio as gr
 import httpx
 import json
 from typing import Optional, Dict, List, Any, Tuple
+from pygments import highlight
+from pygments.lexers import CSharpLexer, JsonLexer
+from pygments.formatters import HtmlFormatter
 
 
 # MCP Client for HTTP transport
@@ -63,11 +66,11 @@ class McpHttpClient:
         return result.get("tools", [])
     
     def list_resources(self) -> List[Dict[str, Any]]:
-        """List all available MCP resources"""
-        result = self._send_request("resources/list")
+        """List all available MCP resource templates"""
+        result = self._send_request("resources/templates/list")
         if "error" in result:
             return []
-        return result.get("resources", [])
+        return result.get("resourceTemplates", [])
     
     def list_prompts(self) -> List[Dict[str, Any]]:
         """List all available MCP prompts"""
@@ -89,6 +92,27 @@ class McpHttpClient:
         return self._send_request("prompts/get", {"name": name, "arguments": arguments or {}})
 
 
+def format_csharp_code(code: str) -> str:
+    """Format C# code with syntax highlighting"""
+    try:
+        formatter = HtmlFormatter(style='monokai', noclasses=True, cssclass='highlight')
+        highlighted = highlight(code, CSharpLexer(), formatter)
+        return f'<div style="background: #272822; padding: 10px; border-radius: 8px; overflow-x: auto;">{highlighted}</div>'
+    except:
+        return f'<pre style="background: #272822; color: #f8f8f2; padding: 10px; border-radius: 8px; overflow-x: auto;"><code>{code}</code></pre>'
+
+
+def format_json_output(data: Any) -> str:
+    """Format JSON output with syntax highlighting"""
+    try:
+        json_str = json.dumps(data, indent=2)
+        formatter = HtmlFormatter(style='monokai', noclasses=True, cssclass='highlight')
+        highlighted = highlight(json_str, JsonLexer(), formatter)
+        return f'<div style="background: #272822; padding: 10px; border-radius: 8px; overflow-x: auto;">{highlighted}</div>'
+    except:
+        return f'<pre style="background: #272822; color: #f8f8f2; padding: 10px; border-radius: 8px; overflow-x: auto;"><code>{json.dumps(data, indent=2)}</code></pre>'
+
+
 def create_landing_page(base_url: Optional[str] = None) -> gr.Blocks:
     """
     Create the interactive Gradio UI for MCP server testing.
@@ -105,25 +129,122 @@ def create_landing_page(base_url: Optional[str] = None) -> gr.Blocks:
     # Initialize MCP client
     mcp_client = McpHttpClient(base_url)
     
-    # CSS for better styling
-    custom_css = """
-    .tool-card { 
-        border: 1px solid #e0e0e0; 
-        border-radius: 8px; 
-        padding: 15px; 
-        margin: 10px 0;
-        background-color: #f9f9f9;
-    }
-    .param-input {
-        margin: 5px 0;
-    }
-    .result-box {
-        background-color: #f5f5f5;
-        border-radius: 4px;
+    # CSS for better styling with syntax highlighting support
+    pygments_css = HtmlFormatter(style='monokai').get_style_defs('.highlight')
+    
+    custom_css = f"""
+    /* Pygments syntax highlighting */
+    {pygments_css}
+    
+    /* Main container styling */
+    .gradio-container {{
+        max-width: 1400px !important;
+        margin: auto;
+    }}
+    
+    /* Header styling */
+    h1 {{
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-weight: 800 !important;
+        font-size: 2.5rem !important;
+    }}
+    
+    /* Tab styling */
+    .tab-nav button {{
+        font-size: 16px !important;
+        padding: 12px 24px !important;
+        border-radius: 8px 8px 0 0 !important;
+        transition: all 0.3s ease;
+    }}
+    
+    .tab-nav button[aria-selected="true"] {{
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        color: white !important;
+        font-weight: 600 !important;
+        box-shadow: 0 4px 6px rgba(102, 126, 234, 0.3);
+    }}
+    
+    /* Card styling */
+    .tool-card, .resource-card, .prompt-card {{ 
+        border: 2px solid #e0e0e0; 
+        border-radius: 12px; 
+        padding: 20px; 
+        margin: 15px 0;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }}
+    
+    .tool-card:hover, .resource-card:hover, .prompt-card:hover {{
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    }}
+    
+    /* Button styling */
+    button {{
+        transition: all 0.3s ease !important;
+    }}
+    
+    button:hover {{
+        transform: translateY(-1px) !important;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2) !important;
+    }}
+    
+    /* Input styling */
+    .param-input {{
+        margin: 8px 0;
+        border-radius: 6px;
+    }}
+    
+    /* Code editor styling */
+    .code-editor {{
+        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace !important;
+        font-size: 14px !important;
+        line-height: 1.5 !important;
+    }}
+    
+    /* Result box styling */
+    .result-box {{
+        background-color: #1e1e1e;
+        border-radius: 8px;
         padding: 10px;
         font-family: monospace;
         white-space: pre-wrap;
-    }
+        max-height: 600px;
+        overflow-y: auto;
+    }}
+    
+    /* Status indicator */
+    .status-indicator {{
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background-color: #00ff00;
+        box-shadow: 0 0 10px #00ff00;
+        animation: pulse 2s infinite;
+    }}
+    
+    @keyframes pulse {{
+        0%, 100% {{
+            opacity: 1;
+        }}
+        50% {{
+            opacity: 0.5;
+        }}
+    }}
+    
+    /* Highlight important text */
+    .highlight-text {{
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        font-weight: 600;
+    }}
     """
     
     with gr.Blocks(title="Roslyn-Stone MCP Testing UI", theme=gr.themes.Soft(), css=custom_css) as demo:
@@ -154,8 +275,10 @@ def create_landing_page(base_url: Optional[str] = None) -> gr.Blocks:
                         )
                         tool_description = gr.Textbox(
                             label="Tool Description",
-                            lines=3,
-                            interactive=False
+                            lines=5,
+                            interactive=False,
+                            max_lines=10,
+                            show_copy_button=True
                         )
                         tool_params_json = gr.Code(
                             label="Tool Parameters (JSON)",
@@ -163,44 +286,49 @@ def create_landing_page(base_url: Optional[str] = None) -> gr.Blocks:
                             value="{}",
                             lines=10
                         )
-                        execute_tool_btn = gr.Button("▶️ Execute Tool", variant="primary")
+                        execute_tool_btn = gr.Button("▶️ Execute Tool", variant="primary", size="lg")
                     
                     with gr.Column(scale=1):
                         tool_result = gr.Code(
-                            label="Tool Result",
+                            label="Tool Result (JSON)",
                             language="json",
                             lines=20,
                             interactive=False
                         )
+                        tool_result_html = gr.HTML(
+                            label="Formatted Result",
+                            visible=False
+                        )
                 
-                # Tool examples
-                gr.Markdown("""
-                #### Example Tool Calls
-                
-                **EvaluateCsharp** - Execute simple C# code:
-                ```json
-                {
-                    "code": "var x = 10; x * 2",
-                    "createContext": false
-                }
-                ```
-                
-                **ValidateCsharp** - Check syntax:
-                ```json
-                {
-                    "code": "var x = 10; x * 2"
-                }
-                ```
-                
-                **SearchNuGetPackages** - Search packages:
-                ```json
-                {
-                    "query": "json",
-                    "skip": 0,
-                    "take": 10
-                }
-                ```
-                """)
+                # Tool examples with better formatting
+                with gr.Accordion("📝 Example Tool Calls", open=True):
+                    gr.Markdown("### C# Code Execution Examples")
+                    
+                    gr.HTML("""
+                    <div style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); padding: 15px; border-radius: 8px; margin: 10px 0;">
+                        <h4>🔹 EvaluateCsharp - Execute simple C# code</h4>
+                        <pre style="background: #272822; color: #f8f8f2; padding: 10px; border-radius: 4px; overflow-x: auto;"><code>{
+    "code": "var x = 10; x * 2",
+    "createContext": false
+}</code></pre>
+                    </div>
+                    
+                    <div style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); padding: 15px; border-radius: 8px; margin: 10px 0;">
+                        <h4>🔹 ValidateCsharp - Check syntax</h4>
+                        <pre style="background: #272822; color: #f8f8f2; padding: 10px; border-radius: 4px; overflow-x: auto;"><code>{
+    "code": "var x = 10; x * 2"
+}</code></pre>
+                    </div>
+                    
+                    <div style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); padding: 15px; border-radius: 8px; margin: 10px 0;">
+                        <h4>🔹 SearchNuGetPackages - Search packages</h4>
+                        <pre style="background: #272822; color: #f8f8f2; padding: 10px; border-radius: 4px; overflow-x: auto;"><code>{
+    "query": "json",
+    "skip": 0,
+    "take": 10
+}</code></pre>
+                    </div>
+                    """)
                 
                 def refresh_tools():
                     """Refresh the list of available tools"""
@@ -268,7 +396,22 @@ def create_landing_page(base_url: Optional[str] = None) -> gr.Blocks:
                         return json.dumps({"error": f"Invalid JSON: {str(e)}"}, indent=2)
                     
                     result = mcp_client.call_tool(tool_name, params)
-                    return json.dumps(result, indent=2)
+                    
+                    # Format result nicely
+                    result_json = json.dumps(result, indent=2)
+                    
+                    # If result contains C# code, show it with syntax highlighting
+                    if isinstance(result, dict) and 'content' in result:
+                        content = result.get('content', [])
+                        if isinstance(content, list) and len(content) > 0:
+                            first_content = content[0]
+                            if isinstance(first_content, dict) and first_content.get('type') == 'text':
+                                text = first_content.get('text', '')
+                                if 'code' in params:
+                                    # Show the original code with syntax highlighting
+                                    return result_json
+                    
+                    return result_json
                 
                 # Wire up tool tab events
                 refresh_tools_btn.click(
@@ -305,15 +448,18 @@ def create_landing_page(base_url: Optional[str] = None) -> gr.Blocks:
                         )
                         resource_description = gr.Textbox(
                             label="Resource Description",
-                            lines=3,
-                            interactive=False
+                            lines=5,
+                            interactive=False,
+                            max_lines=10,
+                            show_copy_button=True
                         )
                         resource_uri = gr.Textbox(
                             label="Resource URI",
                             placeholder="e.g., doc://System.String or nuget://search?q=json",
-                            lines=1
+                            lines=1,
+                            show_copy_button=True
                         )
-                        read_resource_btn = gr.Button("📖 Read Resource", variant="primary")
+                        read_resource_btn = gr.Button("📖 Read Resource", variant="primary", size="lg")
                     
                     with gr.Column(scale=1):
                         resource_result = gr.Code(
@@ -323,27 +469,60 @@ def create_landing_page(base_url: Optional[str] = None) -> gr.Blocks:
                             interactive=False
                         )
                 
-                # Resource examples
-                gr.Markdown("""
-                #### Example Resource URIs
-                
-                **Documentation:**
-                - `doc://System.String` - String class documentation
-                - `doc://System.Linq.Enumerable` - LINQ methods
-                - `doc://System.Collections.Generic.List`1` - List<T> docs
-                
-                **NuGet Search:**
-                - `nuget://search?q=json` - Search JSON packages
-                - `nuget://search?q=http&take=5` - Search HTTP packages (5 results)
-                
-                **Package Info:**
-                - `nuget://packages/Newtonsoft.Json/versions` - All versions
-                - `nuget://packages/Newtonsoft.Json/readme` - Package README
-                
-                **REPL State:**
-                - `repl://state` - Current REPL environment info
-                - `repl://info` - REPL capabilities
-                """)
+                # Resource examples with enhanced UI
+                with gr.Accordion("📚 Example Resource URIs", open=True):
+                    gr.HTML("""
+                    <div style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); padding: 15px; border-radius: 8px; margin: 10px 0;">
+                        <h4>📖 Documentation Resources</h4>
+                        <ul style="list-style-type: none; padding-left: 0;">
+                            <li style="margin: 8px 0; padding: 8px; background: white; border-radius: 4px;">
+                                <code style="color: #667eea; font-weight: bold;">doc://System.String</code> - String class documentation
+                            </li>
+                            <li style="margin: 8px 0; padding: 8px; background: white; border-radius: 4px;">
+                                <code style="color: #667eea; font-weight: bold;">doc://System.Linq.Enumerable</code> - LINQ methods
+                            </li>
+                            <li style="margin: 8px 0; padding: 8px; background: white; border-radius: 4px;">
+                                <code style="color: #667eea; font-weight: bold;">doc://System.Collections.Generic.List`1</code> - List&lt;T&gt; docs
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); padding: 15px; border-radius: 8px; margin: 10px 0;">
+                        <h4>📦 NuGet Search Resources</h4>
+                        <ul style="list-style-type: none; padding-left: 0;">
+                            <li style="margin: 8px 0; padding: 8px; background: white; border-radius: 4px;">
+                                <code style="color: #764ba2; font-weight: bold;">nuget://search?q=json</code> - Search JSON packages
+                            </li>
+                            <li style="margin: 8px 0; padding: 8px; background: white; border-radius: 4px;">
+                                <code style="color: #764ba2; font-weight: bold;">nuget://search?q=http&take=5</code> - Search HTTP packages (5 results)
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); padding: 15px; border-radius: 8px; margin: 10px 0;">
+                        <h4>📦 Package Info Resources</h4>
+                        <ul style="list-style-type: none; padding-left: 0;">
+                            <li style="margin: 8px 0; padding: 8px; background: white; border-radius: 4px;">
+                                <code style="color: #764ba2; font-weight: bold;">nuget://packages/Newtonsoft.Json/versions</code> - All versions
+                            </li>
+                            <li style="margin: 8px 0; padding: 8px; background: white; border-radius: 4px;">
+                                <code style="color: #764ba2; font-weight: bold;">nuget://packages/Newtonsoft.Json/readme</code> - Package README
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div style="background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); padding: 15px; border-radius: 8px; margin: 10px 0;">
+                        <h4>⚙️ REPL State Resources</h4>
+                        <ul style="list-style-type: none; padding-left: 0;">
+                            <li style="margin: 8px 0; padding: 8px; background: white; border-radius: 4px;">
+                                <code style="color: #667eea; font-weight: bold;">repl://state</code> - Current REPL environment info
+                            </li>
+                            <li style="margin: 8px 0; padding: 8px; background: white; border-radius: 4px;">
+                                <code style="color: #667eea; font-weight: bold;">repl://info</code> - REPL capabilities
+                            </li>
+                        </ul>
+                    </div>
+                    """)
                 
                 def refresh_resources():
                     """Refresh the list of available resources"""
@@ -426,16 +605,20 @@ def create_landing_page(base_url: Optional[str] = None) -> gr.Blocks:
                         )
                         prompt_description = gr.Textbox(
                             label="Prompt Description",
-                            lines=2,
-                            interactive=False
+                            lines=3,
+                            interactive=False,
+                            max_lines=5,
+                            show_copy_button=True
                         )
-                        get_prompt_btn = gr.Button("📝 Get Prompt", variant="primary")
+                        get_prompt_btn = gr.Button("📝 Get Prompt", variant="primary", size="lg")
                     
                     with gr.Column(scale=1):
                         prompt_result = gr.Textbox(
                             label="Prompt Content",
-                            lines=25,
-                            interactive=False
+                            lines=30,
+                            interactive=False,
+                            max_lines=50,
+                            show_copy_button=True
                         )
                 
                 def refresh_prompts():
