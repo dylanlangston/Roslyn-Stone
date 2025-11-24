@@ -81,7 +81,7 @@ public sealed class McpServerFixture : IAsyncDisposable
                 );
             }
 
-            // Extract port from BaseUrl (used in environment variable below)
+            // Parse BaseUrl to get components for environment variable
             var uri = new Uri(BaseUrl);
 
             // Configure the server process

@@ -12,6 +12,8 @@ from pygments import highlight
 from pygments.lexers import CSharpLexer, JsonLexer
 from pygments.formatters import HtmlFormatter
 
+# Maximum iterations for tool calls to prevent infinite loops
+MAX_TOOL_ITERATIONS = 10
 
 # MCP Client for HTTP transport
 class McpHttpClient:
@@ -135,8 +137,7 @@ def call_openai_chat(messages: List[Dict], api_key: str, model: str, tools: List
         import openai
         client = openai.OpenAI(api_key=api_key)
         
-        max_iterations = 10
-        for _ in range(max_iterations):
+        for _ in range(MAX_TOOL_ITERATIONS):
             response = client.chat.completions.create(
                 model=model,
                 messages=messages,
@@ -188,8 +189,7 @@ def call_anthropic_chat(messages: List[Dict], api_key: str, model: str, tools: L
                 continue
             anthropic_messages.append({"role": msg["role"], "content": msg["content"]})
         
-        max_iterations = 10
-        for _ in range(max_iterations):
+        for _ in range(MAX_TOOL_ITERATIONS):
             response = client.messages.create(
                 model=model,
                 max_tokens=4096,
