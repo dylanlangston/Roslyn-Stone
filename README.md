@@ -79,17 +79,18 @@ That's it! The container provides isolated execution of C# code with minimal set
 
 ## Features
 
-**File-Based C# Apps** - Create single-file utilities using top-level statements (no class/Main boilerplate)  
-**C# Execution via Roslyn** - Execute and test C# code with full .NET 10 support  
-**Iterative Development** - Build programs incrementally with optional stateful sessions  
-**Real-time Error Feedback** - Get detailed compilation errors and warnings  
+**File-Based C# Apps** - Create single-file utilities using top-level statements aligned with .NET 10's `dotnet run app.cs` feature  
+**Inline Package Loading** - Use `nugetPackages` parameter to load packages during testing, finalize with `#:package` directive for self-contained apps  
+**C# Execution via Roslyn** - Execute and test C# code with full .NET 10 support and recursive NuGet dependency resolution  
+**Iterative Development** - Build programs incrementally with optional stateful sessions and context management  
+**Real-time Error Feedback** - Get detailed compilation errors and warnings with actionable messages  
 **Resources & Tools** - Proper MCP separation: Resources (data) vs Tools (operations)  
-**Documentation Access** - Query .NET type/method docs via `doc://` resource URIs  
-**NuGet Integration** - Search packages via `nuget://` resources, load with tools  
+**Documentation Access** - Query .NET type/method docs via `doc://` resource URIs (includes core SDK types like System.String)  
+**NuGet Integration** - Search packages via `nuget://` resources, load with tools, full dependency tree resolution  
 **MCP Protocol** - Official ModelContextProtocol SDK with stdio and HTTP transports  
 **Dual Transport** - Support for both stdio (local) and HTTP (remote) MCP connections  
 **AI-Friendly** - Designed for LLM interactions via Model Context Protocol  
-**Token-Optimized Prompts** - Efficient guidance for creating utility programs  
+**Token-Optimized Prompts** - Efficient guidance for creating utility programs with .NET 10 directive examples  
 **Containerized** - Docker support with .NET Aspire orchestration  
 **OpenTelemetry** - Built-in observability with logs, metrics, and traces  
 
@@ -201,40 +202,56 @@ These prompts provide detailed guidance on creating runnable .cs files, includin
 
 ## What Can It Do?
 
-Once configured, your AI assistant can help you create single-file C# utility programs:
+Once configured, your AI assistant can help you create single-file C# utility programs aligned with .NET 10's file-based app feature:
 
 **Build a simple utility:**
 ```
 User: "Create a utility that lists files in the current directory"
-Assistant: [Calls EvaluateCsharp with file-based app code]
+Assistant: [Calls EvaluateCsharp with complete file-based app code]
 → Returns complete .cs file using top-level statements
+→ Can be run directly with: dotnet run utility.cs
 ```
 
-**Iterative development:**
+**Create self-contained apps with packages:**
 ```
 User: "Create a JSON formatter utility"
 Assistant: 
-  1. [Reads nuget://search?q=json to find Newtonsoft.Json]
-  2. [Calls LoadNuGetPackage("Newtonsoft.Json")]
-  3. [Calls EvaluateCsharp with complete utility code]
-→ Returns json-formatter.cs ready to run with `dotnet run json-formatter.cs`
+  1. [Searches packages: nuget://search?q=json]
+  2. [Tests with nugetPackages parameter: EvaluateCsharp(..., nugetPackages: [{packageName: "Newtonsoft.Json", version: "13.0.3"}])]
+  3. [Returns complete json-formatter.cs with #:package directive]
+→ Complete self-contained app:
+  #:package Newtonsoft.Json@13.0.3
+  using Newtonsoft.Json;
+  // ... utility code ...
+→ Run with: dotnet run json-formatter.cs (no .csproj needed!)
 ```
 
-**Query documentation:**
+**Query documentation for .NET types:**
 ```
-User: "Show me how to use System.IO.File.ReadAllText"
-Assistant: [Option 1: Reads doc://System.IO.File.ReadAllText resource]
-         [Option 2: Calls GetDocumentation("System.IO.File.ReadAllText")]
+User: "Show me how to use System.String.Split"
+Assistant: [Option 1: Reads doc://System.String.Split resource]
+         [Option 2: Calls GetDocumentation("System.String.Split")]
+→ Returns XML documentation with summary, parameters, examples
 ```
 
 **Validate before execution:**
 ```
 User: "Check if this C# code is valid: <code>"
 Assistant: [Calls ValidateCsharp with code]
-→ Returns syntax validation results
+→ Returns syntax validation results with detailed diagnostics
 ```
 
-The AI assistant creates complete, runnable single-file C# programs using top-level statements—no class or Main method boilerplate needed.
+**Iterative development with context:**
+```
+User: "Start a CSV processor utility"
+Assistant: [EvaluateCsharp with createContext=true, nugetPackages: CsvHelper]
+→ Returns contextId for session
+User: "Add filtering by date"
+Assistant: [EvaluateCsharp with contextId, adds filtering logic]
+→ Builds incrementally on previous code
+```
+
+The AI assistant creates complete, runnable single-file C# programs using .NET 10's modern syntax—no class, Main method, or project file boilerplate needed.
 
 ## For Developers
 
@@ -277,9 +294,54 @@ Contributions are welcome! Please see our [Getting Started Guide](GETTING_STARTE
 
 See [LICENSE](LICENSE) file for details.
 
+## Recommended Pairing: Microsoft Learn MCP
+
+For the best experience creating C# utility programs, **we recommend using Roslyn-Stone alongside the Microsoft Learn MCP server** ([github.com/microsoftdocs/mcp](https://github.com/microsoftdocs/mcp)).
+
+**Why pair these tools?**
+- **Roslyn-Stone**: Provides C# code execution, validation, and package loading for building utilities
+- **Microsoft Learn MCP**: Provides comprehensive .NET documentation, API references, and code samples from official Microsoft Learn
+
+**Together they enable:**
+1. **Search official docs** (Microsoft Learn MCP) → **Find APIs** → **Test with C# code** (Roslyn-Stone)
+2. **Get code samples** (Microsoft Learn) → **Execute and validate** (Roslyn-Stone) → **Build utility**
+3. **Look up .NET types** (both) → **Understand usage** (Learn docs) → **Test implementation** (Roslyn-Stone)
+
+**Example workflow:**
+```
+User: "Create a utility to parse JSON files"
+Assistant:
+  1. [microsoft-learn MCP: Searches for JSON documentation]
+  2. [microsoft-learn MCP: Gets System.Text.Json code samples]
+  3. [roslyn-stone: Tests code with EvaluateCsharp]
+  4. [roslyn-stone: Returns complete json-parser.cs]
+→ Best of both worlds: Official docs + live execution
+```
+
+**Setup both servers:**
+```json
+{
+  "mcpServers": {
+    "roslyn-stone": {
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "ghcr.io/dylanlangston/roslyn-stone:latest"]
+    },
+    "microsoft-learn": {
+      "command": "npx",
+      "args": ["-y", "@microsoft/docs-mcp-server"]
+    }
+  }
+}
+```
+
+This combination provides comprehensive .NET documentation alongside live C# execution for the ultimate utility program development experience.
+
 ## Learn More
 
 - [Getting Started Guide](GETTING_STARTED.md) - Development and contribution guide
+- [MCP Architecture](MCP_ARCHITECTURE.md) - Detailed design documentation for file-based C# apps
 - [Model Context Protocol (MCP)](https://github.com/modelcontextprotocol/specification)
+- [Microsoft Learn MCP](https://github.com/microsoftdocs/mcp) - Official .NET documentation MCP server (recommended pairing)
 - [Roslyn Scripting APIs](https://learn.microsoft.com/en-us/archive/msdn-magazine/2016/january/essential-net-csharp-scripting)
 - [Dynamic Compilation Best Practices](DYNAMIC_COMPILATION_BEST_PRACTICES.md)
+- [.NET 10 File-Based Apps](https://devblogs.microsoft.com/dotnet/announcing-dotnet-run-app/) - Official blog post about `dotnet run app.cs`

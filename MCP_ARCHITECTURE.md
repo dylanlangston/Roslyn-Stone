@@ -11,13 +11,22 @@ Roslyn-Stone implements MCP to help LLMs create single-file C# utility programs 
 
 ## Design Philosophy
 
-The goal is to enable LLMs to create complete, runnable single-file C# programs using top-level statements. This aligns with .NET's file-based app feature (`dotnet run app.cs`), which eliminates the need for project files and boilerplate code.
+The goal is to enable LLMs to create complete, runnable single-file C# programs using .NET 10's file-based app feature. This aligns with `dotnet run app.cs`, which eliminates the need for project files and boilerplate code by supporting:
+- **Top-level statements**: No class or Main method required
+- **`#:package` directive**: Declare NuGet dependencies directly in .cs files
+- **`#:sdk` directive**: Specify project SDK (e.g., Microsoft.NET.Sdk.Web) in code
 
-**Target output:** Complete .cs files that can be run directly, perfect for:
+**Target output:** Self-contained .cs files that can be run directly, perfect for:
 - Command-line utilities
-- Data processing scripts
+- Data processing scripts  
 - Automation tools
+- Web APIs and services
 - Quick C# programs without project scaffolding
+
+**Development workflow:**
+1. **Test with `nugetPackages` parameter**: Load packages during REPL execution for testing
+2. **Finalize with `#:package` directive**: Create self-contained .cs files for production use
+3. **No .csproj needed**: Everything declared in the single .cs file
 
 ## Resources (Passive Data Access)
 
@@ -97,19 +106,28 @@ All tools accept an optional `contextId` parameter:
 
 ### EvaluateCsharp
 
-Execute C# code to create and test single-file utility programs.
+Execute C# code to create and test single-file utility programs. Supports inline package loading for testing.
 
 **Parameters**:
 - `code`: C# code to execute (use top-level statements for file-based apps)
 - `contextId` (optional): Session context ID for iterative development
 - `createContext` (optional): Create persistent context for multi-step building
+- `nugetPackages` (optional): Array of packages to load inline: `[{packageName: "Humanizer", version: "3.0.1"}]`
 
 **Returns**: `{ success, returnValue, output, errors, warnings, executionTime, contextId }`
 
 **Use Cases**:
-- Test complete utility programs
-- Iteratively build single-file apps
+- Test complete utility programs with packages loaded inline
+- Iteratively build single-file apps with stateful context
 - Validate program logic before finalizing
+- Rapid prototyping with NuGet packages (test) → Finalize with `#:package` directive (production)
+
+**Example workflow:**
+```
+1. Test: EvaluateCsharp(code, nugetPackages: [{packageName: "Humanizer"}])
+2. Iterate: Refine logic with loaded packages
+3. Finalize: Output utility.cs with #:package directive at top
+```
 
 ### ValidateCsharp
 
@@ -151,7 +169,7 @@ Load a NuGet package for use in utility programs.
 
 ### GetReplInfo
 
-Get current execution environment information and capabilities.
+Get current execution environment information and capabilities for building file-based C# apps.
 
 **Parameters**:
 - `contextId` (optional): Session context for session-specific information
@@ -159,10 +177,11 @@ Get current execution environment information and capabilities.
 **Returns**: `{ frameworkVersion, language, state, activeSessionCount, contextId, isSessionSpecific, defaultImports, capabilities, tips, examples, sessionMetadata }`
 
 **Use Cases**:
-- Understand environment capabilities
+- Understand environment capabilities (.NET 10, C# 14)
 - Check active session count
-- Get tips for creating utility programs
-- Access example code patterns
+- Get tips for creating utility programs (includes `nugetPackages` guidance)
+- Access example code patterns (includes package loading example)
+- Learn about file-based app workflow (REPL testing → `#:package` finalization)
 
 ### SearchNuGetPackages
 
@@ -264,11 +283,15 @@ Prompts guide LLMs in creating single-file C# utility programs. All prompts focu
 
 ### Prompt Design Principles
 
-- **File-based focus**: Guide LLMs to create complete, runnable .cs files
+- **File-based focus**: Guide LLMs to create complete, runnable .cs files with .NET 10 syntax
 - **Top-level statements**: Emphasize simple, boilerplate-free code
+- **`#:package` directive**: Show self-contained apps with inline package declarations
+- **`#:sdk` directive**: Demonstrate specialized SDKs (e.g., web apps)
 - **Complete examples**: Show full utility programs, not just snippets
 - **Resource-driven**: Reference doc://, nuget:// for API lookup
 - **Context-aware**: Document optional contextId for iterative development
+- **nugetPackages parameter**: Show testing workflow with inline package loading
+- **Two-phase workflow**: Test with `nugetPackages` → Finalize with `#:package`
 - **Workflow-focused**: Resource query → Build → Test → Refine
 - **Practical patterns**: Real-world utility examples (file processing, HTTP clients, etc.)
 
@@ -283,14 +306,33 @@ Prompts guide LLMs in creating single-file C# utility programs. All prompts focu
 4. → Complete utility.cs file
 ```
 
-### Building with Packages
+### Building with Packages (Recommended Workflow)
 
+**Testing Phase:**
 ```
 1. Access nuget://search?q=json (find package)
 2. Access nuget://packages/Newtonsoft.Json/readme (read docs)
-3. LoadNuGetPackage("Newtonsoft.Json") (load)
-4. EvaluateCsharp(complete utility code) (build and test)
-5. → Complete json-processor.cs file with package imports
+3. EvaluateCsharp(code, nugetPackages: [{packageName: "Newtonsoft.Json", version: "13.0.3"}])
+   (test with inline package loading)
+4. Iterate and refine logic
+```
+
+**Finalization Phase:**
+```
+5. Generate final utility.cs with #:package directive:
+   #:package Newtonsoft.Json@13.0.3
+   using Newtonsoft.Json;
+   // ... complete utility code ...
+6. → Self-contained json-processor.cs (no .csproj needed!)
+7. Run with: dotnet run json-processor.cs
+```
+
+**Alternative (Legacy):**
+```
+1. Access nuget://search?q=json (find package)
+2. LoadNuGetPackage("Newtonsoft.Json") (load into global context)
+3. EvaluateCsharp(code) (test)
+4. → Generate utility.cs (requires .csproj or LoadNuGetPackage for execution)
 ```
 
 ### Iterative Development
@@ -308,10 +350,12 @@ Prompts guide LLMs in creating single-file C# utility programs. All prompts focu
 ### Why Focus on File-Based Apps?
 
 - **Simplicity**: No project files, build configuration, or boilerplate code
+- **Self-contained**: `#:package` directive eliminates need for .csproj
 - **Quick utilities**: Perfect for creating small, focused programs
 - **LLM-friendly**: Clear goal (complete .cs file) vs. open-ended REPL experimentation
-- **Real-world use**: Aligns with .NET's `dotnet run app.cs` feature
+- **Real-world use**: Aligns with .NET 10's `dotnet run app.cs` feature
 - **Completeness**: Guides toward finished programs, not code snippets
+- **Modern syntax**: Leverages .NET 10 directives for project-less development
 
 ### Why Resources?
 
@@ -388,8 +432,26 @@ Prompts guide LLMs in creating single-file C# utility programs. All prompts focu
 3. Incremental compilation caching
 4. NuGet package preloading
 
+## Recommended Pairing: Microsoft Learn MCP
+
+For optimal C# utility program development, **Roslyn-Stone pairs excellently with the Microsoft Learn MCP server** ([github.com/microsoftdocs/mcp](https://github.com/microsoftdocs/mcp)).
+
+**Complementary capabilities:**
+- **Roslyn-Stone**: C# code execution, validation, package loading, REPL testing
+- **Microsoft Learn MCP**: Official .NET documentation, API references, code samples from Microsoft Learn
+
+**Combined workflow:**
+1. **Search docs** (Microsoft Learn) → **Find APIs**
+2. **Get code samples** (Microsoft Learn) → **Test with packages** (Roslyn-Stone)
+3. **Look up types** (both) → **Execute and validate** (Roslyn-Stone)
+4. **Build utility** with official guidance + live testing
+
+This combination provides comprehensive documentation alongside live execution for the ultimate utility program development experience.
+
 ## References
 
 - Model Context Protocol: https://modelcontextprotocol.io
 - MCP C# SDK: https://github.com/modelcontextprotocol/csharp-sdk
+- Microsoft Learn MCP: https://github.com/microsoftdocs/mcp (recommended pairing)
 - Roslyn Scripting: https://github.com/dotnet/roslyn/wiki/Scripting-API-Samples
+- .NET 10 File-Based Apps: https://devblogs.microsoft.com/dotnet/announcing-dotnet-run-app/
