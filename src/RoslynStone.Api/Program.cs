@@ -103,6 +103,7 @@ if (useHttpTransport)
     var gradioPort = configuration.GetValue<int>("GradioServerPort", defaultGradioPort);
 
     // Add YARP reverse proxy for Gradio landing page
+    // Proxy ALL traffic except /mcp to Gradio (simplifies routing and catches all assets)
     builder
         .Services.AddReverseProxy()
         .LoadFromMemory(
@@ -110,40 +111,13 @@ if (useHttpTransport)
             {
                 new Yarp.ReverseProxy.Configuration.RouteConfig
                 {
-                    RouteId = "gradio-root",
-                    ClusterId = "gradio-cluster",
-                    Match = new Yarp.ReverseProxy.Configuration.RouteMatch { Path = "/" },
-                    Order = 100, // High priority for exact root match
-                },
-                new Yarp.ReverseProxy.Configuration.RouteConfig
-                {
-                    RouteId = "gradio-assets",
+                    RouteId = "gradio-catchall",
                     ClusterId = "gradio-cluster",
                     Match = new Yarp.ReverseProxy.Configuration.RouteMatch
                     {
-                        Path = "/assets/{**catch-all}",
+                        Path = "{**catch-all}", // Catch everything
                     },
-                    Order = 100, // High priority for assets (JS, CSS, fonts)
-                },
-                new Yarp.ReverseProxy.Configuration.RouteConfig
-                {
-                    RouteId = "gradio-files",
-                    ClusterId = "gradio-cluster",
-                    Match = new Yarp.ReverseProxy.Configuration.RouteMatch
-                    {
-                        Path = "/file/{**catch-all}",
-                    },
-                    Order = 100, // High priority for Gradio file serving
-                },
-                new Yarp.ReverseProxy.Configuration.RouteConfig
-                {
-                    RouteId = "gradio-api",
-                    ClusterId = "gradio-cluster",
-                    Match = new Yarp.ReverseProxy.Configuration.RouteMatch
-                    {
-                        Path = "/gradio/{**catch-all}",
-                    },
-                    Order = 100, // High priority for Gradio API routes
+                    Order = 1000, // Low priority - runs after MCP routes
                 },
             },
             new[]
