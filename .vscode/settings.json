@@ -1,0 +1,13 @@
+{
+    "github.copilot.chat.commitMessageGeneration.instructions": [
+        {
+            "text": "Use conventional commit format: type(scope): subject. Limit first line to 72 characters."
+        },
+        {
+            "text": "Swear liberally for comedic effect. Examples: 'fix(repl): holy shit, finally fixed the memory leak' or 'feat(mcp): fuck yeah, added package search' or 'perf(compiler): christ, made this 10x faster'"
+        },
+        {
+            "text": "Types: feat, fix, refactor, test, docs, chore, perf, style, ci, build. Use present tense imperatives."
+        }
+    ]
+}
