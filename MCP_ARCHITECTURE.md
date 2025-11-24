@@ -4,10 +4,20 @@ This document describes the Model Context Protocol (MCP) architecture implementa
 
 ## Overview
 
-Roslyn-Stone implements MCP following best practices by properly distinguishing between:
-- **Tools**: Active functions that perform operations
-- **Resources**: Passive data sources providing read-only access
-- **Prompts**: Optimized templates guiding LLM usage
+Roslyn-Stone implements MCP to help LLMs create single-file C# utility programs (file-based apps). It properly distinguishes between:
+- **Tools**: Active functions that execute, validate, and build utility programs
+- **Resources**: Passive data sources providing read-only access to documentation and package info
+- **Prompts**: Optimized templates guiding LLMs to create runnable .cs files
+
+## Design Philosophy
+
+The goal is to enable LLMs to create complete, runnable single-file C# programs using top-level statements. This aligns with .NET's file-based app feature (`dotnet run app.cs`), which eliminates the need for project files and boilerplate code.
+
+**Target output:** Complete .cs files that can be run directly, perfect for:
+- Command-line utilities
+- Data processing scripts
+- Automation tools
+- Quick C# programs without project scaffolding
 
 ## Resources (Passive Data Access)
 
@@ -87,31 +97,34 @@ All tools accept an optional `contextId` parameter:
 
 ### EvaluateCsharp
 
-Execute C# code in a REPL session.
+Execute C# code to create and test single-file utility programs.
 
 **Parameters**:
-- `code`: C# code to execute
-- `contextId` (optional): Session context ID
+- `code`: C# code to execute (use top-level statements for file-based apps)
+- `contextId` (optional): Session context ID for iterative development
+- `createContext` (optional): Create persistent context for multi-step building
 
 **Returns**: `{ success, returnValue, output, errors, warnings, executionTime, contextId }`
 
-**Workflow**:
-1. First call without contextId → creates session, returns contextId
-2. Subsequent calls with contextId → continue in same session
+**Use Cases**:
+- Test complete utility programs
+- Iteratively build single-file apps
+- Validate program logic before finalizing
 
 ### ValidateCsharp
 
-Validate C# syntax without execution.
+Validate C# syntax and semantics for single-file utility programs.
 
 **Parameters**:
-- `code`: C# code to validate
+- `code`: C# code to validate (use top-level statements)
 - `contextId` (optional): Session context for context-aware validation
 
 **Returns**: `{ isValid, issues: [{ code, message, severity, line, column }] }`
 
-**Modes**:
-- Context-free: Syntax-only validation
-- Context-aware: Validates against session variables/types
+**Use Cases**:
+- Check utility program syntax before execution
+- Validate complete .cs files
+- Context-aware validation against session variables
 
 ### ResetRepl
 
@@ -128,17 +141,17 @@ Reset REPL sessions.
 
 ### LoadNuGetPackage
 
-Load a NuGet package into the REPL.
+Load a NuGet package for use in utility programs.
 
 **Parameters**:
 - `packageName`: Package ID
 - `version` (optional): Specific version (omit for latest stable)
 
-**Behavior**: Package loaded into session, persists until ResetRepl
+**Use Cases**: Add functionality to single-file utility programs (JSON processing, HTTP clients, etc.)
 
 ### GetReplInfo
 
-Get current REPL environment information and capabilities.
+Get current execution environment information and capabilities.
 
 **Parameters**:
 - `contextId` (optional): Session context for session-specific information
@@ -146,9 +159,10 @@ Get current REPL environment information and capabilities.
 **Returns**: `{ frameworkVersion, language, state, activeSessionCount, contextId, isSessionSpecific, defaultImports, capabilities, tips, examples, sessionMetadata }`
 
 **Use Cases**:
-- Understand REPL capabilities
+- Understand environment capabilities
 - Check active session count
-- Get session-specific metadata
+- Get tips for creating utility programs
+- Access example code patterns
 
 ### SearchNuGetPackages
 
@@ -237,55 +251,67 @@ Tracks session information:
 
 ## Prompts (Optimized Templates)
 
-Prompts guide LLMs in using Roslyn-Stone effectively. All prompts are token-optimized and reference Resources.
+Prompts guide LLMs in creating single-file C# utility programs. All prompts focus on file-based app patterns.
 
 ### Available Prompts
 
-1. **QuickStartRepl** (150 tokens): Bare minimum quick start
-2. **GetStartedWithCsharpRepl** (600 tokens): Comprehensive introduction
+1. **QuickStartRepl** (150 tokens): Quick start for creating single-file utilities
+2. **GetStartedWithCsharpRepl** (800 tokens): Comprehensive guide to file-based C# apps with complete examples
 3. **DebugCompilationErrors** (250 tokens): Error handling workflow
-4. **ReplBestPractices** (350 tokens): Best practices and patterns
-5. **WorkingWithPackages** (250 tokens): NuGet essentials
-6. **PackageIntegrationGuide** (450 tokens): Detailed package workflow
+4. **ReplBestPractices** (600 tokens): Best practices for creating utility programs with complete examples
+5. **WorkingWithPackages** (400 tokens): Using NuGet packages in utility programs
+6. **PackageIntegrationGuide** (700 tokens): Detailed package integration with 4 complete utility examples
 
 ### Prompt Design Principles
 
-- **Concise**: 60-70% smaller than original (4500→1850 tokens total)
-- **Resource-driven**: Reference doc://, nuget://, repl:// instead of embedding examples
-- **Context-aware**: Document optional contextId parameters
-- **Workflow-focused**: Resource query → Tool usage → Iteration
-- **Bullet points**: Replace verbose paragraphs
+- **File-based focus**: Guide LLMs to create complete, runnable .cs files
+- **Top-level statements**: Emphasize simple, boilerplate-free code
+- **Complete examples**: Show full utility programs, not just snippets
+- **Resource-driven**: Reference doc://, nuget:// for API lookup
+- **Context-aware**: Document optional contextId for iterative development
+- **Workflow-focused**: Resource query → Build → Test → Refine
+- **Practical patterns**: Real-world utility examples (file processing, HTTP clients, etc.)
 
 ## Workflow Patterns
+
+### Creating a Simple Utility
+
+```
+1. Access doc://System.IO.File (learn API)
+2. ValidateCsharp(code) (check syntax)
+3. EvaluateCsharp(code) (test program)
+4. → Complete utility.cs file
+```
+
+### Building with Packages
+
+```
+1. Access nuget://search?q=json (find package)
+2. Access nuget://packages/Newtonsoft.Json/readme (read docs)
+3. LoadNuGetPackage("Newtonsoft.Json") (load)
+4. EvaluateCsharp(complete utility code) (build and test)
+5. → Complete json-processor.cs file with package imports
+```
 
 ### Iterative Development
 
 ```
-1. Access doc://System.Linq.Enumerable.Select (learn API)
-2. ValidateCsharp(code, contextId) (check syntax)
-3. EvaluateCsharp(code, contextId) (execute)
-4. Access repl://sessions/{contextId}/state (check session)
-```
-
-### Package Integration
-
-```
-1. Access nuget://search?q=json (explore packages)
-2. Access nuget://packages/Newtonsoft.Json/readme (read docs)
-3. LoadNuGetPackage("Newtonsoft.Json") (load)
-4. EvaluateCsharp(code with using directive, contextId) (use)
-```
-
-### Session Management
-
-```
-1. EvaluateCsharp(code) → get contextId
-2. EvaluateCsharp(more code, contextId) → continue session
-3. Access repl://sessions/{contextId}/state → check metadata
-4. ResetRepl(contextId) → clean up
+1. EvaluateCsharp(initial code, createContext: true) → get contextId
+2. ValidateCsharp(next code, contextId) → check additions
+3. EvaluateCsharp(next code, contextId) → test incremental changes
+4. Repeat steps 2-3 as needed
+5. → Final complete utility program
 ```
 
 ## Design Decisions
+
+### Why Focus on File-Based Apps?
+
+- **Simplicity**: No project files, build configuration, or boilerplate code
+- **Quick utilities**: Perfect for creating small, focused programs
+- **LLM-friendly**: Clear goal (complete .cs file) vs. open-ended REPL experimentation
+- **Real-world use**: Aligns with .NET's `dotnet run app.cs` feature
+- **Completeness**: Guides toward finished programs, not code snippets
 
 ### Why Resources?
 
@@ -296,17 +322,18 @@ Prompts guide LLMs in using Roslyn-Stone effectively. All prompts are token-opti
 
 ### Why Context Management?
 
-- **Statefulness**: Enable multi-step development workflows
+- **Iterative development**: Build utility programs step by step
 - **Isolation**: Multiple concurrent sessions without interference
-- **Flexibility**: Support both single-shot and session-based execution
+- **Flexibility**: Support both single-shot and iterative development
 - **Lifecycle**: Automatic cleanup prevents resource leaks
 
 ### Why Optimize Prompts?
 
-- **Token efficiency**: Reduce LLM context usage by 59%
-- **Clarity**: Concise prompts are easier to understand
-- **Maintainability**: Smaller prompts are easier to update
-- **Resource-driven**: Leverage Resources for examples instead of embedding
+- **Clear guidance**: Help LLMs create complete, runnable programs
+- **Token efficiency**: Focus on essential patterns and examples
+- **Practical examples**: Show real utility programs, not toy snippets
+- **Resource-driven**: Leverage Resources for API docs instead of embedding
+- **Goal-oriented**: Guide toward finished .cs files
 
 ## Performance Considerations
 
