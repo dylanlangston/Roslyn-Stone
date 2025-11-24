@@ -6,6 +6,7 @@ using Microsoft.CodeAnalysis.Scripting;
 using ModelContextProtocol.Server;
 using RoslynStone.Core.Models;
 using RoslynStone.Infrastructure.Functional;
+using RoslynStone.Infrastructure.Helpers;
 using RoslynStone.Infrastructure.Services;
 
 namespace RoslynStone.Infrastructure.Tools;
@@ -276,6 +277,9 @@ public class ReplTools
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(code);
 
+        // Strip file-based program directives (#:package, #:sdk, etc.) as they are build-time directives
+        var processedCode = MetadataReferenceHelper.StripFileBasedProgramDirectives(code);
+
         ScriptState? existingState = null;
         ScriptOptions? contextOptions = null;
 
@@ -302,8 +306,8 @@ public class ReplTools
         var optionsToUse = contextOptions ?? scriptingService.ScriptOptions;
         var script =
             existingState != null
-                ? existingState.Script.ContinueWith(code)
-                : CSharpScript.Create(code, optionsToUse);
+                ? existingState.Script.ContinueWith(processedCode)
+                : CSharpScript.Create(processedCode, optionsToUse);
 
         var diagnostics = script.Compile(cancellationToken);
 

@@ -34,9 +34,7 @@ public class CompilationService
         assemblyName ??= $"DynamicAssembly_{Guid.NewGuid():N}";
 
         // Enable file-based program features to support #:package, #:sdk, #:property directives
-        var parseOptions = CSharpParseOptions.Default
-            .WithLanguageVersion(LanguageVersion.Preview)
-            .WithFeatures(new[] { new KeyValuePair<string, string>("FileBasedProgram", "") });
+        var parseOptions = MetadataReferenceHelper.GetFileBasedProgramParseOptions();
 
         var syntaxTree = CSharpSyntaxTree.ParseText(code, parseOptions);
 

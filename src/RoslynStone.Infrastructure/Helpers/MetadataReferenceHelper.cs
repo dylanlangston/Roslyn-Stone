@@ -1,4 +1,5 @@
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Scripting;
 
 namespace RoslynStone.Infrastructure.Helpers;
@@ -61,5 +62,47 @@ public static class MetadataReferenceHelper
                 "System.Text",
                 "System.Threading.Tasks"
             );
+    }
+
+    /// <summary>
+    /// Gets CSharpParseOptions with file-based program features enabled
+    /// This allows #:package, #:sdk, #:property directives to be recognized
+    /// </summary>
+    /// <returns>Configured CSharpParseOptions instance</returns>
+    public static CSharpParseOptions GetFileBasedProgramParseOptions()
+    {
+        return CSharpParseOptions.Default
+            .WithLanguageVersion(LanguageVersion.Preview)
+            .WithFeatures(new[] { new KeyValuePair<string, string>("FileBasedProgram", "") });
+    }
+
+    /// <summary>
+    /// Strips file-based program directives (#:package, #:sdk, #:property, #:project) from code
+    /// These directives are build-time directives processed by the SDK, not the Roslyn scripting engine
+    /// </summary>
+    /// <param name="code">The source code that may contain file-based program directives</param>
+    /// <returns>Code with file-based program directives removed</returns>
+    public static string StripFileBasedProgramDirectives(string code)
+    {
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            return code;
+        }
+
+        var lines = code.Split('\n');
+        var filteredLines = new List<string>();
+
+        foreach (var line in lines)
+        {
+            var trimmedLine = line.TrimStart();
+            // Skip lines that start with #: (file-based program directives)
+            // Also skip shebang lines (#!)
+            if (!trimmedLine.StartsWith("#:") && !trimmedLine.StartsWith("#!"))
+            {
+                filteredLines.Add(line);
+            }
+        }
+
+        return string.Join('\n', filteredLines);
     }
 }
