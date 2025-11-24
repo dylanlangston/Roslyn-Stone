@@ -118,6 +118,39 @@ if (useHttpTransport)
                         Path = "{**catch-all}", // Catch everything
                     },
                     Order = 1000, // Low priority - runs after MCP routes
+                    Transforms = new List<IReadOnlyDictionary<string, string>>
+                    {
+                        // Prevent content sniffing attacks - enforce strict MIME type checking
+                        new Dictionary<string, string>
+                        {
+                            { "ResponseHeader", "X-Content-Type-Options" },
+                            { "Append", "nosniff" },
+                        },
+                        // Allow iframe embedding in HuggingFace Spaces, SAMEORIGIN for others
+                        new Dictionary<string, string>
+                        {
+                            { "ResponseHeader", "X-Frame-Options" },
+                            { "Append", isHuggingFaceSpace ? "ALLOWALL" : "SAMEORIGIN" },
+                        },
+                        // Set permissive CSP for Gradio assets (needs unsafe-inline, unsafe-eval)
+                        // Gradio uses inline scripts and eval for dynamic UI
+                        new Dictionary<string, string>
+                        {
+                            { "ResponseHeader", "Content-Security-Policy" },
+                            {
+                                "Append",
+                                "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https:; "
+                                    + "img-src 'self' data: blob: https:; "
+                                    + "font-src 'self' data: https:; "
+                                    + "connect-src 'self' https: wss: ws:;"
+                            },
+                        },
+                        new Dictionary<string, string>
+                        {
+                            { "ResponseHeader", "Referrer-Policy" },
+                            { "Append", "strict-origin-when-cross-origin" },
+                        },
+                    },
                 },
             },
             new[]
@@ -198,56 +231,8 @@ if (useHttpTransport)
         }
     });
 
-    // Add security headers transform for YARP proxy
-    app.Use(
-        async (context, next) =>
-        {
-            // Add security headers for proxied Gradio responses
-            // But allow more permissive settings for HuggingFace Spaces iframe embedding
-            var isGradioRequest =
-                context.Request.Path.StartsWithSegments("/")
-                || context.Request.Path.StartsWithSegments("/gradio")
-                || context.Request.Path.StartsWithSegments("/assets")
-                || context.Request.Path.StartsWithSegments("/file");
-
-            if (isGradioRequest)
-            {
-                context.Response.OnStarting(() =>
-                {
-                    // Allow content sniffing for proper MIME type detection
-                    // This is needed because Gradio serves JS modules
-                    if (!context.Response.Headers.ContainsKey("X-Content-Type-Options"))
-                    {
-                        context.Response.Headers["X-Content-Type-Options"] = "nosniff";
-                    }
-
-                    // Allow iframe embedding in HuggingFace Spaces
-                    // Use ALLOWALL for HF Spaces, SAMEORIGIN for others
-                    if (isHuggingFaceSpace)
-                    {
-                        context.Response.Headers["X-Frame-Options"] = "ALLOWALL";
-                    }
-                    else
-                    {
-                        context.Response.Headers["X-Frame-Options"] = "SAMEORIGIN";
-                    }
-
-                    // Set permissive CSP for Gradio assets (needs unsafe-inline, unsafe-eval)
-                    // Gradio uses inline scripts and eval for dynamic UI
-                    context.Response.Headers["Content-Security-Policy"] =
-                        "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https:; "
-                        + "img-src 'self' data: blob: https:; "
-                        + "font-src 'self' data: https:; "
-                        + "connect-src 'self' https: wss: ws:;";
-
-                    context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
-
-                    return Task.CompletedTask;
-                });
-            }
-            await next();
-        }
-    );
+    // Security headers will be applied via YARP response transforms (see AddReverseProxy configuration)
+    // This ensures headers are only added to proxied Gradio responses, not all endpoints like /mcp or /health
 
     // Map YARP reverse proxy routes (Gradio)
     app.MapReverseProxy();
