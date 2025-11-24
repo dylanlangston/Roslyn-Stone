@@ -341,9 +341,6 @@ public class NuGetService : IDisposable
 
         // Get lib files that match the current framework
         var libItems = packageReader.GetLibItems().ToList();
-        foreach (var item in libItems)
-        {
-        }
 
         // ALWAYS resolve and download dependencies first (depth-first)
         var dependencies = packageMetadata.DependencySets

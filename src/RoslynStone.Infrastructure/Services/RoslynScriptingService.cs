@@ -233,8 +233,6 @@ public class RoslynScriptingService
                 ScriptState<object>? newState;
                 var optionsToUse = customOptions ?? _scriptOptions;
 
-                // DEBUG: Log options information
-
                 if (existingState == null)
                 {
                     newState = await CSharpScript.RunAsync(
