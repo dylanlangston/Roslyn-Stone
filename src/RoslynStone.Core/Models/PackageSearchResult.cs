@@ -3,20 +3,20 @@ namespace RoslynStone.Core.Models;
 /// <summary>
 /// Represents the result of a package search operation
 /// </summary>
-public class PackageSearchResult
+public record PackageSearchResult
 {
     /// <summary>
-    /// Gets or sets the list of found packages
+    /// Gets the list of found packages
     /// </summary>
-    public List<PackageMetadata> Packages { get; set; } = [];
+    public required IReadOnlyList<PackageMetadata> Packages { get; init; }
 
     /// <summary>
-    /// Gets or sets the total number of packages found
+    /// Gets the total number of packages found
     /// </summary>
-    public int TotalCount { get; set; }
+    public required int TotalCount { get; init; }
 
     /// <summary>
-    /// Gets or sets the search query that was used
+    /// Gets the search query that was used
     /// </summary>
-    public string Query { get; set; } = string.Empty;
+    public required string Query { get; init; }
 }

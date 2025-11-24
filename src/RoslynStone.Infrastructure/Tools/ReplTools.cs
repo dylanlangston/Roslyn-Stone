@@ -62,11 +62,13 @@ public class ReplTools
         CancellationToken cancellationToken = default
     )
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(code);
+
         ScriptState? existingState = null;
         ScriptOptions? contextOptions = null;
         bool isNewContext = false;
-        bool shouldReturnContextId = false;
-        string? activeContextId = null;
+        bool shouldReturnContextId;
+        string activeContextId;
         var packageErrors = new List<string>();
 
         // Handle context logic
@@ -84,8 +86,8 @@ public class ReplTools
                         {
                             code = "CONTEXT_NOT_FOUND",
                             message = $"Context '{contextId}' not found or expired. Create a new context with createContext: true, or omit contextId to start fresh.",
-                            severity = "Error"
-                        }
+                            severity = "Error",
+                        },
                     },
                     contextId = (string?)null,
                 };
@@ -117,11 +119,9 @@ public class ReplTools
             var baseOptions = contextOptions ?? scriptingService.ScriptOptions;
             bool packagesAdded = false;
 
-
             // Load NuGet packages if provided
             if (nugetPackages != null && nugetPackages.Length > 0)
             {
-                
                 // If trying to add packages to an existing context with state, warn that variables will be lost
                 if (existingState != null && !string.IsNullOrWhiteSpace(contextId))
                 {
@@ -147,12 +147,6 @@ public class ReplTools
                             cancellationToken
                         );
 
-                        
-                        if (assemblyPaths == null)
-                        {
-                            continue;
-                        }
-                        
                         // Add assemblies to context-specific options using MetadataReference
                         // This avoids loading assemblies into the runtime (Assembly.LoadFrom)
                         foreach (var assemblyPath in assemblyPaths.Where(File.Exists))
@@ -162,7 +156,6 @@ public class ReplTools
                             );
                             packagesAdded = true;
                         }
-                        
                     }
                     catch (Exception ex) when (ex is not OperationCanceledException)
                     {
@@ -174,7 +167,7 @@ public class ReplTools
 
                 // Store updated options in context
                 contextManager.UpdateContextOptions(activeContextId, baseOptions);
-                
+
                 // CRITICAL: Reset script state when packages are added
                 // ScriptState.ContinueWithAsync() doesn't accept new options,
                 // so we must start fresh to use the updated options with new packages
@@ -270,7 +263,9 @@ public class ReplTools
     public static Task<object> ValidateCsharp(
         RoslynScriptingService scriptingService,
         IReplContextManager contextManager,
-        [Description("C# code to validate. Use top-level statements for single-file utility programs. Checks syntax and semantics without executing.")]
+        [Description(
+            "C# code to validate. Use top-level statements for single-file utility programs. Checks syntax and semantics without executing."
+        )]
             string code,
         [Description(
             "Optional context ID for context-aware validation. Omit for context-free syntax checking."
@@ -279,6 +274,8 @@ public class ReplTools
         CancellationToken cancellationToken = default
     )
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(code);
+
         ScriptState? existingState = null;
         ScriptOptions? contextOptions = null;
 

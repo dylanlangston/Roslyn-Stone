@@ -13,7 +13,9 @@ public class GuidancePrompts
     /// Quick start guide for creating single-file C# utility programs
     /// </summary>
     [McpServerPrompt]
-    [Description("Get the bare minimum to start creating single-file C# utility programs right now")]
+    [Description(
+        "Get the bare minimum to start creating single-file C# utility programs right now"
+    )]
     public static Task<string> QuickStartRepl()
     {
         return Task.FromResult(
@@ -868,7 +870,9 @@ ResetRepl()
     /// Comprehensive guide for integrating packages into single-file utility programs
     /// </summary>
     [McpServerPrompt]
-    [Description("Deep dive into NuGet package integration for building single-file C# utility programs with detailed examples")]
+    [Description(
+        "Deep dive into NuGet package integration for building single-file C# utility programs with detailed examples"
+    )]
     public static Task<string> PackageIntegrationGuide()
     {
         return Task.FromResult(

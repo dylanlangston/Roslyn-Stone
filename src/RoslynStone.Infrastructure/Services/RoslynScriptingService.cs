@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Reflection;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Scripting;
 using Microsoft.CodeAnalysis.Scripting;
@@ -54,6 +53,8 @@ public class RoslynScriptingService
         CancellationToken cancellationToken = default
     )
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(code);
+
         var stopwatch = Stopwatch.StartNew();
         var errors = new List<CompilationError>();
         var warnings = new List<CompilationError>();
@@ -155,9 +156,11 @@ public class RoslynScriptingService
     public async Task AddPackageReferenceAsync(
         string packageName,
         string? version = null,
-        List<string>? assemblyPaths = null
+        IReadOnlyList<string>? assemblyPaths = null
     )
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(packageName);
+
         await _stateLock.WaitAsync();
         try
         {
@@ -214,6 +217,8 @@ public class RoslynScriptingService
         CancellationToken cancellationToken = default
     )
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(code);
+
         var stopwatch = Stopwatch.StartNew();
         var errors = new List<CompilationError>();
         var warnings = new List<CompilationError>();

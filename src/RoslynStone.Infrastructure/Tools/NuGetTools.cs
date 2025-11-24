@@ -37,6 +37,8 @@ public class NuGetTools
         CancellationToken cancellationToken = default
     )
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(packageName);
+
         try
         {
             var assemblyPaths = await nugetService.DownloadPackageAsync(
@@ -111,6 +113,8 @@ public class NuGetTools
         CancellationToken cancellationToken = default
     )
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(query);
+
         // Clamp take to valid range
         take = Math.Min(Math.Max(take, 1), 100);
 
@@ -159,6 +163,8 @@ public class NuGetTools
         CancellationToken cancellationToken = default
     )
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(packageId);
+
         try
         {
             var versions = await nugetService.GetPackageVersionsAsync(packageId, cancellationToken);
@@ -213,6 +219,8 @@ public class NuGetTools
         CancellationToken cancellationToken = default
     )
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(packageId);
+
         try
         {
             var readme = await nugetService.GetPackageReadmeAsync(

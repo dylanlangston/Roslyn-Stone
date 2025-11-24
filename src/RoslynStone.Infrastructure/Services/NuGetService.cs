@@ -76,6 +76,8 @@ public class NuGetService : IDisposable
         CancellationToken cancellationToken = default
     )
     {
+        ArgumentNullException.ThrowIfNull(query);
+
         var searchResource = await _repository.GetResourceAsync<PackageSearchResource>(
             cancellationToken
         );
@@ -120,11 +122,13 @@ public class NuGetService : IDisposable
     /// <param name="packageId">Package ID</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of package versions</returns>
-    public async Task<List<PackageVersion>> GetPackageVersionsAsync(
+    public async Task<IReadOnlyList<PackageVersion>> GetPackageVersionsAsync(
         string packageId,
         CancellationToken cancellationToken = default
     )
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(packageId);
+
         var metadataResource = await _repository.GetResourceAsync<PackageMetadataResource>(
             cancellationToken
         );
@@ -163,6 +167,7 @@ public class NuGetService : IDisposable
         CancellationToken cancellationToken = default
     )
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(packageId);
         // Get package metadata to find the version
         var metadataResource = await _repository.GetResourceAsync<PackageMetadataResource>(
             cancellationToken
@@ -257,13 +262,20 @@ public class NuGetService : IDisposable
     /// <param name="version">Package version (optional, uses latest if not specified)</param>
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>List of assembly file paths</returns>
-    public async Task<List<string>> DownloadPackageAsync(
+    public async Task<IReadOnlyList<string>> DownloadPackageAsync(
         string packageId,
         string? version = null,
         CancellationToken cancellationToken = default
     )
     {
-        return await DownloadPackageWithDependenciesAsync(packageId, version, new HashSet<string>(StringComparer.OrdinalIgnoreCase), cancellationToken);
+        ArgumentException.ThrowIfNullOrWhiteSpace(packageId);
+
+        return await DownloadPackageWithDependenciesAsync(
+            packageId,
+            version,
+            new HashSet<string>(StringComparer.OrdinalIgnoreCase),
+            cancellationToken
+        );
     }
 
     private async Task<List<string>> DownloadPackageWithDependenciesAsync(
@@ -274,12 +286,11 @@ public class NuGetService : IDisposable
     )
     {
         // Avoid infinite loops and duplicate processing
-        if (visitedPackages.Contains(packageId))
+        if (!visitedPackages.Add(packageId))
         {
             return new List<string>();
         }
-        visitedPackages.Add(packageId);
-        
+
         // Get package metadata
         var metadataResource = await _repository.GetResourceAsync<PackageMetadataResource>(
             cancellationToken
@@ -343,30 +354,40 @@ public class NuGetService : IDisposable
         var libItems = packageReader.GetLibItems().ToList();
 
         // ALWAYS resolve and download dependencies first (depth-first)
-        var dependencies = packageMetadata.DependencySets
-            .SelectMany(ds => ds.Packages)
+        var dependencies = packageMetadata
+            .DependencySets.SelectMany(ds => ds.Packages)
             .Select(p => p.Id)
             .Distinct()
             .ToList();
-        
+
         if (dependencies.Count > 0)
         {
-            
             // Recursively download each dependency
             foreach (var depId in dependencies)
             {
                 try
                 {
-                    var depAssemblies = await DownloadPackageWithDependenciesAsync(depId, null, visitedPackages, cancellationToken);
+                    var depAssemblies = await DownloadPackageWithDependenciesAsync(
+                        depId,
+                        null,
+                        visitedPackages,
+                        cancellationToken
+                    );
                     assemblies.AddRange(depAssemblies);
                 }
-                catch (Exception)
+                catch (InvalidOperationException)
                 {
-                    // Silently skip dependencies that fail to download
+                    // Package not found or download failed - dependencies are optional
+                    // Log would go here if logger was available
+                }
+                catch (IOException)
+                {
+                    // File system error - dependencies are optional
+                    // Log would go here if logger was available
                 }
             }
         }
-        
+
         // If this is a metapackage (no lib items), we're done (dependencies already processed above)
         if (libItems.Count == 0)
         {
@@ -386,7 +407,6 @@ public class NuGetService : IDisposable
                 ? libItems.FirstOrDefault(l => l.TargetFramework.Equals(nearestFramework))
                 : libItems.OrderByDescending(g => g.TargetFramework.Version).FirstOrDefault();
 
-
         if (targetFramework != null)
         {
             var packagePath = Path.Combine(
@@ -394,7 +414,6 @@ public class NuGetService : IDisposable
                 packageId.ToLowerInvariant(),
                 packageMetadata.Identity.Version.ToNormalizedString()
             );
-
 
             assemblies.AddRange(
                 targetFramework
@@ -405,7 +424,6 @@ public class NuGetService : IDisposable
                     .Select(file => Path.Combine(packagePath, file))
                     .Where(File.Exists)
             );
-            
         }
 
         return assemblies;
@@ -422,6 +440,7 @@ public class NuGetService : IDisposable
         CancellationToken cancellationToken = default
     )
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(packageId);
         try
         {
             var metadataResource = await _repository.GetResourceAsync<PackageMetadataResource>(

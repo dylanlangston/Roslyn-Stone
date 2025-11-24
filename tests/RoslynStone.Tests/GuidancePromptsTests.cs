@@ -174,13 +174,13 @@ public class GuidancePromptsTests
 
         // Assert - Should contain #:package directive
         Assert.Contains("#:package", result);
-        
+
         // Assert - All 4 main examples should have package directives
         Assert.Contains("#:package Newtonsoft.Json@13.0.3", result);
         Assert.Contains("#:package Flurl.Http@4.0.0", result);
         Assert.Contains("#:package CsvHelper@30.0.1", result);
         Assert.Contains("#:package Bogus@35.0.0", result);
-        
+
         // Assert - Should mention self-contained
         Assert.Contains("self-contained", result, StringComparison.OrdinalIgnoreCase);
     }

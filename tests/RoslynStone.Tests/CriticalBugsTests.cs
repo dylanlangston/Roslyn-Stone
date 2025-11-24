@@ -47,7 +47,7 @@ public class CriticalBugsTests : IDisposable
         // Arrange
         var nugetPackages = new[]
         {
-            new NuGetPackageSpec { PackageName = "Humanizer", Version = "3.0.1" }
+            new NuGetPackageSpec { PackageName = "Humanizer", Version = "3.0.1" },
         };
 
         // Act - Single-shot execution (createContext=false, no contextId)
@@ -69,10 +69,11 @@ public class CriticalBugsTests : IDisposable
             "Package should be available in isolated context"
         );
         Assert.Equal("Test", resultDict["returnValue"].GetString());
-        
+
         // Context should not be returned (it was temporary)
         Assert.False(
-            resultDict.ContainsKey("contextId") && resultDict["contextId"].ValueKind != JsonValueKind.Null,
+            resultDict.ContainsKey("contextId")
+                && resultDict["contextId"].ValueKind != JsonValueKind.Null,
             "Temporary context should not return contextId"
         );
     }
@@ -87,7 +88,7 @@ public class CriticalBugsTests : IDisposable
         // Arrange - Create context with packages at creation time
         var nugetPackages = new[]
         {
-            new NuGetPackageSpec { PackageName = "Humanizer", Version = "3.0.1" }
+            new NuGetPackageSpec { PackageName = "Humanizer", Version = "3.0.1" },
         };
 
         var createResult = await ReplTools.EvaluateCsharp(
@@ -131,7 +132,7 @@ public class CriticalBugsTests : IDisposable
         var nugetPackages = new[]
         {
             new NuGetPackageSpec { PackageName = "Newtonsoft.Json", Version = "13.0.3" },
-            new NuGetPackageSpec { PackageName = "Humanizer", Version = "3.0.1" }
+            new NuGetPackageSpec { PackageName = "Humanizer", Version = "3.0.1" },
         };
 
         var createResult = await ReplTools.EvaluateCsharp(
@@ -216,7 +217,7 @@ public class CriticalBugsTests : IDisposable
             "System.Int32",
             "System.Console",
             "System.IO.File",
-            "System.Linq.Enumerable"
+            "System.Linq.Enumerable",
         };
 
         foreach (var typeName in commonTypes)
@@ -296,7 +297,9 @@ public class CriticalBugsTests : IDisposable
 
         // Assert - Should succeed or provide detailed error
         var continueJson = JsonSerializer.Serialize(continueResult);
-        var continueDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(continueJson);
+        var continueDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
+            continueJson
+        );
 
         Assert.NotNull(continueDict);
 

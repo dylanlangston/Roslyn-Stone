@@ -3,25 +3,25 @@ namespace RoslynStone.Core.Models;
 /// <summary>
 /// Represents a specific version of a NuGet package
 /// </summary>
-public class PackageVersion
+public record PackageVersion
 {
     /// <summary>
-    /// Gets or sets the version string
+    /// Gets the version string
     /// </summary>
-    public string Version { get; set; } = string.Empty;
+    public required string Version { get; init; }
 
     /// <summary>
-    /// Gets or sets the download count for this version
+    /// Gets the download count for this version
     /// </summary>
-    public long? DownloadCount { get; set; }
+    public long? DownloadCount { get; init; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether this is a prerelease version
+    /// Gets a value indicating whether this is a prerelease version
     /// </summary>
-    public bool IsPrerelease { get; set; }
+    public required bool IsPrerelease { get; init; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether this version is deprecated
+    /// Gets a value indicating whether this version is deprecated
     /// </summary>
-    public bool IsDeprecated { get; set; }
+    public required bool IsDeprecated { get; init; }
 }

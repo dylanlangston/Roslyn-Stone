@@ -84,9 +84,9 @@ public class DocumentationResource
             SymbolName = doc.SymbolName,
             Summary = doc.Summary,
             Remarks = doc.Remarks,
-            Parameters = doc.Parameters,
+            Parameters = doc.Parameters.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
             Returns = doc.Returns,
-            Exceptions = doc.Exceptions,
+            Exceptions = doc.Exceptions.ToList(),
             Example = doc.Example,
         };
     }

@@ -3,50 +3,50 @@ namespace RoslynStone.Core.Models;
 /// <summary>
 /// Represents metadata for a NuGet package
 /// </summary>
-public class PackageMetadata
+public record PackageMetadata
 {
     /// <summary>
-    /// Gets or sets the package ID
+    /// Gets the package ID
     /// </summary>
-    public string Id { get; set; } = string.Empty;
+    public required string Id { get; init; }
 
     /// <summary>
-    /// Gets or sets the package title
+    /// Gets the package title
     /// </summary>
-    public string? Title { get; set; }
+    public string? Title { get; init; }
 
     /// <summary>
-    /// Gets or sets the package description
+    /// Gets the package description
     /// </summary>
-    public string? Description { get; set; }
+    public string? Description { get; init; }
 
     /// <summary>
-    /// Gets or sets the package authors
+    /// Gets the package authors
     /// </summary>
-    public string? Authors { get; set; }
+    public string? Authors { get; init; }
 
     /// <summary>
-    /// Gets or sets the latest version
+    /// Gets the latest version
     /// </summary>
-    public string? LatestVersion { get; set; }
+    public string? LatestVersion { get; init; }
 
     /// <summary>
-    /// Gets or sets the total download count
+    /// Gets the total download count
     /// </summary>
-    public long? DownloadCount { get; set; }
+    public long? DownloadCount { get; init; }
 
     /// <summary>
-    /// Gets or sets the package icon URL
+    /// Gets the package icon URL
     /// </summary>
-    public string? IconUrl { get; set; }
+    public string? IconUrl { get; init; }
 
     /// <summary>
-    /// Gets or sets the package project URL
+    /// Gets the package project URL
     /// </summary>
-    public string? ProjectUrl { get; set; }
+    public string? ProjectUrl { get; init; }
 
     /// <summary>
-    /// Gets or sets the package tags
+    /// Gets the package tags
     /// </summary>
-    public string? Tags { get; set; }
+    public string? Tags { get; init; }
 }
