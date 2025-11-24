@@ -1,274 +1,142 @@
-# Copilot Instructions for Roslyn-Stone
+# Roslyn-Stone: C# MCP Sandbox
+
+Developer and LLM-friendly C# REPL with Model Context Protocol integration.
+
+---
 
 ## Project Overview
 
-Roslyn-Stone is a developer- and LLM-friendly sandbox for C# code targeting MCP (Model Context Protocol). The project provides:
-- C# REPL (Read-Eval-Print Loop) functionality
-- Actionable error feedback
-- XML documentation support
-- NuGet extensibility for LLMs
-- Integration with Model Context Protocol for AI-assisted development
+**Stack**: .NET 8.0+, Roslyn, MCP, NuGet  
+**Purpose**: C# REPL for MCP with actionable errors, XML docs, and NuGet extensibility
 
-## Architecture
+---
 
-This is a .NET-based project that leverages:
-- **Microsoft Roslyn**: The .NET Compiler Platform for C# code analysis and compilation
-- **Model Context Protocol (MCP)**: An open protocol for standardizing AI agent interactions
-- **NuGet**: For package management and extensibility
+## Quick Start
 
-## Development Setup
-
-### Prerequisites
-- .NET 8.0 SDK or later
-- Visual Studio 2022, VS Code, or Rider
-
-### Building the Project
 ```bash
-# Restore dependencies
 dotnet restore
-
-# Build the solution
 dotnet build
-
-# Run tests (if available)
 dotnet test
 ```
+
+---
+
+## Communication Style
+
+**Swear liberally for comedic effect:**
+- Found a gnarly bug? "Well shit, that's a nasty one."
+- Stuck on a problem? "Fuck, this is tricky."
+- Solved something tough? "Holy shit, got it!"
+- Code quality issues? "This code is a goddamn mess."
+- Performance problems? "Christ, this is slow as hell."
+
+Keep it natural and conversational. Swearing makes explanations more human and entertaining.
+
+---
 
 ## Coding Standards
 
 ### C# Conventions
-- Follow standard .NET naming conventions (PascalCase for public members, camelCase for private fields)
-- Use nullable reference types where appropriate
-- Prefer async/await patterns for I/O operations
-- Include XML documentation comments for public APIs
+- PascalCase for public members, camelCase for private fields
+- Nullable reference types where appropriate
+- Async/await for I/O operations
+- XML documentation for public APIs
 
-### Functional Programming Patterns
+### Functional Programming (Preferred)
 
-This project favors **functional programming patterns over heavy OOP abstractions**:
+**Use:**
+- LINQ over imperative loops
+- Pure functions for transformations
+- Direct service calls from MCP Tools (`Tool → Service`)
+- Expression-bodied members and pattern matching
+- Records for immutable data
+- Extension methods for functional helpers
 
-**Prefer:**
-- **LINQ functional composition** over imperative loops
-  ```csharp
-  // Good: Functional with LINQ
-  var results = items.Select(x => Transform(x)).Where(x => x.IsValid).ToList();
-  
-  // Avoid: Imperative with loops
-  var results = new List<Result>();
-  foreach (var item in items) {
-      var transformed = Transform(item);
-      if (transformed.IsValid) results.Add(transformed);
-  }
-  ```
+**Avoid:**
+- Heavy OOP abstractions
+- CQRS patterns (no Commands/Queries/Handlers)
+- Imperative loops when LINQ works
 
-- **Pure functions** for transformations and utilities
-  ```csharp
-  // Good: Pure function with no side effects
-  public static CompilationError ToCompilationError(this Diagnostic diagnostic) =>
-      new() { Code = diagnostic.Id, Message = diagnostic.GetMessage(), ... };
-  ```
+```csharp
+// Good: Functional LINQ
+var results = items
+    .Select(x => Transform(x))
+    .Where(x => x.IsValid)
+    .ToList();
 
-- **Direct service calls** from MCP Tools
-  ```csharp
-  // Good: Direct call
-  var result = await nugetService.SearchPackagesAsync(query, skip, take, ct);
-  
-  // Avoid: Unnecessary abstraction layers (Commands/Queries/Handlers)
-  ```
-
-- **Expression-bodied members** and **pattern matching**
-- **Records** for immutable data models where appropriate
-- **Extension methods** for functional helpers
-
-**Architecture:**
-- MCP Tools call services directly: `Tool → Service`
-- No CQRS pattern (Commands/Queries/Handlers removed)
-- Services use LINQ and functional composition
-- Functional helpers in `Infrastructure/Functional/` for pure utilities
+// Avoid: Imperative loop
+var results = new List<Result>();
+foreach (var item in items) {
+    var transformed = Transform(item);
+    if (transformed.IsValid) results.Add(transformed);
+}
+```
 
 ### Error Handling
-- Provide actionable error messages that LLMs can understand and act upon
-- Include context in error messages (what was attempted, why it failed, how to fix)
-- Use structured error responses when possible
-- **Use specific exception types** instead of generic `catch (Exception)`
-- Filter out `OperationCanceledException` from generic catches: `catch (Exception ex) when (ex is not OperationCanceledException)`
+- Use specific exception types, not generic `catch (Exception)`
+- Filter out `OperationCanceledException`: `catch (Exception ex) when (ex is not OperationCanceledException)`
+- Provide actionable error messages LLMs can understand
+- Include context: what was attempted, why it failed, how to fix
 
 ### Code Quality
-- Write clean, readable code with minimal complexity
-- Keep methods focused and single-purpose
-- Use dependency injection where appropriate
-- Follow SOLID principles
+- SOLID principles
+- Focused, single-purpose methods
+- Dependency injection where appropriate
+- Always use `using` for disposables
 
-### Code Formatting and Analysis
+---
 
-**ALWAYS run these tools before committing code:**
+## Code Quality Tools (REQUIRED)
 
-1. **ReSharper Inspection**: Run `jb inspectcode RoslynStone.sln --output=/tmp/resharper-output.xml --verbosity=WARN` to check for code quality issues
-   - Fix ALL warnings and errors before committing
-   - Check the output with: `cat /tmp/resharper-output.xml | jq -r '.runs[0].results[] | select(.level == "warning" or .level == "error")'`
-   - No ReSharper warnings or errors are allowed in the codebase
+**Run before every commit:**
 
-2. **CSharpier Formatting**: Run `csharpier format .` to format all C# files
-   - This ensures consistent code formatting across the project
-   - Run after making code changes and before committing
-
-**Workflow:**
 ```bash
-# After making code changes:
-# 1. Run ReSharper and fix all issues
+# 1. ReSharper inspection (fix ALL warnings/errors)
 jb inspectcode RoslynStone.sln --output=/tmp/resharper-output.xml --verbosity=WARN
 cat /tmp/resharper-output.xml | jq -r '.runs[0].results[] | select(.level == "warning" or .level == "error")'
 
-# 2. Run CSharpier to format code
+# 2. CSharpier formatting
 csharpier format .
 
 # 3. Build and test
 dotnet build
 dotnet test
-
-# 4. Then commit via report_progress
 ```
 
-## Using Roslyn-Stone MCP Tools (Dogfooding)
+Zero ReSharper warnings or errors allowed in codebase.
 
-**IMPORTANT**: When working on this repository, you have access to the roslyn-stone MCP server tools. Use these tools to validate C# code, test expressions, and look up documentation whenever possible.
+---
 
-### Available MCP Tools
+## Testing
 
-#### EvaluateCsharp
-Execute C# code in a stateful REPL. Use this to:
-- Test C# expressions and validate they work as expected
-- Verify code snippets before adding them to the codebase
-- Experiment with .NET APIs and library methods
-- Check return values and side effects of code
-- Validate that refactorings produce the same results
-
-Example usage:
-```
-EvaluateCsharp: { code: "var x = 10; x * 2" }
-// Returns: { success: true, returnValue: 20, ... }
-```
-
-#### ValidateCsharp
-Validate C# syntax without executing. Use this to:
-- Check syntax before executing potentially problematic code
-- Validate code snippets in documentation or comments
-- Verify that code will compile before adding it
-- Understand compilation errors with detailed diagnostics
-
-Example usage:
-```
-ValidateCsharp: { code: "int x = 10; x * 2" }
-// Returns: { isValid: true, issues: [] }
-```
-
-#### GetDocumentation
-Look up XML documentation for .NET types and methods. Use this to:
-- Understand .NET API behavior and parameters
-- Find correct method signatures
-- Learn about available overloads and extensions
-- Get usage examples from XML docs
-
-Example usage:
-```
-GetDocumentation: { symbolName: "System.String" }
-// Returns comprehensive documentation with summary, parameters, examples
-```
-
-#### GetReplInfo
-Get information about the REPL environment. Use this to:
-- Understand what namespaces are available
-- Learn about REPL capabilities
-- Check the framework version
-- Get tips and examples
-
-#### LoadNuGetPackage
-Dynamically load NuGet packages. Use this to:
-- Test package APIs before adding dependencies
-- Experiment with different package versions
-- Validate package compatibility
-
-#### SearchNuGetPackages
-Search for NuGet packages. Use this to:
-- Find packages for specific functionality
-- Compare available options
-- Check package metadata and download counts
-
-### When to Use These Tools
-
-**ALWAYS** use these tools when:
-- Writing or modifying C# code to validate it works correctly
-- Testing expressions or algorithms to ensure correctness
-- Looking up .NET API documentation to understand behavior
-- Validating that refactoring preserves behavior
-- Checking syntax of complex expressions
-- Experimenting with different approaches to a problem
-
-**Example workflow**:
-1. Write a C# code change
-2. Use ValidateCsharp to check syntax
-3. Use EvaluateCsharp to test the logic works as expected
-4. Use GetDocumentation to verify API usage is correct
-5. Add the validated code to the codebase
-
-### Benefits of Using MCP Tools
-
-- **Faster iteration**: Test code without building the entire solution
-- **Higher confidence**: Validate changes work before committing
-- **Better understanding**: Use GetDocumentation to learn APIs
-- **Fewer bugs**: Catch errors early with ValidateCsharp
-- **Dogfooding**: Use the very tools we're building to build them
-
-## Testing Guidelines
-
-The project has comprehensive testing infrastructure with coverage reporting, benchmarks, and load tests.
-
-### Test Coverage Requirements
-
-- **Line Coverage**: Target > 80% (currently 86.67%)
-- **Branch Coverage**: Target > 75% (currently 62.98%)
-- Write unit tests for new functionality
-- Ensure tests are deterministic and isolated
-- Test error conditions and edge cases
-- Mock external dependencies appropriately
+### Coverage Targets
+- Line coverage: >80% (current: 86.67%)
+- Branch coverage: >75% (current: 62.98%)
 
 ### Running Tests
 
 ```bash
-# Run all tests
+# All tests
 dotnet test
 
-# Run tests with coverage
+# With coverage
 dotnet cake --target=Test-Coverage
 
-# Generate HTML coverage report
+# HTML report
 dotnet cake --target=Test-Coverage-Report
 
-# Run specific test category
+# Filtered
 dotnet test --filter "Category=Unit"
 dotnet test --filter "Component=REPL"
 ```
 
 ### Test Projects
-
-1. **RoslynStone.Tests** - Unit and integration tests (xUnit)
-   - 102 tests covering core functionality
-   - Uses xUnit with AAA pattern
-   - Test traits: Category, Component, Feature
-
-2. **RoslynStone.Benchmarks** - Performance benchmarks (BenchmarkDotNet)
-   - Benchmarks for RoslynScriptingService, CompilationService, NuGetService
-   - Run with: `dotnet cake --target=Benchmark`
-   - Results saved to `./artifacts/benchmarks/`
-
-3. **RoslynStone.LoadTests** - HTTP server load tests
-   - Tests 300 concurrent requests across 10 rounds
-   - Validates scalability and performance
-   - Run with: `dotnet cake --target=Load-Test`
-   - Requires server running in HTTP mode
+1. **RoslynStone.Tests** - Unit/integration (xUnit, 102 tests)
+2. **RoslynStone.Benchmarks** - Performance (BenchmarkDotNet)
+3. **RoslynStone.LoadTests** - HTTP server load tests (300 concurrent requests)
 
 ### Writing Tests
 
-Follow xUnit patterns and AAA structure:
 ```csharp
 [Fact]
 [Trait("Category", "Unit")]
@@ -287,114 +155,169 @@ public async Task MethodName_Scenario_ExpectedBehavior()
 }
 ```
 
-### Resource Disposal
-
-Always use `using` statements for disposable resources:
-```csharp
-using var cts = new CancellationTokenSource();
-using var client = new HttpClient();
-```
-
-### Best Practices
-
+**Best Practices:**
 - Test names: `MethodName_Scenario_ExpectedBehavior`
 - One logical assertion per test
-- Fast unit tests (< 100ms)
-- Independent tests that can run in any order
-- Use `DefaultIfEmpty()` when averaging to prevent exceptions on empty sequences
-- Avoid meaningless assertions like `Assert.True(true)` - tests fail automatically on exceptions
+- Fast unit tests (<100ms)
+- Independent tests (any order)
+- Use `DefaultIfEmpty()` when averaging to prevent exceptions
+- Avoid meaningless assertions like `Assert.True(true)`
 
-See `.github/instructions/testing.instructions.md` for detailed testing guidelines.
+---
+
+## Dogfooding: Use Roslyn-Stone MCP Tools
+
+**IMPORTANT**: Use roslyn-stone MCP tools when working on this repo.
+
+### Available Tools
+
+#### EvaluateCsharp
+Execute C# in stateful REPL. Test expressions, validate code, verify refactorings.
+
+```json
+{ "code": "var x = 10; x * 2" }
+// Returns: { success: true, returnValue: 20, ... }
+```
+
+#### ValidateCsharp
+Check syntax without executing. Validate before adding to codebase.
+
+```json
+{ "code": "int x = 10; x * 2" }
+// Returns: { isValid: true, issues: [] }
+```
+
+#### GetDocumentation
+Look up .NET XML docs. Understand APIs, find signatures, get examples.
+
+```json
+{ "symbolName": "System.String" }
+```
+
+#### LoadNuGetPackage & SearchNuGetPackages
+Test packages before adding dependencies.
+
+### When to Use
+
+**ALWAYS use these tools when:**
+- Writing or modifying C# code
+- Testing expressions or algorithms
+- Looking up .NET API documentation
+- Validating refactoring preserves behavior
+- Checking complex expression syntax
+- Experimenting with approaches
+
+**Workflow:**
+1. Write C# code change
+2. ValidateCsharp for syntax
+3. EvaluateCsharp to test logic
+4. GetDocumentation to verify API usage
+5. Add validated code to codebase
+
+**Benefits:**
+- Faster iteration without full builds
+- Higher confidence before committing
+- Better API understanding
+- Catch errors early
+- Dogfooding our own tools
+
+---
 
 ## MCP Integration
 
-When working with MCP-related code:
-- Follow the C# MCP SDK instructions in `.github/instructions/csharp-mcp-server.instructions.md`
-- Use the ModelContextProtocol NuGet package (prerelease)
-- Configure logging to stderr to avoid interfering with stdio transport
-- Use proper attributes: `[McpServerToolType]`, `[McpServerTool]`, `[Description]`
-- Implement proper error handling with `McpProtocolException`
-- Validate inputs and sanitize paths for security
-- For expert assistance, use the C# MCP Expert chat mode in `.github/chatmodes/csharp-mcp-expert.chatmode.md`
-- For generating new MCP servers, use the prompt template in `.github/prompts/csharp-mcp-server-generator.prompt.md`
+- Follow `.github/instructions/csharp-mcp-server.instructions.md`
+- Use ModelContextProtocol NuGet package (prerelease)
+- Log to stderr (avoid interfering with stdio)
+- Use attributes: `[McpServerToolType]`, `[McpServerTool]`, `[Description]`
+- Handle errors with `McpProtocolException`
+- Validate inputs, sanitize paths
+- For expert help: `.github/chatmodes/csharp-mcp-expert.chatmode.md`
+- Generate servers: `.github/prompts/csharp-mcp-server-generator.prompt.md`
 
-## Security Considerations
+---
 
-- Never commit secrets or credentials
-- Validate and sanitize all user inputs
-- Use secure defaults for configuration
-- Be cautious with dynamic code compilation
-- Implement proper access controls for file system operations
+## Security
 
-## LLM-Friendly Features
+- Never commit secrets
+- Validate and sanitize all inputs
+- Secure defaults for configuration
+- Caution with dynamic compilation
+- Proper access controls for file operations
 
-When implementing features:
-- Provide clear, structured error messages
-- Include context and suggestions in responses
-- Make APIs self-documenting through XML comments
+---
+
+## LLM-Friendly Design
+
+- Clear, structured error messages
+- Context and suggestions in responses
+- Self-documenting APIs via XML comments
 - Support discoverability (reflection, metadata)
-- Return actionable feedback that can guide next steps
+- Return actionable feedback
+
+---
 
 ## Documentation
 
-- Keep README.md up to date with setup instructions
-- Document any new APIs with XML comments
-- Include usage examples for complex features
-- Document breaking changes clearly
+- Keep README.md current
+- XML comments for all APIs
+- Include usage examples
+- Document breaking changes
 
-## Pull Request Guidelines
+---
 
-- Keep changes focused and atomic
-- Include tests for new functionality
-- Update documentation as needed
-- Ensure all tests pass before submitting
-- Use descriptive commit messages
+## Pull Requests
+
+- Focused, atomic changes
+- Tests for new functionality
+- Updated documentation
+- All tests passing
+- Descriptive commit messages
+
+---
 
 ## Custom Agents
 
-This repository has a CSharpExpert custom agent (`.github/agents/CSharpExpert.agent.md`) that should be used for:
-- Complex C# code changes
-- Roslyn-specific implementations
-- .NET framework integrations
-- Performance-critical code paths
+Delegate to agents (`.github/agents/*.agent.md`) for complex tasks:
+- Refactoring
+- Bug fixing
+- Feature implementation
+- Performance optimization
+- Code reviews
+- Documentation updates
 
-Delegate to the CSharpExpert agent when working on core C# functionality.
+---
 
-## Updating These Instructions
-
-These instructions should be updated when significant changes are made to the project that would help Copilot be more productive. Consider updating when:
+## Update This File When
 
 ### Code Quality & Standards
-- **Linting/Formatting**: New tools added (e.g., ReSharper, CSharpier, ESLint)
-- **Code style guidelines**: New patterns or anti-patterns established
-- **Build process**: New build steps, targets, or CI requirements
-- **Dependencies**: Major framework upgrades or new package requirements
+- New linting/formatting tools (ReSharper, CSharpier)
+- New code style patterns or anti-patterns
+- Build process changes
+- Major framework upgrades
 
 ### Testing Infrastructure
-- **Test frameworks**: New testing tools or patterns introduced (e.g., BenchmarkDotNet, load tests)
-- **Coverage requirements**: Changes to coverage thresholds or metrics
-- **Test categories**: New test organization or classification schemes
-- **Test commands**: New ways to run or filter tests
+- New test frameworks or patterns
+- Coverage requirement changes
+- New test categories or organization
+- New test commands
 
 ### Architecture & Patterns
-- **Design patterns**: New architectural patterns adopted project-wide
-- **Service organization**: Changes to how services, tools, or components are structured
-- **Domain-specific guidelines**: New patterns for specific areas (MCP tools, REPL, etc.)
+- New design patterns adopted project-wide
+- Service organization changes
+- Domain-specific guidelines
 
 ### Development Workflow
-- **Custom agents**: New specialized agents added for specific tasks
-- **MCP tools**: New dogfooding tools available for development
-- **Development commands**: New scripts, cake tasks, or automation
+- New custom agents
+- New MCP tools for dogfooding
+- New scripts or automation
 
 ### Project Structure
-- **Directory reorganization**: Significant changes to project layout
-- **New projects**: Addition of new projects to the solution
-- **Module boundaries**: Changes to how modules or layers interact
+- Directory reorganization
+- New projects added
+- Module boundary changes
 
-**Best Practice**: Update instructions immediately after:
-- Adding new testing infrastructure (✅ Done for benchmarks and load tests)
-- Introducing new linting or formatting tools (✅ Done for ReSharper and CSharpier)
-- Establishing new architectural patterns
-- Adding custom agents or development tools
-
-This ensures Copilot has the latest context to provide accurate and helpful assistance.
+**Update immediately after:**
+- Adding testing infrastructure
+- Introducing linting/formatting tools
+- Establishing architectural patterns
+- Adding custom agents or dev tools
