@@ -55,6 +55,9 @@ public class RoslynScriptingService
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(code);
 
+        // Strip file-based program directives (#:package, #:sdk, etc.) as they are build-time directives
+        var processedCode = MetadataReferenceHelper.StripFileBasedProgramDirectives(code);
+
         var stopwatch = Stopwatch.StartNew();
         var errors = new List<CompilationError>();
         var warnings = new List<CompilationError>();
@@ -74,12 +77,12 @@ public class RoslynScriptingService
                 _scriptState =
                     _scriptState == null
                         ? await CSharpScript.RunAsync(
-                            code,
+                            processedCode,
                             _scriptOptions,
                             cancellationToken: cancellationToken
                         )
                         : await _scriptState.ContinueWithAsync(
-                            code,
+                            processedCode,
                             cancellationToken: cancellationToken
                         );
 
@@ -219,6 +222,9 @@ public class RoslynScriptingService
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(code);
 
+        // Strip file-based program directives (#:package, #:sdk, etc.) as they are build-time directives
+        var processedCode = MetadataReferenceHelper.StripFileBasedProgramDirectives(code);
+
         var stopwatch = Stopwatch.StartNew();
         var errors = new List<CompilationError>();
         var warnings = new List<CompilationError>();
@@ -241,7 +247,7 @@ public class RoslynScriptingService
                 if (existingState == null)
                 {
                     newState = await CSharpScript.RunAsync(
-                        code,
+                        processedCode,
                         optionsToUse,
                         cancellationToken: cancellationToken
                     );
@@ -249,7 +255,7 @@ public class RoslynScriptingService
                 else
                 {
                     newState = await existingState.ContinueWithAsync(
-                        code,
+                        processedCode,
                         cancellationToken: cancellationToken
                     );
                 }

@@ -33,7 +33,10 @@ public class CompilationService
     {
         assemblyName ??= $"DynamicAssembly_{Guid.NewGuid():N}";
 
-        var syntaxTree = CSharpSyntaxTree.ParseText(code);
+        // Enable file-based program features to support #:package, #:sdk, #:property directives
+        var parseOptions = MetadataReferenceHelper.GetFileBasedProgramParseOptions();
+
+        var syntaxTree = CSharpSyntaxTree.ParseText(code, parseOptions);
 
         // Get metadata references from script options (already configured in constructor)
         var references = _scriptOptions
@@ -43,7 +46,7 @@ public class CompilationService
         // Create compilation
         var compilation = CSharpCompilation.Create(
             assemblyName,
-            syntaxTrees: new[] { syntaxTree },
+            syntaxTrees: [syntaxTree],
             references: references,
             options: new CSharpCompilationOptions(
                 OutputKind.ConsoleApplication, // Changed from DynamicallyLinkedLibrary to support top-level statements
