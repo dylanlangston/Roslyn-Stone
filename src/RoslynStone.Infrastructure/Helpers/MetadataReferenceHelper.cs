@@ -89,7 +89,8 @@ public static class MetadataReferenceHelper
             return code;
         }
 
-        var lines = code.Split('\n');
+        // Split on all common line ending styles to handle cross-platform code
+        var lines = code.Split(new[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
         var filteredLines = new List<string>();
 
         foreach (var line in lines)
@@ -103,6 +104,8 @@ public static class MetadataReferenceHelper
             }
         }
 
-        return string.Join('\n', filteredLines);
+        // Preserve the original line ending style by detecting it from the input
+        var lineEnding = code.Contains("\r\n") ? "\r\n" : "\n";
+        return string.Join(lineEnding, filteredLines);
     }
 }
