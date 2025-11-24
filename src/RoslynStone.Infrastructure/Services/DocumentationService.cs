@@ -271,9 +271,13 @@ public class DocumentationService
 
             var docInfo = _dotnetRefAssemblyPaths
                 .SelectMany(GetXmlFilesFromDirectory)
-                .Select(xmlFile => (xmlFile, xmlDoc: LoadOrGetCachedXmlDocument(xmlFile, $"sdk:{xmlFile}")))
+                .Select(xmlFile =>
+                    (xmlFile, xmlDoc: LoadOrGetCachedXmlDocument(xmlFile, $"sdk:{xmlFile}"))
+                )
                 .Where(tuple => tuple.xmlDoc != null)
-                .Select(tuple => FindMemberDocumentation(tuple.xmlDoc!, possibleMemberNames, symbolName))
+                .Select(tuple =>
+                    FindMemberDocumentation(tuple.xmlDoc!, possibleMemberNames, symbolName)
+                )
                 .FirstOrDefault(doc => doc != null);
 
             if (docInfo != null)

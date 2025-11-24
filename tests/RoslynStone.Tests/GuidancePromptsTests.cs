@@ -11,74 +11,27 @@ public class GuidancePromptsTests
 {
     [Fact]
     [Trait("Feature", "Prompts")]
-    public async Task GetStartedWithCsharpRepl_ReturnsDetailedGuide()
+    public async Task QuickStart_ReturnsQuickStartGuide()
     {
         // Act
-        var result = await GuidancePrompts.GetStartedWithCsharpRepl();
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.NotEmpty(result);
-        Assert.Contains("Roslyn-Stone", result);
-        Assert.Contains("Single-File", result);
-        Assert.Contains("EvaluateCsharp", result);
-        Assert.Contains("ValidateCsharp", result);
-        Assert.Contains("doc://", result);
-        Assert.Contains("NuGet", result);
-    }
-
-    [Fact]
-    [Trait("Feature", "Prompts")]
-    [Trait("Feature", "NET10Directives")]
-    public async Task GetStartedWithCsharpRepl_ContainsPackageDirective()
-    {
-        // Act
-        var result = await GuidancePrompts.GetStartedWithCsharpRepl();
-
-        // Assert
-        Assert.Contains("#:package", result);
-        Assert.Contains("Newtonsoft.Json@13.0.3", result);
-        Assert.Contains("dotnet run", result);
-        Assert.Contains("no .csproj needed", result, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    [Trait("Feature", "Prompts")]
-    [Trait("Feature", "NET10Directives")]
-    public async Task GetStartedWithCsharpRepl_ContainsSdkDirective()
-    {
-        // Act
-        var result = await GuidancePrompts.GetStartedWithCsharpRepl();
-
-        // Assert
-        Assert.Contains("#:sdk", result);
-        Assert.Contains("Microsoft.NET.Sdk.Web", result);
-        Assert.Contains("WebApplication", result);
-    }
-
-    [Fact]
-    [Trait("Feature", "Prompts")]
-    public async Task QuickStartRepl_ReturnsQuickStartGuide()
-    {
-        // Act
-        var result = await GuidancePrompts.QuickStartRepl();
+        var result = await GuidancePrompts.QuickStart();
 
         // Assert
         Assert.NotNull(result);
         Assert.NotEmpty(result);
         Assert.Contains("Quick Start", result);
         Assert.Contains("EvaluateCsharp", result);
-        Assert.Contains("contextId", result);
+        Assert.Contains("nugetPackages", result);
         Assert.Contains("Resources", result);
     }
 
     [Fact]
     [Trait("Feature", "Prompts")]
     [Trait("Feature", "NET10Directives")]
-    public async Task QuickStartRepl_ContainsPackageDirectiveExample()
+    public async Task QuickStart_ContainsPackageDirectiveExample()
     {
         // Act
-        var result = await GuidancePrompts.QuickStartRepl();
+        var result = await GuidancePrompts.QuickStart();
 
         // Assert
         Assert.Contains("#:package", result);
@@ -89,58 +42,86 @@ public class GuidancePromptsTests
 
     [Fact]
     [Trait("Feature", "Prompts")]
-    public async Task DebugCompilationErrors_ReturnsDebugGuide()
+    public async Task ComprehensiveGuide_ReturnsDetailedGuide()
     {
         // Act
-        var result = await GuidancePrompts.DebugCompilationErrors();
+        var result = await GuidancePrompts.ComprehensiveGuide();
 
         // Assert
         Assert.NotNull(result);
         Assert.NotEmpty(result);
-        Assert.Contains("Debugging", result);
+        Assert.Contains("Complete Guide", result);
+        Assert.Contains("Single-File", result);
+        Assert.Contains("EvaluateCsharp", result);
         Assert.Contains("ValidateCsharp", result);
-        Assert.Contains("Context-Aware", result);
-        Assert.Contains("Workflow", result);
-    }
-
-    [Fact]
-    [Trait("Feature", "Prompts")]
-    public async Task ReplBestPractices_ReturnsBestPracticesGuide()
-    {
-        // Act
-        var result = await GuidancePrompts.ReplBestPractices();
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.NotEmpty(result);
-        Assert.Contains("Best Practices", result);
-        Assert.Contains("File-Based App", result);
-        Assert.Contains("Iterative", result);
-        Assert.Contains("contextId", result);
-    }
-
-    [Fact]
-    [Trait("Feature", "Prompts")]
-    public async Task WorkingWithPackages_ReturnsPackageWorkflowGuide()
-    {
-        // Act
-        var result = await GuidancePrompts.WorkingWithPackages();
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.NotEmpty(result);
+        Assert.Contains("doc://", result);
         Assert.Contains("NuGet", result);
-        Assert.Contains("LoadNuGetPackage", result);
-        Assert.Contains("nuget://", result);
     }
 
     [Fact]
     [Trait("Feature", "Prompts")]
     [Trait("Feature", "NET10Directives")]
-    public async Task WorkingWithPackages_ContainsPackageDirective()
+    public async Task ComprehensiveGuide_ContainsPackageDirective()
     {
         // Act
-        var result = await GuidancePrompts.WorkingWithPackages();
+        var result = await GuidancePrompts.ComprehensiveGuide();
+
+        // Assert
+        Assert.Contains("#:package", result);
+        Assert.Contains("Newtonsoft.Json@13.0.3", result);
+        Assert.Contains("dotnet run", result);
+        Assert.Contains("self-contained", result, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    [Trait("Feature", "Prompts")]
+    [Trait("Feature", "NET10Directives")]
+    public async Task ComprehensiveGuide_ContainsSdkDirective()
+    {
+        // Act
+        var result = await GuidancePrompts.ComprehensiveGuide();
+
+        // Assert
+        Assert.Contains("#:sdk", result);
+        Assert.Contains("Microsoft.NET.Sdk.Web", result);
+        Assert.Contains("WebApplication", result);
+    }
+
+    [Fact]
+    [Trait("Feature", "Prompts")]
+    [Trait("Feature", "NET10Directives")]
+    public async Task ComprehensiveGuide_ContainsPackageDirectiveGuidance()
+    {
+        // Act
+        var result = await GuidancePrompts.ComprehensiveGuide();
+
+        // Assert
+        Assert.Contains("#:package", result);
+        Assert.Contains("Package directives", result, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    [Trait("Feature", "Prompts")]
+    public async Task PackageGuide_ReturnsPackageGuide()
+    {
+        // Act
+        var result = await GuidancePrompts.PackageGuide();
+
+        // Assert
+        Assert.NotNull(result);
+        Assert.NotEmpty(result);
+        Assert.Contains("NuGet", result);
+        Assert.Contains("nuget://", result);
+        Assert.Contains("Newtonsoft.Json", result);
+    }
+
+    [Fact]
+    [Trait("Feature", "Prompts")]
+    [Trait("Feature", "NET10Directives")]
+    public async Task PackageGuide_ContainsPackageDirective()
+    {
+        // Act
+        var result = await GuidancePrompts.PackageGuide();
 
         // Assert
         Assert.Contains("#:package", result);
@@ -151,26 +132,11 @@ public class GuidancePromptsTests
 
     [Fact]
     [Trait("Feature", "Prompts")]
-    public async Task PackageIntegrationGuide_ReturnsPackageGuide()
-    {
-        // Act
-        var result = await GuidancePrompts.PackageIntegrationGuide();
-
-        // Assert
-        Assert.NotNull(result);
-        Assert.NotEmpty(result);
-        Assert.Contains("NuGet", result);
-        Assert.Contains("LoadNuGetPackage", result);
-        Assert.Contains("Newtonsoft.Json", result);
-    }
-
-    [Fact]
-    [Trait("Feature", "Prompts")]
     [Trait("Feature", "NET10Directives")]
-    public async Task PackageIntegrationGuide_ContainsPackageDirectiveInAllExamples()
+    public async Task PackageGuide_ContainsPackageDirectiveInAllExamples()
     {
         // Act
-        var result = await GuidancePrompts.PackageIntegrationGuide();
+        var result = await GuidancePrompts.PackageGuide();
 
         // Assert - Should contain #:package directive
         Assert.Contains("#:package", result);
@@ -179,7 +145,7 @@ public class GuidancePromptsTests
         Assert.Contains("#:package Newtonsoft.Json@13.0.3", result);
         Assert.Contains("#:package Flurl.Http@4.0.0", result);
         Assert.Contains("#:package CsvHelper@30.0.1", result);
-        Assert.Contains("#:package Bogus@35.0.0", result);
+        Assert.Contains("#:package Humanizer@2.14.1", result);
 
         // Assert - Should mention self-contained
         Assert.Contains("self-contained", result, StringComparison.OrdinalIgnoreCase);
@@ -187,14 +153,17 @@ public class GuidancePromptsTests
 
     [Fact]
     [Trait("Feature", "Prompts")]
-    [Trait("Feature", "NET10Directives")]
-    public async Task ReplBestPractices_ContainsPackageDirectiveGuidance()
+    public async Task DebuggingErrors_ReturnsDebugGuide()
     {
         // Act
-        var result = await GuidancePrompts.ReplBestPractices();
+        var result = await GuidancePrompts.DebuggingErrors();
 
         // Assert
-        Assert.Contains("#:package", result);
-        Assert.Contains("Package directives", result, StringComparison.OrdinalIgnoreCase);
+        Assert.NotNull(result);
+        Assert.NotEmpty(result);
+        Assert.Contains("Debugging", result);
+        Assert.Contains("ValidateCsharp", result);
+        Assert.Contains("Context-Aware", result);
+        Assert.Contains("Workflow", result);
     }
 }
