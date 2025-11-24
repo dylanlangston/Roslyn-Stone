@@ -30,11 +30,28 @@ class McpHttpClient:
         try:
             response = self.client.post(self.mcp_url, json=request_data)
             response.raise_for_status()
-            result = response.json()
             
-            if "error" in result:
-                return {"error": result["error"]}
-            return result.get("result", {})
+            # MCP HTTP transport uses Server-Sent Events (SSE) format
+            # Response format: "event: message\ndata: {json}\n\n"
+            response_text = response.text
+            
+            # Parse SSE format
+            if response_text.startswith("event:"):
+                lines = response_text.strip().split('\n')
+                for line in lines:
+                    if line.startswith("data: "):
+                        json_data = line[6:]  # Remove "data: " prefix
+                        result = json.loads(json_data)
+                        if "error" in result:
+                            return {"error": result["error"]}
+                        return result.get("result", {})
+            else:
+                # Fallback to regular JSON
+                result = response.json()
+                if "error" in result:
+                    return {"error": result["error"]}
+                return result.get("result", {})
+                
         except Exception as e:
             return {"error": str(e)}
     
@@ -72,7 +89,6 @@ class McpHttpClient:
         return self._send_request("prompts/get", {"name": name, "arguments": arguments or {}})
 
 
-def create_landing_page(base_url: Optional[str] = None) -> gr.Blocks:
 def create_landing_page(base_url: Optional[str] = None) -> gr.Blocks:
     """
     Create the interactive Gradio UI for MCP server testing.
