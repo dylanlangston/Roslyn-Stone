@@ -1,4 +1,5 @@
 using Microsoft.Playwright;
+using System.Diagnostics;
 
 namespace RoslynStone.GradioTests;
 
@@ -6,16 +7,22 @@ namespace RoslynStone.GradioTests;
 /// Playwright tests for the Gradio landing page.
 /// These tests verify that the Gradio UI is accessible and displays the expected content.
 /// Tests run as part of the standard CI pipeline to ensure UI functionality.
+/// Server is automatically started and stopped for each test run.
 /// </summary>
 public class GradioLandingPageTests : IAsyncLifetime
 {
     private IPlaywright? _playwright;
     private IBrowser? _browser;
+    private Process? _serverProcess;
     private const string BaseUrl = "http://localhost:7077"; // Test server URL
+    private const int ServerStartupTimeoutSeconds = 60;
 
     public async Task InitializeAsync()
     {
-        // Assumes Playwright browsers are already installed (see README for setup instructions)
+        // Start the MCP server
+        await StartServerAsync();
+        
+        // Initialize Playwright
         _playwright = await Playwright.CreateAsync();
         _browser = await _playwright.Chromium.LaunchAsync(
             new BrowserTypeLaunchOptions { Headless = true }
@@ -24,12 +31,107 @@ public class GradioLandingPageTests : IAsyncLifetime
 
     public async Task DisposeAsync()
     {
+        // Clean up Playwright
         if (_browser != null)
         {
             await _browser.CloseAsync();
             await _browser.DisposeAsync();
         }
         _playwright?.Dispose();
+        
+        // Stop the server
+        StopServer();
+    }
+
+    private async Task StartServerAsync()
+    {
+        // Find the API project directory
+        var projectDir = Path.Combine(
+            Directory.GetCurrentDirectory(),
+            "..", "..", "..", "..", "..", "src", "RoslynStone.Api"
+        );
+        projectDir = Path.GetFullPath(projectDir);
+
+        if (!Directory.Exists(projectDir))
+        {
+            throw new DirectoryNotFoundException($"API project directory not found: {projectDir}");
+        }
+
+        // Start the server process
+        _serverProcess = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = "dotnet",
+                Arguments = "run --no-build --urls=http://localhost:7077",
+                WorkingDirectory = projectDir,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+                Environment =
+                {
+                    ["MCP_TRANSPORT"] = "http"
+                }
+            }
+        };
+
+        _serverProcess.Start();
+
+        // Wait for server to be ready
+        var startTime = DateTime.UtcNow;
+        var isReady = false;
+
+        while ((DateTime.UtcNow - startTime).TotalSeconds < ServerStartupTimeoutSeconds)
+        {
+            try
+            {
+                using var httpClient = new HttpClient();
+                httpClient.Timeout = TimeSpan.FromSeconds(2);
+                var response = await httpClient.GetAsync(BaseUrl);
+                if (response.IsSuccessStatusCode || response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    isReady = true;
+                    break;
+                }
+            }
+            catch
+            {
+                // Server not ready yet, continue waiting
+            }
+
+            await Task.Delay(1000);
+        }
+
+        if (!isReady)
+        {
+            StopServer();
+            throw new TimeoutException($"Server failed to start within {ServerStartupTimeoutSeconds} seconds");
+        }
+
+        // Give Gradio a moment to fully initialize
+        await Task.Delay(3000);
+    }
+
+    private void StopServer()
+    {
+        if (_serverProcess != null && !_serverProcess.HasExited)
+        {
+            try
+            {
+                _serverProcess.Kill(entireProcessTree: true);
+                _serverProcess.WaitForExit(5000);
+            }
+            catch
+            {
+                // Best effort cleanup
+            }
+            finally
+            {
+                _serverProcess.Dispose();
+                _serverProcess = null;
+            }
+        }
     }
 
     [Fact]
@@ -366,6 +468,60 @@ public class GradioLandingPageTests : IAsyncLifetime
             Assert.NotNull(response);
             // MCP endpoint should return something (could be error without POST, but should respond)
             Assert.True(response.Status != 404, "MCP endpoint should exist");
+        }
+        finally
+        {
+            await page.CloseAsync();
+        }
+    }
+
+    [Fact]
+    [Trait("Category", "Integration")]
+    [Trait("Component", "Gradio")]
+    public async Task GradioLandingPage_ChatTab_HasRequiredElements()
+    {
+        // Arrange
+        var page = await _browser!.NewPageAsync();
+
+        try
+        {
+            // Act
+            await page.GotoAsync(
+                BaseUrl,
+                new PageGotoOptions { WaitUntil = WaitUntilState.NetworkIdle, Timeout = 30000 }
+            );
+
+            // Wait for page to load
+            await page.WaitForSelectorAsync("h1", new() { Timeout = 5000 });
+
+            // Click on Chat tab
+            var chatTab = page.Locator(
+                "button:has-text('Chat'), [role='tab']:has-text('Chat')"
+            ).First;
+            await chatTab.ClickAsync();
+
+            // Wait for chat tab content to load
+            await page.WaitForSelectorAsync("text=Chat with AI", new() { Timeout = 5000 });
+
+            // Assert - Check for chat interface elements
+            var pageContent = await page.ContentAsync();
+            Assert.Contains("Chat with AI using Roslyn-Stone MCP Tools", pageContent);
+            Assert.Contains("HuggingFace", pageContent);
+            Assert.Contains("Free Option", pageContent);
+            Assert.Contains("Security Note", pageContent);
+            Assert.Contains("API keys are not stored", pageContent);
+
+            // Check for LLM Provider dropdown
+            var providerDropdown = page.Locator("text=LLM Provider");
+            Assert.True(await providerDropdown.IsVisibleAsync());
+
+            // Check for Enable MCP Tools checkbox
+            var mcpCheckbox = page.Locator("text=Enable MCP Tools");
+            Assert.True(await mcpCheckbox.IsVisibleAsync());
+
+            // Check for Send button
+            var sendButton = page.Locator("button:has-text('Send')");
+            Assert.True(await sendButton.IsVisibleAsync());
         }
         finally
         {

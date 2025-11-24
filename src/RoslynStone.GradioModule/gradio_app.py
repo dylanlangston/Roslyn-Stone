@@ -6,6 +6,7 @@ Provides dynamic testing interface for MCP tools, resources, and prompts.
 import gradio as gr
 import httpx
 import json
+import os
 from typing import Optional, Dict, List, Any
 from pygments import highlight
 from pygments.lexers import CSharpLexer, JsonLexer
@@ -126,6 +127,148 @@ def format_json_output(data: Any) -> str:
         return f'<div style="background: #272822; padding: 10px; border-radius: 8px; overflow-x: auto;">{highlighted}</div>'
     except Exception:
         return f'<pre style="background: #272822; color: #f8f8f2; padding: 10px; border-radius: 8px; overflow-x: auto;"><code>{json.dumps(data, indent=2)}</code></pre>'
+
+
+def call_openai_chat(messages: List[Dict], api_key: str, model: str, tools: List[Dict], mcp_client) -> str:
+    """Call OpenAI API with MCP tools"""
+    try:
+        import openai
+        client = openai.OpenAI(api_key=api_key)
+        
+        response = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            tools=tools if tools else None
+        )
+        
+        message = response.choices[0].message
+        
+        # Handle tool calls
+        if message.tool_calls:
+            for tool_call in message.tool_calls:
+                tool_name = tool_call.function.name
+                tool_args = json.loads(tool_call.function.arguments)
+                
+                # Call MCP tool
+                result = mcp_client.call_tool(tool_name, tool_args)
+                
+                # Add tool result to messages
+                messages.append({
+                    "role": "assistant",
+                    "content": None,
+                    "tool_calls": [{"id": tool_call.id, "function": {"name": tool_name, "arguments": tool_call.function.arguments}, "type": "function"}]
+                })
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tool_call.id,
+                    "content": json.dumps(result)
+                })
+            
+            # Make another call with tool results
+            return call_openai_chat(messages, api_key, model, tools, mcp_client)
+        
+        return message.content or "No response"
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+
+def call_anthropic_chat(messages: List[Dict], api_key: str, model: str, tools: List[Dict], mcp_client) -> str:
+    """Call Anthropic API with MCP tools"""
+    try:
+        import anthropic
+        client = anthropic.Anthropic(api_key=api_key)
+        
+        # Convert messages format
+        anthropic_messages = []
+        for msg in messages:
+            if msg["role"] == "system":
+                continue
+            anthropic_messages.append({"role": msg["role"], "content": msg["content"]})
+        
+        response = client.messages.create(
+            model=model,
+            max_tokens=4096,
+            messages=anthropic_messages,
+            tools=tools if tools else None
+        )
+        
+        # Handle tool calls
+        if response.stop_reason == "tool_use":
+            for content in response.content:
+                if content.type == "tool_use":
+                    tool_name = content.name
+                    tool_args = content.input
+                    
+                    # Call MCP tool
+                    result = mcp_client.call_tool(tool_name, tool_args)
+                    
+                    # Add tool result and continue
+                    anthropic_messages.append({
+                        "role": "assistant",
+                        "content": response.content
+                    })
+                    anthropic_messages.append({
+                        "role": "user",
+                        "content": [{
+                            "type": "tool_result",
+                            "tool_use_id": content.id,
+                            "content": json.dumps(result)
+                        }]
+                    })
+            
+            # Make another call with tool results
+            return call_anthropic_chat([{"role": "system", "content": ""}] + anthropic_messages, api_key, model, tools, mcp_client)
+        
+        return response.content[0].text if response.content else "No response"
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+
+def call_gemini_chat(messages: List[Dict], api_key: str, model: str, tools: List[Dict], mcp_client) -> str:
+    """Call Google Gemini API with MCP tools"""
+    try:
+        import google.generativeai as genai
+        genai.configure(api_key=api_key)
+        
+        model_instance = genai.GenerativeModel(model)
+        
+        # Convert messages to Gemini format
+        prompt = "\n\n".join([f"{msg['role']}: {msg['content']}" for msg in messages if msg.get('content')])
+        
+        response = model_instance.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+
+def call_huggingface_chat(messages: List[Dict], api_key: str, model: str, mcp_client) -> str:
+    """Call HuggingFace Inference API (supports serverless)"""
+    try:
+        from huggingface_hub import InferenceClient
+        
+        # Use serverless API if no key provided, otherwise use key
+        client = InferenceClient(token=api_key) if api_key else InferenceClient()
+        
+        # Convert messages to chat format
+        chat_messages = []
+        for msg in messages:
+            if msg.get('content'):
+                chat_messages.append({"role": msg['role'], "content": msg['content']})
+        
+        # Call chat completion
+        response = ""
+        for message in client.chat_completion(
+            messages=chat_messages,
+            model=model if model else "meta-llama/Llama-3.2-3B-Instruct",
+            max_tokens=2048,
+            stream=True
+        ):
+            if message.choices and message.choices[0].delta.content:
+                response += message.choices[0].delta.content
+        
+        return response if response else "No response"
+    except Exception as e:
+        return f"Error: {str(e)}"
 
 
 def create_landing_page(base_url: Optional[str] = None) -> gr.Blocks:
@@ -696,6 +839,161 @@ def create_landing_page(base_url: Optional[str] = None) -> gr.Blocks:
                     fn=get_prompt,
                     inputs=[prompt_dropdown],
                     outputs=[prompt_result]
+                )
+            
+            # Chat Tab
+            with gr.Tab("💬 Chat"):
+                gr.Markdown("### Chat with AI using Roslyn-Stone MCP Tools")
+                gr.Markdown("""
+                Connect to various LLM providers and use Roslyn-Stone MCP tools in your conversations.
+                
+                **🚀 Free Option:** Use HuggingFace serverless inference (no API key needed)
+                
+                ⚠️ **Security Note:** API keys are not stored and are only used for the current session.
+                """)
+                
+                with gr.Row():
+                    with gr.Column(scale=1):
+                        # Provider selection
+                        provider = gr.Dropdown(
+                            label="LLM Provider",
+                            choices=["HuggingFace (Serverless)", "OpenAI", "Anthropic", "Google Gemini"],
+                            value="HuggingFace (Serverless)",
+                            interactive=True
+                        )
+                        
+                        # API Key input (session state only, not stored)
+                        api_key = gr.Textbox(
+                            label="API Key (optional for HF)",
+                            type="password",
+                            placeholder="Enter API key (not stored, session only)",
+                            lines=1,
+                            info="Not stored - only used during this session"
+                        )
+                        
+                        # Model selection
+                        model = gr.Textbox(
+                            label="Model Name",
+                            value="meta-llama/Llama-3.2-3B-Instruct",
+                            placeholder="e.g., meta-llama/Llama-3.2-3B-Instruct, gpt-4o-mini",
+                            lines=1
+                        )
+                        
+                        # Enable MCP tools
+                        enable_mcp = gr.Checkbox(
+                            label="Enable MCP Tools",
+                            value=True,
+                            info="Allow the AI to use Roslyn-Stone MCP tools"
+                        )
+                        
+                        # Clear button
+                        clear_btn = gr.Button("🗑️ Clear Chat", size="sm")
+                    
+                    with gr.Column(scale=2):
+                        # Chat interface
+                        chatbot = gr.Chatbot(
+                            label="Chat",
+                            height=500,
+                            show_copy_button=True,
+                            type="messages"
+                        )
+                        
+                        # Message input
+                        msg = gr.Textbox(
+                            label="Message",
+                            placeholder="Ask the AI to help with C# code, NuGet packages, or .NET documentation...",
+                            lines=2,
+                            show_copy_button=True
+                        )
+                        
+                        send_btn = gr.Button("📤 Send", variant="primary", size="lg")
+                
+                # Chat examples
+                gr.Markdown("""
+                ### Example Prompts
+                
+                Try asking the AI to:
+                - "Write a C# program that calculates the Fibonacci sequence"
+                - "Search for JSON parsing NuGet packages"
+                - "Show me documentation for System.Linq.Enumerable.Select"
+                - "Create a C# script that reads a CSV file"
+                - "Validate this C# code: var x = 10; Console.WriteLine(x);"
+                
+                The AI can use Roslyn-Stone MCP tools to execute C# code, search packages, and access documentation.
+                """)
+                
+                def chat_response(message: str, history: List, provider_name: str, key: str, model_name: str, use_mcp: bool):
+                    """Handle chat messages and call appropriate LLM (keys not stored)"""
+                    if not message:
+                        return history, ""
+                    
+                    # Add user message to history (using messages format)
+                    history.append({"role": "user", "content": message})
+                    
+                    # Build messages for API
+                    messages = [{"role": "system", "content": "You are a helpful AI assistant with access to Roslyn-Stone MCP tools for C# development."}]
+                    for h in history:
+                        if h.get("role") and h.get("content"):
+                            messages.append({"role": h["role"], "content": h["content"]})
+                    
+                    # Get MCP tools if enabled (note: MCP tool calling only works with OpenAI/Anthropic)
+                    tools = []
+                    if use_mcp and provider_name in ["OpenAI", "Anthropic"]:
+                        mcp_tools = mcp_client.list_tools()
+                        for tool in mcp_tools:
+                            tools.append({
+                                "type": "function",
+                                "function": {
+                                    "name": tool.get("name"),
+                                    "description": tool.get("description", ""),
+                                    "parameters": tool.get("inputSchema", {})
+                                }
+                            })
+                    
+                    # Call appropriate provider (API key used only for this request, not stored)
+                    try:
+                        if provider_name == "OpenAI":
+                            if not key:
+                                response_text = "Error: OpenAI API key is required"
+                            else:
+                                response_text = call_openai_chat(messages, key, model_name, tools, mcp_client)
+                        elif provider_name == "Anthropic":
+                            if not key:
+                                response_text = "Error: Anthropic API key is required"
+                            else:
+                                response_text = call_anthropic_chat(messages, key, model_name, tools, mcp_client)
+                        elif provider_name == "Google Gemini":
+                            if not key:
+                                response_text = "Error: Google API key is required"
+                            else:
+                                response_text = call_gemini_chat(messages, key, model_name, tools, mcp_client)
+                        elif provider_name == "HuggingFace (Serverless)" or provider_name == "HuggingFace":
+                            response_text = call_huggingface_chat(messages, key, model_name, mcp_client)
+                        else:
+                            response_text = f"Error: Unknown provider {provider_name}"
+                        
+                        history.append({"role": "assistant", "content": response_text})
+                    except Exception as e:
+                        history.append({"role": "assistant", "content": f"Error: {str(e)}"})
+                    
+                    return history, ""
+                
+                # Wire up chat events
+                send_btn.click(
+                    fn=chat_response,
+                    inputs=[msg, chatbot, provider, api_key, model, enable_mcp],
+                    outputs=[chatbot, msg]
+                )
+                
+                msg.submit(
+                    fn=chat_response,
+                    inputs=[msg, chatbot, provider, api_key, model, enable_mcp],
+                    outputs=[chatbot, msg]
+                )
+                
+                clear_btn.click(
+                    fn=lambda: ([], ""),
+                    outputs=[chatbot, msg]
                 )
             
             # About Tab
