@@ -16,8 +16,6 @@ jobs:
     environment:
       name: production
     runs-on: ubuntu-latest
-    env:
-      HF_TOKEN: ${{ secrets.HF_TOKEN }}
     permissions:
       contents: read
       packages: write
