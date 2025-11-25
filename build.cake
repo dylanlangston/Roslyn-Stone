@@ -79,6 +79,31 @@ Task("Format-Check")
     }
 });
 
+Task("Python-Format")
+    .Description("Format Python code with Ruff")
+    .Does(() =>
+{
+    StartProcess("bash", new ProcessSettings
+    {
+        Arguments = "./scripts/format-python.sh"
+    });
+});
+
+Task("Python-Check")
+    .Description("Check Python code quality (Ruff + mypy)")
+    .Does(() =>
+{
+    var exitCode = StartProcess("bash", new ProcessSettings
+    {
+        Arguments = "./scripts/check-python-quality.sh"
+    });
+    
+    if (exitCode != 0)
+    {
+        throw new Exception("Python quality checks failed. Run 'dotnet cake --target=Python-Format' to fix formatting issues.");
+    }
+});
+
 Task("Inspect")
     .Description("Run ReSharper code inspections")
     .IsDependentOn("Build")
@@ -130,30 +155,45 @@ Task("Test-Coverage")
     var coverageFiles = GetFiles("./artifacts/coverage/**/coverage.cobertura.xml");
     if (coverageFiles.Any())
     {
-        var coverageFile = coverageFiles.First();
-        var xml = System.Xml.Linq.XDocument.Load(coverageFile.FullPath);
-        var coverage = xml.Root;
+        // Aggregate coverage from all files to get total metrics
+        double totalLinesCovered = 0;
+        double totalLinesValid = 0;
+        double totalBranchesCovered = 0;
+        double totalBranchesValid = 0;
         
-        if (coverage == null)
+        foreach (var coverageFile in coverageFiles)
         {
-            Warning("Unable to parse coverage report: root element not found");
+            var xml = System.Xml.Linq.XDocument.Load(coverageFile.FullPath);
+            var coverage = xml.Root;
+            
+            if (coverage == null) continue;
+            
+            var linesCoveredAttr = coverage.Attribute("lines-covered");
+            var linesValidAttr = coverage.Attribute("lines-valid");
+            var branchesCoveredAttr = coverage.Attribute("branches-covered");
+            var branchesValidAttr = coverage.Attribute("branches-valid");
+            
+            if (linesCoveredAttr != null && linesValidAttr != null && 
+                branchesCoveredAttr != null && branchesValidAttr != null)
+            {
+                totalLinesCovered += double.Parse(linesCoveredAttr.Value);
+                totalLinesValid += double.Parse(linesValidAttr.Value);
+                totalBranchesCovered += double.Parse(branchesCoveredAttr.Value);
+                totalBranchesValid += double.Parse(branchesValidAttr.Value);
+            }
+        }
+        
+        if (totalLinesValid == 0)
+        {
+            Warning("Unable to parse coverage report: no valid lines found");
             return;
         }
         
-        var lineRateAttr = coverage.Attribute("line-rate");
-        var branchRateAttr = coverage.Attribute("branch-rate");
+        var lineCoverage = (totalLinesCovered / totalLinesValid) * 100;
+        var branchCoverage = totalBranchesValid > 0 ? (totalBranchesCovered / totalBranchesValid) * 100 : 0;
         
-        if (lineRateAttr == null || branchRateAttr == null)
-        {
-            Warning("Unable to parse coverage report: required attributes not found");
-            return;
-        }
-        
-        var lineCoverage = double.Parse(lineRateAttr.Value) * 100;
-        var branchCoverage = double.Parse(branchRateAttr.Value) * 100;
-        
-        Information($"Line Coverage: {lineCoverage:F2}%");
-        Information($"Branch Coverage: {branchCoverage:F2}%");
+        Information($"Line Coverage: {lineCoverage:F2}% ({totalLinesCovered}/{totalLinesValid} lines)");
+        Information($"Branch Coverage: {branchCoverage:F2}% ({totalBranchesCovered}/{totalBranchesValid} branches)");
         
         // Enforce minimum coverage thresholds
         const double MinBranchCoverage = 75.0;
@@ -309,8 +349,9 @@ Task("Publish-NuGet")
 });
 
 Task("CI")
-    .Description("Run all CI tasks: Format check, Build, Inspect, Test with Coverage")
+    .Description("Run all CI tasks: Format check (C# + Python), Build, Inspect, Test with Coverage")
     .IsDependentOn("Format-Check")
+    .IsDependentOn("Python-Check")
     .IsDependentOn("Inspect")
     .IsDependentOn("Test-Coverage");
 

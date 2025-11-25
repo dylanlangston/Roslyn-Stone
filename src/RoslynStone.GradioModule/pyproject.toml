@@ -13,6 +13,114 @@ dependencies = [
     "huggingface_hub>=0.20.0",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.8.0",
+    "mypy>=1.13.0",
+    "types-pygments>=2.17.0",
+]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.ruff]
+# Enable pycodestyle (E/W), Pyflakes (F), isort (I), pydocstyle (D), pyupgrade (UP), and more
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # Pyflakes
+    "I",      # isort
+    "N",      # pep8-naming
+    "D",      # pydocstyle
+    "UP",     # pyupgrade
+    "ANN",    # flake8-annotations
+    "ASYNC",  # flake8-async
+    "S",      # flake8-bandit
+    "B",      # flake8-bugbear
+    "A",      # flake8-builtins
+    "COM",    # flake8-commas
+    "C4",     # flake8-comprehensions
+    "DTZ",    # flake8-datetimez
+    "T10",    # flake8-debugger
+    "EM",     # flake8-errmsg
+    "ISC",    # flake8-implicit-str-concat
+    "ICN",    # flake8-import-conventions
+    "G",      # flake8-logging-format
+    "INP",    # flake8-no-pep420
+    "PIE",    # flake8-pie
+    "Q",      # flake8-quotes
+    "RSE",    # flake8-raise
+    "RET",    # flake8-return
+    "SLF",    # flake8-self
+    "SIM",    # flake8-simplify
+    "TID",    # flake8-tidy-imports
+    "TCH",    # flake8-type-checking
+    "PTH",    # flake8-use-pathlib
+    "ERA",    # eradicate
+    "PL",     # Pylint
+    "PERF",   # Perflint
+    "RUF",    # Ruff-specific rules
+]
+
+ignore = [
+    "D100",   # Missing docstring in public module (we have module docstrings at top)
+    "D104",   # Missing docstring in public package
+    "D205",   # Blank line between summary and description (not needed for short docstrings)
+    "ANN001", # Missing type annotation for function argument (Gradio callbacks)
+    "ANN202", # Missing return type annotation for private function (internal Gradio callbacks)
+    "COM812", # Trailing comma missing (conflicts with formatter)
+    "ISC001", # Implicit string concatenation (conflicts with formatter)
+    "E501",   # Line too long (formatter handles this)
+    "PLR0913",# Too many arguments (Gradio callbacks need this)
+    "PLR0912",# Too many branches (complex UI logic)
+    "PLR0915",# Too many statements (large UI functions)
+    "PLR0911",# Too many return statements (error handling patterns)
+    "ARG001", # Unused function argument (some callbacks need placeholder args)
+    "PLC0415",# Import outside top-level (lazy imports for optional dependencies)
+    "TRY300", # Consider moving to else block (readability preference)
+    "PERF401",# Use list comprehension (readability over micro-optimization)
+    "RUF001", # Ambiguous unicode character (emoji in UI strings is intentional)
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]  # Allow unused imports in __init__.py
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+check_untyped_defs = true
+warn_redundant_casts = true
+warn_unused_ignores = false  # Disabled because of third-party library stubs
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+# Relaxed settings for Gradio UI code with many callbacks
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_untyped_decorators = false
+no_implicit_optional = false
+exclude = ["bin/", "obj/"]
+
+[[tool.mypy.overrides]]
+module = [
+    "gradio.*",
+    "anthropic.*",
+    "openai.*",
+    "google.generativeai.*",
+    "huggingface_hub.*",
+]
+ignore_missing_imports = true

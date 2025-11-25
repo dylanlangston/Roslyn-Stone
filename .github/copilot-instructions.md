@@ -88,7 +88,11 @@ foreach (var item in items) {
 
 ## Code Quality Tools (REQUIRED)
 
-**Run before every commit:**
+**Both C# and Python code quality checks are enforced in CI pipeline.**
+
+### C# Quality Checks
+
+**Run before every C# commit:**
 
 ```bash
 # 1. ReSharper inspection (fix ALL warnings/errors)
@@ -104,6 +108,72 @@ dotnet test
 ```
 
 Zero ReSharper warnings or errors allowed in codebase.
+
+### Python Quality Checks
+
+**Run before every Python commit:**
+
+```bash
+# Quick check script (recommended)
+./scripts/check-python-quality.sh
+
+# Or manually:
+cd src/RoslynStone.GradioModule
+
+# 1. Ruff formatter check
+ruff format --check .
+
+# 2. Ruff linter
+ruff check .
+
+# 3. Mypy type checker
+mypy .
+```
+
+**Auto-format and fix:**
+
+```bash
+./scripts/format-python.sh
+
+# Or manually:
+cd src/RoslynStone.GradioModule
+ruff format .
+ruff check --fix --unsafe-fixes .
+```
+
+**Python Tools:**
+- **Ruff** - Fast linter and formatter (like ReSharper + CSharpier for Python)
+- **mypy** - Static type checker (like Roslyn type checking)
+- Configuration in `src/RoslynStone.GradioModule/pyproject.toml`
+
+**Python Standards:**
+- Google-style docstrings
+- Type hints on public functions
+- Line length: 100 characters
+- Use modern Python syntax (PEP 585+)
+- Lazy imports OK for optional dependencies
+
+### Cake Build Targets
+
+```bash
+# Run full CI pipeline (C# + Python quality checks + tests)
+dotnet cake --target=CI
+
+# Individual targets
+dotnet cake --target=Format-Check      # Check C# formatting
+dotnet cake --target=Python-Check      # Check Python quality
+dotnet cake --target=Format            # Auto-format C#
+dotnet cake --target=Python-Format     # Auto-format Python
+dotnet cake --target=Inspect           # ReSharper inspection
+```
+
+**CI Pipeline enforces:**
+- ✅ C# formatting (CSharpier)
+- ✅ Python formatting (Ruff)
+- ✅ Python linting (Ruff)
+- ✅ Python type checking (mypy)
+- ✅ ReSharper code inspection
+- ✅ All tests with coverage
 
 ---
 

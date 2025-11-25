@@ -1,0 +1,31 @@
+{
+	"servers": {
+		// "roslyn-stone-docker": {
+		// 	"command": "docker",
+		// 	"type": "stdio",
+		// 	"args": [
+		// 		"run",
+		// 		"-i",
+		// 		"--rm",
+		// 		"-e", "DOTNET_USE_POLLING_FILE_WATCHER=1",
+		// 		"ghcr.io/dylanlangston/roslyn-stone:latest"
+		// 	]
+		// },
+		"roslyn-stone-local": {
+			"command": "dotnet",
+			"type": "stdio",
+			"dev": {
+				"watch": "src/RoslynStone.Api//**/*.cs",
+			},
+			"args": [
+				"run",
+				"--project",
+				"src/RoslynStone.Api/RoslynStone.Api.csproj"
+			],
+			"env": {
+				"ASPNETCORE_ENVIRONMENT": "Development",
+				"DOTNET_USE_POLLING_FILE_WATCHER": "1"
+			}
+		}
+	}
+}

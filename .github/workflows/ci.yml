@@ -27,6 +27,15 @@ jobs:
         with:
           python-version: '3.12'
       
+      - name: Install Playwright browsers
+        timeout-minutes: 5
+        run: |
+          # Install Playwright CLI
+          dotnet tool install -g Microsoft.Playwright.CLI || true
+          
+          # Install Chromium with system dependencies
+          playwright install --with-deps chromium
+      
       - name: Install UV and Python dependencies
         timeout-minutes: 5
         run: |
@@ -51,12 +60,10 @@ jobs:
               huggingface_hub>=0.20.0 \
               pygments>=2.17.0
           done
-      
-      - name: Install Playwright browsers
-        timeout-minutes: 3
-        run: |
-          dotnet build tests/RoslynStone.GradioTests/RoslynStone.GradioTests.csproj
-          pwsh tests/RoslynStone.GradioTests/bin/Debug/net10.0/playwright.ps1 install --with-deps chromium
+          
+          # Install Python quality tools in project venv for quality checks
+          cd src/RoslynStone.GradioModule
+          uv pip install --prerelease=allow ruff mypy types-pygments
       
       - name: Run Cake CI
         timeout-minutes: 20
