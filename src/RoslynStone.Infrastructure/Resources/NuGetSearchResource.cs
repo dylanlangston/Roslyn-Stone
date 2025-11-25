@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using Microsoft.AspNetCore.WebUtilities;
+using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using RoslynStone.Infrastructure.Models;
 using RoslynStone.Infrastructure.Services;
@@ -16,40 +17,39 @@ public class NuGetSearchResource
     /// Search for NuGet packages as a resource
     /// </summary>
     /// <param name="nugetService">The NuGet service for package operations</param>
-    /// <param name="uri">The resource URI in format: nuget://search?q=query&amp;skip=0&amp;take=20</param>
+    /// <param name="requestContext">The request context containing URI and cancellation token</param>
+    /// <param name="query">Search query. Use this to search by package name, keyword, or description.</param>
+    /// <param name="skip">Optional number of records to skip (default: 0)</param>
+    /// <param name="take">Optional number of records to return (default: 20, max: 100)</param>
     /// <param name="cancellationToken">Cancellation token for async operations</param>
     /// <returns>Search results with package metadata</returns>
-    [McpServerResource]
+    [McpServerResource(UriTemplate = "nuget://search?q={query}&skip={skip}&take={take}", Name = "NuGet Package Search", MimeType = "application/json")]
     [Description(
         "Access the NuGet package repository catalog to find libraries and tools. Returns matching packages with metadata including name, description, authors, latest version, download count, and URLs. Use this to discover packages for specific functionality, find popular libraries, and check package information before loading. Search by keywords, package names, tags, or descriptions. URI format: nuget://search?q={query}&skip={skip}&take={take}"
     )]
-    public static async Task<PackageSearchResponse> SearchPackages(
+    public static async Task<ResourceContents> SearchPackages(
         NuGetService nugetService,
-        [Description(
-            "Resource URI in the format 'nuget://search?q=query&skip=0&take=20'. Query parameter examples: 'json', 'http client', 'Newtonsoft.Json', 'csv parser', 'logging'."
-        )]
-            string uri,
+        RequestContext<ReadResourceRequestParams> requestContext,
+        [Description("Search query; examples: 'json', 'http client', 'Newtonsoft.Json', 'csv parser', 'logging'.")]
+            string query,
+        [Description("Optional number of records to skip; default: 0")]
+            int? skip = null,
+        [Description("Optional number of records to take; default: 20, max: 100")]
+            int? take = null,
         CancellationToken cancellationToken = default
     )
     {
-        // Parse URI and extract query parameters
-        var uriObj = new Uri(
-            uri.StartsWith("nuget://", StringComparison.OrdinalIgnoreCase) ? uri : $"nuget://{uri}"
-        );
+        var uri = requestContext.Params?.Uri ?? "nuget://search";
 
-        var query = QueryHelpers.ParseQuery(uriObj.Query);
-        var searchQuery = query.TryGetValue("q", out var q) ? q.ToString() : "";
-        var skip =
-            query.TryGetValue("skip", out var skipStr) && int.TryParse(skipStr, out var s) ? s : 0;
-        var take =
-            query.TryGetValue("take", out var takeStr) && int.TryParse(takeStr, out var t)
-                ? Math.Min(t, 100)
-                : 20;
+        // Finalize defaults if still null
+        var finalQuery = query ?? string.Empty;
+        var finalSkip = skip ?? 0;
+        var finalTake = take.HasValue ? Math.Min(take.Value, 100) : 20;
 
         var result = await nugetService.SearchPackagesAsync(
-            searchQuery,
-            skip,
-            take,
+            finalQuery,
+            finalSkip,
+            finalTake,
             cancellationToken
         );
 
@@ -74,8 +74,8 @@ public class NuGetSearchResource
                 .ToList(),
             TotalCount = result.TotalCount,
             Query = result.Query,
-            Skip = skip,
-            Take = take,
+            Skip = finalSkip,
+            Take = finalTake,
         };
     }
 }

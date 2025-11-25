@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Runtime.InteropServices;
+using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using RoslynStone.Infrastructure.Models;
 using RoslynStone.Infrastructure.Services;
@@ -17,13 +18,60 @@ public class ReplStateResource
     /// </summary>
     /// <param name="scriptingService">The Roslyn scripting service</param>
     /// <param name="contextManager">The REPL context manager</param>
-    /// <param name="uri">The resource URI: repl://state, repl://info, or repl://sessions/{contextId}/state</param>
+    /// <param name="requestContext">The request context containing the URI and optional params.</param>
     /// <returns>Information about current REPL state</returns>
-    [McpServerResource]
+    [McpServerResource(UriTemplate = "repl://state", Name = "REPL State Information", MimeType = "application/json")]
     [Description(
-        "Access current REPL environment state and capabilities. Returns information about framework version, available namespaces, loaded assemblies, imported NuGet packages, current variables in scope, and REPL capabilities. Use 'repl://state' or 'repl://info' for general info, or 'repl://sessions/{contextId}/state' for session-specific state. URI formats: repl://state, repl://info, repl://sessions/{contextId}/state"
+        "Access the current REPL environment state, including active sessions, default imports, capabilities, tips, and examples."
     )]
-    public static ReplStateResponse GetReplState(
+    public static ResourceContents GetReplState(
+        RoslynScriptingService scriptingService,
+        IReplContextManager contextManager,
+        [Description(
+            "RequestContext containing the resource URI. Use 'repl://state' or 'repl://info' for general info, or 'repl://sessions/{contextId}/state' for session-specific state."
+        )]
+            RequestContext<ReadResourceRequestParams> requestContext
+    )
+    {
+        var uri = requestContext.Params?.Uri ?? "repl://state";
+        return GetReplState_Internal(scriptingService, contextManager, uri);
+    }
+
+    /// <summary>
+    /// Get REPL session-specific state information as a resource
+    /// </summary>
+    /// <param name="scriptingService">The Roslyn scripting service</param>
+    /// <param name="contextManager">The REPL context manager</param>
+    /// <param name="contextId">The ID of the REPL session to query (path variable).</param>
+    /// <param name="requestContext">The request context containing the URI and optional params.</param>
+    /// <returns>Information about specific REPL session state</returns>
+    [McpServerResource(UriTemplate = "repl://sessions/{contextId}/state", Name = "REPL Session State Information", MimeType = "application/json")]
+    [Description(
+        "Access detailed state information for a specific REPL session identified by its context ID. Returns session metadata including creation time, last accessed time, execution count, and initialization status. Use this to monitor and manage individual REPL sessions, track their activity, and understand their current state. URI format: repl://sessions/{contextId}/state"
+    )]
+    public static ResourceContents GetReplSessionState(
+        RoslynScriptingService scriptingService,
+        IReplContextManager contextManager,
+        RequestContext<ReadResourceRequestParams> requestContext,
+        [Description(
+            "The REPL session context ID extracted from the URI. Use 'repl://sessions/{contextId}/state' to target a specific session."
+        )]
+            string contextId
+    )
+    {
+        // Construct URI from the provided contextId if available, otherwise fall back to requestContext
+        var uri = requestContext.Params?.Uri ?? $"repl://sessions/{contextId}/state";
+        return GetReplState_Internal(scriptingService, contextManager, uri);
+    }
+
+    /// <summary>
+    /// Internal method to get REPL state information
+    /// </summary>
+    /// <param name="scriptingService"></param>
+    /// <param name="contextManager"></param>
+    /// <param name="uri"></param>
+    /// <returns></returns>
+    static ResourceContents GetReplState_Internal(
         RoslynScriptingService scriptingService,
         IReplContextManager contextManager,
         [Description(

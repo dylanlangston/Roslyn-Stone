@@ -1,4 +1,6 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
+using ModelContextProtocol.Protocol;
 
 namespace RoslynStone.Infrastructure.Models;
 
@@ -50,6 +52,22 @@ public class DocumentationResponse
     /// <summary>Error or informational message</summary>
     [JsonPropertyName("message")]
     public string? Message { get; init; }
+
+    /// <summary>
+    /// Implicit conversion to TextResourceContents
+    /// </summary>
+    /// <param name="docResponse"></param>
+    public static implicit operator TextResourceContents(DocumentationResponse docResponse)
+    {
+        return new TextResourceContents
+        {
+            Uri = docResponse.Uri,
+            MimeType = docResponse.MimeType,
+            Text = docResponse.Found
+                ? $"Symbol: {docResponse.SymbolName}\n\nSummary: {docResponse.Summary}\n\nRemarks: {docResponse.Remarks}\n\nParameters: {string.Join(", ", docResponse.Parameters ?? new())}\n\nReturns: {docResponse.Returns}\n\nExceptions: {string.Join(", ", docResponse.Exceptions ?? new())}\n\nExample: {docResponse.Example}"
+                : docResponse.Message ?? "Documentation not found.",
+        };
+    }
 }
 
 /// <summary>
@@ -84,6 +102,41 @@ public class PackageSearchResponse
     /// <summary>Results to take</summary>
     [JsonPropertyName("take")]
     public required int Take { get; init; }
+
+    /// <summary>
+    /// Implicit conversion to TextResourceContents
+    /// </summary>
+    /// <param name="searchResponse"></param>
+    public static implicit operator TextResourceContents(PackageSearchResponse searchResponse)
+    {
+        var contentLines = new List<string>
+        {
+            $"Search Results for '{searchResponse.Query}':",
+            $"Total Packages Found: {searchResponse.TotalCount}",
+            "",
+        };
+
+        foreach (var pkg in searchResponse.Packages)
+        {
+            contentLines.Add($"Package ID: {pkg.Id}");
+            contentLines.Add($"Title: {pkg.Title}");
+            contentLines.Add($"Description: {pkg.Description}");
+            contentLines.Add($"Authors: {pkg.Authors}");
+            contentLines.Add($"Latest Version: {pkg.LatestVersion}");
+            contentLines.Add($"Download Count: {pkg.DownloadCount}");
+            contentLines.Add($"Icon URL: {pkg.IconUrl}");
+            contentLines.Add($"Project URL: {pkg.ProjectUrl}");
+            contentLines.Add($"Tags: {pkg.Tags}");
+            contentLines.Add(new string('-', 40));
+        }
+
+        return new TextResourceContents
+        {
+            Uri = searchResponse.Uri,
+            MimeType = "application/json",
+            Text = string.Join("\n", contentLines),
+        };
+    }
 }
 
 /// <summary>
@@ -126,6 +179,20 @@ public class PackageInfo
     /// <summary>Package tags</summary>
     [JsonPropertyName("tags")]
     public string? Tags { get; init; }
+
+    /// <summary>
+    /// Implicit conversion to TextResourceContents
+    /// </summary>
+    /// <param name="pkgInfo"></param>
+    public static implicit operator TextResourceContents(PackageInfo pkgInfo)
+    {
+        return new TextResourceContents
+        {
+            Uri = $"nuget://packages/{pkgInfo.Id}",
+            MimeType = "application/json",
+            Text = $"Package ID: {pkgInfo.Id}\nTitle: {pkgInfo.Title}\nDescription: {pkgInfo.Description}\nAuthors: {pkgInfo.Authors}\nLatest Version: {pkgInfo.LatestVersion}\nDownload Count: {pkgInfo.DownloadCount}\nIcon URL: {pkgInfo.IconUrl}\nProject URL: {pkgInfo.ProjectUrl}\nTags: {pkgInfo.Tags}",
+        };
+    }
 }
 
 /// <summary>
@@ -160,6 +227,46 @@ public class PackageVersionsResponse
     /// <summary>Error or informational message</summary>
     [JsonPropertyName("message")]
     public string? Message { get; init; }
+
+    /// <summary>
+    /// Implicit conversion to TextResourceContents
+    /// </summary>
+    /// <param name="versionsResponse"></param>
+    public static implicit operator TextResourceContents(PackageVersionsResponse versionsResponse)
+    {
+        if (!versionsResponse.Found || versionsResponse.Versions == null)
+        {
+            return new TextResourceContents
+            {
+                Uri = versionsResponse.Uri,
+                MimeType = "application/json",
+                Text = versionsResponse.Message ?? "Package not found.",
+            };
+        }
+
+        var contentLines = new List<string>
+        {
+            $"Package ID: {versionsResponse.PackageId}",
+            $"Total Versions: {versionsResponse.TotalCount}",
+            "",
+        };
+
+        foreach (var version in versionsResponse.Versions)
+        {
+            contentLines.Add($"Version: {version.Version}");
+            contentLines.Add($"Download Count: {version.DownloadCount}");
+            contentLines.Add($"Is Prerelease: {version.IsPrerelease}");
+            contentLines.Add($"Is Deprecated: {version.IsDeprecated}");
+            contentLines.Add(new string('-', 30));
+        }
+
+        return new TextResourceContents
+        {
+            Uri = versionsResponse.Uri,
+            MimeType = "application/json",
+            Text = string.Join("\n", contentLines),
+        };
+    }
 }
 
 /// <summary>
@@ -182,6 +289,20 @@ public class PackageVersionInfo
     /// <summary>Whether this version is deprecated</summary>
     [JsonPropertyName("isDeprecated")]
     public required bool IsDeprecated { get; init; }
+
+    /// <summary>
+    /// Implicit conversion to TextResourceContents
+    /// </summary>
+    /// <param name="versionInfo"></param>
+    public static implicit operator TextResourceContents(PackageVersionInfo versionInfo)
+    {
+        return new TextResourceContents
+        {
+            Uri = $"nuget://packages/{{packageId}}/versions/{versionInfo.Version}",
+            MimeType = "application/json",
+            Text = $"Version: {versionInfo.Version}\nDownload Count: {versionInfo.DownloadCount}\nIs Prerelease: {versionInfo.IsPrerelease}\nIs Deprecated: {versionInfo.IsDeprecated}",
+        };
+    }
 }
 
 /// <summary>
@@ -216,6 +337,23 @@ public class PackageReadmeResponse
     /// <summary>Error or informational message</summary>
     [JsonPropertyName("message")]
     public string? Message { get; init; }
+
+    /// <summary>
+    /// Implicit conversion to TextResourceContents
+    /// </summary>
+    /// <param name="readmeResponse"></param>
+
+    public static implicit operator TextResourceContents(PackageReadmeResponse readmeResponse)
+    {
+        return new TextResourceContents
+        {
+            Uri = readmeResponse.Uri,
+            MimeType = readmeResponse.MimeType,
+            Text = readmeResponse.Found
+                ? readmeResponse.Content ?? "No README content available."
+                : readmeResponse.Message ?? "README not found.",
+        };
+    }
 }
 
 /// <summary>
@@ -274,6 +412,35 @@ public class ReplStateResponse
     /// <summary>Session metadata for session-specific requests</summary>
     [JsonPropertyName("sessionMetadata")]
     public SessionMetadata? SessionMetadata { get; init; }
+
+    /// <summary>
+    /// Implicit conversion to TextResourceContents
+    /// </summary>
+    /// <param name="replState"></param>
+    public static implicit operator TextResourceContents(ReplStateResponse replState)
+    {
+        var contentLines = new List<string>
+        {
+            $"Framework Version: {replState.FrameworkVersion}",
+            $"Language: {replState.Language}",
+            $"State: {replState.State}",
+            $"Active Session Count: {replState.ActiveSessionCount}",
+            $"Context ID: {replState.ContextId}",
+            $"Is Session Specific: {replState.IsSessionSpecific}",
+            $"Default Imports: {string.Join(", ", replState.DefaultImports)}",
+            $"Capabilities: {JsonSerializer.Serialize(replState.Capabilities)}",
+            $"Tips: {string.Join("\n", replState.Tips)}",
+            $"Examples: {JsonSerializer.Serialize(replState.Examples)}",
+            $"Session Metadata: {JsonSerializer.Serialize(replState.SessionMetadata)}",
+        };
+
+        return new TextResourceContents
+        {
+            Uri = replState.Uri,
+            MimeType = "application/json",
+            Text = string.Join("\n", contentLines),
+        };
+    }
 }
 
 /// <summary>

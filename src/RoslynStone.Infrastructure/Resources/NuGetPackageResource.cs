@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using Microsoft.AspNetCore.WebUtilities;
+using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using RoslynStone.Infrastructure.Models;
 using RoslynStone.Infrastructure.Services;
@@ -16,67 +17,34 @@ public class NuGetPackageResource
     /// Get available versions for a NuGet package as a resource
     /// </summary>
     /// <param name="nugetService">The NuGet service for package operations</param>
-    /// <param name="uri">The resource URI in format: nuget://packages/PackageId/versions</param>
+    /// <param name="requestContext">The request context containing URI and cancellation token</param>
+    /// <param name="id">The package ID extracted from the URI</param>
     /// <param name="cancellationToken">Cancellation token for async operations</param>
     /// <returns>List of package versions with metadata</returns>
-    [McpServerResource]
+    [McpServerResource(UriTemplate = "nuget://packages/{id}/versions", Name = "NuGet Package Versions", MimeType = "application/json")]
     [Description(
         "Access all published versions of a specific NuGet package, sorted from newest to oldest. Returns version numbers, download counts, and flags indicating prerelease or deprecated status. Use this to choose a specific version to load, check version history, avoid deprecated versions, and identify stable releases. URI format: nuget://packages/{PackageId}/versions"
     )]
-    public static async Task<PackageVersionsResponse> GetPackageVersions(
+    public static async Task<ResourceContents> GetPackageVersions(
         NuGetService nugetService,
+        RequestContext<ReadResourceRequestParams> requestContext,
         [Description(
-            "Resource URI in the format 'nuget://packages/PackageId/versions'. Examples: 'nuget://packages/Newtonsoft.Json/versions', 'nuget://packages/Microsoft.Extensions.Logging/versions'."
+            "The package ID extracted from the URI. Example: 'Newtonsoft.Json', 'Serilog', 'Dapper'."
         )]
-            string uri,
+        string id,
         CancellationToken cancellationToken = default
     )
     {
-        // Extract package ID from URI (format: nuget://packages/{packageId}/versions)
-        if (
-            !Uri.TryCreate(uri, UriKind.Absolute, out var parsedUri)
-            || !string.Equals(parsedUri.Scheme, "nuget", StringComparison.OrdinalIgnoreCase)
-            || !string.Equals(parsedUri.Host, "packages", StringComparison.OrdinalIgnoreCase)
-            || string.IsNullOrEmpty(parsedUri.AbsolutePath)
-        )
-        {
-            return new PackageVersionsResponse
-            {
-                Uri = uri,
-                Found = false,
-                MimeType = "application/json",
-                Message =
-                    "Invalid URI format. Expected: nuget://packages/{packageId}/versions. Example: nuget://packages/Newtonsoft.Json/versions",
-            };
-        }
+        var uri = requestContext.Params?.Uri ?? $"nuget://packages/{id}/readme";
 
-        // AbsolutePath is like "/PackageId/versions"
-        var segments = parsedUri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
-        if (
-            segments.Length != 2
-            || !string.Equals(segments[1], "versions", StringComparison.OrdinalIgnoreCase)
-        )
-        {
-            return new PackageVersionsResponse
-            {
-                Uri = uri,
-                Found = false,
-                MimeType = "application/json",
-                Message =
-                    "Invalid URI format. Expected: nuget://packages/{packageId}/versions. Example: nuget://packages/Newtonsoft.Json/versions",
-            };
-        }
-
-        var packageId = segments[0];
-
-        var versions = await nugetService.GetPackageVersionsAsync(packageId, cancellationToken);
+        var versions = await nugetService.GetPackageVersionsAsync(id, cancellationToken);
 
         return new PackageVersionsResponse
         {
             Uri = uri,
             MimeType = "application/json",
             Found = true,
-            PackageId = packageId,
+            PackageId = id,
             Versions = versions
                 .Select(v => new PackageVersionInfo
                 {
@@ -94,62 +62,39 @@ public class NuGetPackageResource
     /// Get the README content for a NuGet package as a resource
     /// </summary>
     /// <param name="nugetService">The NuGet service for package operations</param>
-    /// <param name="uri">The resource URI in format: nuget://packages/PackageId/readme or nuget://packages/PackageId/readme?version=1.0.0</param>
+    /// <param name="requestContext">The request context containing URI and cancellation token</param>
+    /// <param name="id">The package ID extracted from the URI</param>
+    /// <param name="version">Optional package version to load</param>
     /// <param name="cancellationToken">Cancellation token for async operations</param>
     /// <returns>Package README content</returns>
-    [McpServerResource]
+    [McpServerResource(UriTemplate = "nuget://packages/{id}/readme?version={version}", Name = "NuGet Package README", MimeType = "text/markdown")]
     [Description(
         "Access README documentation for a NuGet package. README files typically contain installation instructions, quick start guides, API overview, usage examples, and links to detailed documentation. Use this to understand how to use a package, see code examples, learn about package features, and check requirements before loading. URI format: nuget://packages/{PackageId}/readme?version={version}"
     )]
-    public static async Task<PackageReadmeResponse> GetPackageReadme(
+    public static async Task<ResourceContents> GetPackageReadme(
         NuGetService nugetService,
+        RequestContext<ReadResourceRequestParams> requestContext,
         [Description(
-            "Resource URI in the format 'nuget://packages/PackageId/readme' or 'nuget://packages/PackageId/readme?version=1.0.0'. Examples: 'nuget://packages/Newtonsoft.Json/readme', 'nuget://packages/Flurl.Http/readme?version=4.0.0'."
+            "The package ID extracted from the URI. Example: 'Newtonsoft.Json', 'Serilog', 'Dapper'."
         )]
-            string uri,
+        string id,
+        [Description(
+            "Optional package version to load. Example: '13.0.1'"
+        )]
+        string? version = null,
         CancellationToken cancellationToken = default
     )
     {
-        // Extract package ID and version from URI
-        var uriObj = new Uri(
-            uri.StartsWith("nuget://", StringComparison.OrdinalIgnoreCase) ? uri : $"nuget://{uri}"
-        );
+        var uri = requestContext.Params?.Uri ?? $"nuget://packages/{id}/readme";
 
-        var path = uriObj.AbsolutePath.Replace(
-            "/packages/",
-            "",
-            StringComparison.OrdinalIgnoreCase
-        );
-        var parts = path.Split('/');
-        var packageId = parts.Length > 0 ? parts[0] : "";
-
-        if (string.IsNullOrWhiteSpace(packageId))
-        {
-            return new PackageReadmeResponse
-            {
-                Uri = uri,
-                Found = false,
-                MimeType = "text/markdown",
-                Message =
-                    "Invalid URI format. Expected: nuget://packages/{packageId}/readme. Example: nuget://packages/Newtonsoft.Json/readme",
-            };
-        }
-
-        var query = QueryHelpers.ParseQuery(uriObj.Query);
-        var version = query.TryGetValue("version", out var v) ? v.ToString() : null;
-
-        var readme = await nugetService.GetPackageReadmeAsync(
-            packageId,
-            version,
-            cancellationToken
-        );
+        var readme = await nugetService.GetPackageReadmeAsync(id, version, cancellationToken);
 
         return new PackageReadmeResponse
         {
             Uri = uri,
             MimeType = "text/markdown",
             Found = readme != null,
-            PackageId = packageId,
+            PackageId = id,
             Version = version ?? "latest",
             Content = readme ?? "README not found for this package",
         };
