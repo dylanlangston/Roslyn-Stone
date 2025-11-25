@@ -211,7 +211,32 @@ if (useHttpTransport)
             var env = app.Services.GetRequiredService<IPythonEnvironment>();
             var gradioLauncher = env.GradioLauncher();
 
-            var baseUrl = app.Configuration["BASE_URL"] ?? "http://localhost:7071";
+            // Determine the base URL for MCP server connection
+            // Priority: BASE_URL env var > ASPNETCORE_URLS > default
+            var baseUrl = app.Configuration["BASE_URL"];
+            if (string.IsNullOrEmpty(baseUrl))
+            {
+                // Try to get from ASPNETCORE_URLS (used in HuggingFace Spaces and Docker)
+                var aspNetCoreUrls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
+                if (!string.IsNullOrEmpty(aspNetCoreUrls))
+                {
+                    // ASPNETCORE_URLS can be semicolon-separated, take the first HTTP URL
+                    // and replace '+' or '*' with 'localhost' for local connections
+                    var firstUrl = aspNetCoreUrls.Split(';').FirstOrDefault(u => u.StartsWith("http://"));
+                    if (!string.IsNullOrEmpty(firstUrl))
+                    {
+                        baseUrl = firstUrl.Replace("http://+:", "http://localhost:")
+                                         .Replace("http://*:", "http://localhost:")
+                                         .Replace("http://0.0.0.0:", "http://localhost:");
+                    }
+                }
+            }
+            
+            // Final fallback
+            if (string.IsNullOrEmpty(baseUrl))
+            {
+                baseUrl = "http://localhost:7071";
+            }
 
             // Check if Gradio is installed
             var isInstalled = gradioLauncher.CheckGradioInstalled();
