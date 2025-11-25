@@ -41,6 +41,20 @@ public class NuGetPackageResource
     {
         var uri = requestContext.Params?.Uri ?? $"nuget://packages/{id}/readme";
 
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return new PackageVersionsResponse
+            {
+                Uri = uri,
+                MimeType = "application/json",
+                Found = false,
+                PackageId = id,
+                Versions = new List<PackageVersionInfo>(),
+                TotalCount = 0,
+                Message = "Invalid package ID specified in URI",
+            };
+        }
+
         var versions = await nugetService.GetPackageVersionsAsync(id, cancellationToken);
 
         return new PackageVersionsResponse

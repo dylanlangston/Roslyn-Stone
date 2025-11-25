@@ -101,8 +101,8 @@ public class McpServerConfigurationTests
             .Where(m => m.GetCustomAttributes(typeof(McpServerResourceAttribute), false).Any())
             .ToList();
 
-        // We expect: GetReplState (ListSessions removed)
-        Assert.Single(methods);
+        // We expect: GetReplState and GetReplSessionState (ListSessions removed)
+        Assert.Equal(2, methods.Count);
     }
 
     [Fact]
