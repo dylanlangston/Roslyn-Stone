@@ -1,5 +1,5 @@
-using System.Text.Json;
 using System.Runtime.Serialization;
+using System.Text.Json;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using RoslynStone.Infrastructure.Resources;
@@ -33,7 +33,10 @@ public class ResourceTests
         try
         {
             var context = new RequestContext<ReadResourceRequestParams>(null!, null!);
-            context.GetType().GetProperty("Params")?.SetValue(context, new ReadResourceRequestParams { Uri = uri });
+            context
+                .GetType()
+                .GetProperty("Params")
+                ?.SetValue(context, new ReadResourceRequestParams { Uri = uri });
             return context;
         }
         catch
@@ -41,7 +44,9 @@ public class ResourceTests
             // FormatterServices.GetUninitializedObject is obsolete but acceptable here for test isolation; use with pragma to avoid errors.
 #pragma warning disable SYSLIB0050
             var contextType = typeof(RequestContext<ReadResourceRequestParams>);
-            var context = (RequestContext<ReadResourceRequestParams>)FormatterServices.GetUninitializedObject(contextType);
+            var context =
+                (RequestContext<ReadResourceRequestParams>)
+                    FormatterServices.GetUninitializedObject(contextType);
             var param = new ReadResourceRequestParams { Uri = uri };
             contextType.GetProperty("Params")?.SetValue(context, param);
             return context;
@@ -51,15 +56,19 @@ public class ResourceTests
 
     [Fact]
     [Trait("Feature", "Documentation")]
-        public async Task DocumentationResource_GetDocumentation_ValidUri_ReturnsDocumentation()
+    public async Task DocumentationResource_GetDocumentation_ValidUri_ReturnsDocumentation()
     {
         // Arrange
         var uri = "doc://System.String";
-            var requestContext = CreateRequestContext(uri);
+        var requestContext = CreateRequestContext(uri);
 
         // Act
         var id = uri.StartsWith("doc://") ? uri[6..] : uri;
-        var result = await DocumentationResource.GetDocumentation(_documentationService, requestContext, id);
+        var result = await DocumentationResource.GetDocumentation(
+            _documentationService,
+            requestContext,
+            id
+        );
         var json = JsonSerializer.Serialize(result);
         var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
 
@@ -73,15 +82,19 @@ public class ResourceTests
 
     [Fact]
     [Trait("Feature", "Documentation")]
-        public async Task DocumentationResource_GetDocumentation_WithoutPrefix_ReturnsDocumentation()
+    public async Task DocumentationResource_GetDocumentation_WithoutPrefix_ReturnsDocumentation()
     {
         // Arrange
         var uri = "System.String";
-            var requestContext = CreateRequestContext(uri);
+        var requestContext = CreateRequestContext(uri);
 
         // Act
         var id = uri.StartsWith("doc://") ? uri[6..] : uri;
-        var result = await DocumentationResource.GetDocumentation(_documentationService, requestContext, id);
+        var result = await DocumentationResource.GetDocumentation(
+            _documentationService,
+            requestContext,
+            id
+        );
         var json = JsonSerializer.Serialize(result);
         var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
 
@@ -92,15 +105,19 @@ public class ResourceTests
 
     [Fact]
     [Trait("Feature", "Documentation")]
-        public async Task DocumentationResource_GetDocumentation_InvalidSymbol_ReturnsNotFound()
+    public async Task DocumentationResource_GetDocumentation_InvalidSymbol_ReturnsNotFound()
     {
         // Arrange
         var uri = "doc://NonExistent.Type.Name";
-            var requestContext = CreateRequestContext(uri);
+        var requestContext = CreateRequestContext(uri);
 
         // Act
         var id = uri.StartsWith("doc://") ? uri[6..] : uri;
-        var result = await DocumentationResource.GetDocumentation(_documentationService, requestContext, id);
+        var result = await DocumentationResource.GetDocumentation(
+            _documentationService,
+            requestContext,
+            id
+        );
         var json = JsonSerializer.Serialize(result);
         var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
 
@@ -120,15 +137,19 @@ public class ResourceTests
 
     [Fact]
     [Trait("Feature", "Documentation")]
-        public async Task DocumentationResource_GetDocumentation_PackageUriFormat_ParsesCorrectly()
+    public async Task DocumentationResource_GetDocumentation_PackageUriFormat_ParsesCorrectly()
     {
         // Arrange
         var uri = "doc://Newtonsoft.Json@Newtonsoft.Json.JsonConvert";
-            var requestContext = CreateRequestContext(uri);
+        var requestContext = CreateRequestContext(uri);
 
         // Act
         var id = uri.StartsWith("doc://") ? uri[6..] : uri;
-        var result = await DocumentationResource.GetDocumentation(_documentationService, requestContext, id);
+        var result = await DocumentationResource.GetDocumentation(
+            _documentationService,
+            requestContext,
+            id
+        );
         var json = JsonSerializer.Serialize(result);
         var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
 
@@ -150,14 +171,20 @@ public class ResourceTests
 
     [Fact]
     [Trait("Feature", "NuGet")]
-        public async Task NuGetSearchResource_SearchPackages_ValidQuery_ReturnsResults()
+    public async Task NuGetSearchResource_SearchPackages_ValidQuery_ReturnsResults()
     {
         // Arrange
         var uri = "nuget://search?q=Newtonsoft.Json&skip=0&take=5";
-            var requestContext = CreateRequestContext(uri);
+        var requestContext = CreateRequestContext(uri);
 
         // Act
-        var result = await NuGetSearchResource.SearchPackages(_nugetService, requestContext, "Newtonsoft.Json", 0, 5);
+        var result = await NuGetSearchResource.SearchPackages(
+            _nugetService,
+            requestContext,
+            "Newtonsoft.Json",
+            0,
+            5
+        );
         var json = JsonSerializer.Serialize(result);
         var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
 
@@ -180,20 +207,29 @@ public class ResourceTests
 
     [Fact]
     [Trait("Feature", "NuGet")]
-        public async Task NuGetSearchResource_SearchPackages_WithoutQueryParams_UsesDefaults()
+    public async Task NuGetSearchResource_SearchPackages_WithoutQueryParams_UsesDefaults()
     {
         // Arrange
         var uri = "nuget://search?q=json";
-            var requestContext = CreateRequestContext(uri);
+        var requestContext = CreateRequestContext(uri);
 
         // Act
-        var result = await NuGetSearchResource.SearchPackages(_nugetService, requestContext, "json", null, null);
+        var result = await NuGetSearchResource.SearchPackages(
+            _nugetService,
+            requestContext,
+            "json",
+            null,
+            null
+        );
         var json = JsonSerializer.Serialize(result);
         var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
 
         // Assert — if structured response, check skip/take; otherwise verify text contains query and defaults implied
         Assert.NotNull(resultDict);
-        if (resultDict.TryGetValue("skip", out var skipElem) && resultDict.TryGetValue("take", out var takeElem))
+        if (
+            resultDict.TryGetValue("skip", out var skipElem)
+            && resultDict.TryGetValue("take", out var takeElem)
+        )
         {
             Assert.Equal(0, skipElem.GetInt32());
             Assert.Equal(20, takeElem.GetInt32());
@@ -208,17 +244,21 @@ public class ResourceTests
 
     [Fact]
     [Trait("Feature", "NuGet")]
-        public async Task NuGetPackageResource_GetPackageVersions_ValidPackage_ReturnsVersions()
+    public async Task NuGetPackageResource_GetPackageVersions_ValidPackage_ReturnsVersions()
     {
         // Arrange
         var uri = "nuget://packages/Newtonsoft.Json/versions";
-            var requestContext = CreateRequestContext(uri);
+        var requestContext = CreateRequestContext(uri);
 
         // Act
         var path = uri.StartsWith("nuget://") ? uri.Substring("nuget://".Length) : uri;
         var parts = path.Split('/');
         var id = parts.Length > 1 ? parts[1] : string.Empty; // 'packages/{id}/versions'
-        var result = await NuGetPackageResource.GetPackageVersions(_nugetService, requestContext, id);
+        var result = await NuGetPackageResource.GetPackageVersions(
+            _nugetService,
+            requestContext,
+            id
+        );
         var json = JsonSerializer.Serialize(result);
         var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
 
@@ -243,17 +283,21 @@ public class ResourceTests
 
     [Fact]
     [Trait("Feature", "NuGet")]
-        public async Task NuGetPackageResource_GetPackageVersions_InvalidUri_ReturnsNotFound()
+    public async Task NuGetPackageResource_GetPackageVersions_InvalidUri_ReturnsNotFound()
     {
         // Arrange
         var uri = "nuget://packages//versions";
-            var requestContext = CreateRequestContext(uri);
+        var requestContext = CreateRequestContext(uri);
 
         // Act
         var path = uri.StartsWith("nuget://") ? uri.Substring("nuget://".Length) : uri;
         var parts = path.Split('/');
         var id = parts.Length > 1 ? parts[1] : string.Empty; // may be empty
-        var result = await NuGetPackageResource.GetPackageVersions(_nugetService, requestContext, id);
+        var result = await NuGetPackageResource.GetPackageVersions(
+            _nugetService,
+            requestContext,
+            id
+        );
         var json = JsonSerializer.Serialize(result);
         var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
 
@@ -269,21 +313,23 @@ public class ResourceTests
             var text = textElem.GetString() ?? string.Empty;
             Assert.True(
                 text.Contains("Package not found", StringComparison.OrdinalIgnoreCase)
-                || text.Contains("Invalid package ID", StringComparison.OrdinalIgnoreCase)
+                    || text.Contains("Invalid package ID", StringComparison.OrdinalIgnoreCase)
             );
         }
     }
 
     [Fact]
     [Trait("Feature", "NuGet")]
-        public async Task NuGetPackageResource_GetPackageReadme_ValidPackage_ReturnsReadme()
+    public async Task NuGetPackageResource_GetPackageReadme_ValidPackage_ReturnsReadme()
     {
         // Arrange
         var uri = "nuget://packages/Newtonsoft.Json/readme";
-            var requestContext = CreateRequestContext(uri);
+        var requestContext = CreateRequestContext(uri);
 
         // Act
-        var id = uri.Split('/', StringSplitOptions.RemoveEmptyEntries).Skip(1).FirstOrDefault() ?? string.Empty; // 'packages/{id}/readme'
+        var id =
+            uri.Split('/', StringSplitOptions.RemoveEmptyEntries).Skip(1).FirstOrDefault()
+            ?? string.Empty; // 'packages/{id}/readme'
         var result = await NuGetPackageResource.GetPackageReadme(_nugetService, requestContext, id);
         var json = JsonSerializer.Serialize(result);
         var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
@@ -298,17 +344,26 @@ public class ResourceTests
 
     [Fact]
     [Trait("Feature", "NuGet")]
-        public async Task NuGetPackageResource_GetPackageReadme_WithVersion_ReturnsVersionedReadme()
+    public async Task NuGetPackageResource_GetPackageReadme_WithVersion_ReturnsVersionedReadme()
     {
         // Arrange
         var uri = "nuget://packages/Newtonsoft.Json/readme?version=13.0.3";
-            var requestContext = CreateRequestContext(uri);
+        var requestContext = CreateRequestContext(uri);
 
         // Act
-        var id = uri.Split('/', StringSplitOptions.RemoveEmptyEntries).Skip(1).FirstOrDefault() ?? string.Empty;
+        var id =
+            uri.Split('/', StringSplitOptions.RemoveEmptyEntries).Skip(1).FirstOrDefault()
+            ?? string.Empty;
         // Extract version from query if present
-        var version = uri.Contains("version=") ? uri.Split("version=").Last().Split('&').First() : null;
-        var result = await NuGetPackageResource.GetPackageReadme(_nugetService, requestContext, id, version);
+        var version = uri.Contains("version=")
+            ? uri.Split("version=").Last().Split('&').First()
+            : null;
+        var result = await NuGetPackageResource.GetPackageReadme(
+            _nugetService,
+            requestContext,
+            id,
+            version
+        );
         var json = JsonSerializer.Serialize(result);
         var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
 
@@ -321,14 +376,18 @@ public class ResourceTests
 
     [Fact]
     [Trait("Feature", "REPL")]
-        public void ReplStateResource_GetReplState_ReturnsState()
+    public void ReplStateResource_GetReplState_ReturnsState()
     {
         // Arrange
         var uri = "repl://state";
-            var requestContext = CreateRequestContext(uri);
+        var requestContext = CreateRequestContext(uri);
 
         // Act
-        var result = ReplStateResource.GetReplState(_scriptingService, _contextManager, requestContext);
+        var result = ReplStateResource.GetReplState(
+            _scriptingService,
+            _contextManager,
+            requestContext
+        );
         var json = JsonSerializer.Serialize(result);
         var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
 
@@ -352,14 +411,18 @@ public class ResourceTests
 
     [Fact]
     [Trait("Feature", "REPL")]
-        public void ReplStateResource_GetReplState_AlternativeUri_ReturnsState()
+    public void ReplStateResource_GetReplState_AlternativeUri_ReturnsState()
     {
         // Arrange
         var uri = "repl://info";
-            var requestContext = CreateRequestContext(uri);
+        var requestContext = CreateRequestContext(uri);
 
         // Act
-        var result = ReplStateResource.GetReplState(_scriptingService, _contextManager, requestContext);
+        var result = ReplStateResource.GetReplState(
+            _scriptingService,
+            _contextManager,
+            requestContext
+        );
         var json = JsonSerializer.Serialize(result);
         var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
 
@@ -371,14 +434,18 @@ public class ResourceTests
 
     [Fact]
     [Trait("Feature", "REPL")]
-        public void ReplStateResource_GetReplState_SessionSpecificUri_ReturnsSessionState()
+    public void ReplStateResource_GetReplState_SessionSpecificUri_ReturnsSessionState()
     {
         // Arrange
         var uri = "repl://sessions/test-context-123/state";
-            var requestContext = CreateRequestContext(uri);
+        var requestContext = CreateRequestContext(uri);
 
         // Act
-        var result = ReplStateResource.GetReplState(_scriptingService, _contextManager, requestContext);
+        var result = ReplStateResource.GetReplState(
+            _scriptingService,
+            _contextManager,
+            requestContext
+        );
         var json = JsonSerializer.Serialize(result);
         var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
 
