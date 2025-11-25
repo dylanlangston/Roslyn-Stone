@@ -8,7 +8,7 @@ env:
   IMAGE_NAME: ${{ github.repository }}
   # For automatic pushes to Hugging Face Spaces, add
   # 'HF_TOKEN' as a repository secret pointing to a Hugging Face access token
-  # with 'repo' scope for the target space `dylanlangston/Roslyn-Stone_MCP`.
+  # with 'repo' scope for the target space `MCP-1st-Birthday/Roslyn-Stone`.
 
 jobs:
   build-and-push:
@@ -121,9 +121,9 @@ jobs:
           fi
           # Upload the repository root to the Space, excluding common build outputs
           if command -v uvx >/dev/null 2>&1; then
-            uvx hf upload dylanlangston/Roslyn-Stone_MCP . --repo-type=space --exclude="/.venv/*" --exclude="/bin/*" --exclude="/obj/*" --exclude="/tests/*" --exclude="/.github/*" --delete="*" --commit-message="CI: Sync from GitHub Actions ${GITHUB_SHA}"
+            uvx hf upload MCP-1st-Birthday/Roslyn-Stone . --repo-type=space --exclude="/.venv/*" --exclude="/bin/*" --exclude="/obj/*" --exclude="/tests/*" --exclude="/.github/*" --delete="*" --commit-message="CI: Sync from GitHub Actions ${GITHUB_SHA}"
           else
-            hf upload dylanlangston/Roslyn-Stone_MCP . --repo-type=space --exclude="/.venv/*" --exclude="/bin/*" --exclude="/obj/*" --exclude="/tests/*" --exclude="/.github/*" --delete="*" --commit-message="CI: Sync from GitHub Actions ${GITHUB_SHA}"
+            hf upload MCP-1st-Birthday/Roslyn-Stone . --repo-type=space --exclude="/.venv/*" --exclude="/bin/*" --exclude="/obj/*" --exclude="/tests/*" --exclude="/.github/*" --delete="*" --commit-message="CI: Sync from GitHub Actions ${GITHUB_SHA}"
           fi
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
