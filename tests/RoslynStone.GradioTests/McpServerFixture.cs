@@ -11,6 +11,24 @@ namespace RoslynStone.GradioTests;
 /// </summary>
 public sealed class McpServerFixture : IAsyncDisposable
 {
+    /// <summary>
+    /// Timeout for ASP.NET Core to start accepting connections (seconds).
+    /// This is usually fast (a few seconds).
+    /// </summary>
+    private const int AspNetCoreReadyTimeoutSeconds = 30;
+
+    /// <summary>
+    /// Timeout for Gradio to fully initialize after ASP.NET Core is ready (seconds).
+    /// In CI, UV/Python setup can take significant time, so this needs to be generous.
+    /// </summary>
+    private const int GradioReadyTimeoutSeconds = 180;
+
+    /// <summary>
+    /// Delay between Gradio readiness polling attempts (milliseconds).
+    /// Using a longer delay reduces log spam during the wait.
+    /// </summary>
+    private const int GradioPollingDelayMs = 3000;
+
     private readonly ITestOutputHelper? _output;
     private Process? _serverProcess;
     private readonly SemaphoreSlim _initializationLock = new(1, 1);
@@ -184,87 +202,127 @@ public sealed class McpServerFixture : IAsyncDisposable
 
     private async Task WaitForServerReadyAsync(CancellationToken cancellationToken)
     {
-        using var timeoutCts = new CancellationTokenSource(
-            TimeSpan.FromSeconds(ServerStartupTimeoutSeconds)
+        // Phase 1: Wait for ASP.NET Core to accept connections (fast)
+        WriteMessage(
+            $"Phase 1: Waiting for ASP.NET Core server to accept connections (timeout: {AspNetCoreReadyTimeoutSeconds}s)..."
         );
-        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+
+        using var aspNetCts = new CancellationTokenSource(
+            TimeSpan.FromSeconds(AspNetCoreReadyTimeoutSeconds)
+        );
+        using var linkedAspNetCts = CancellationTokenSource.CreateLinkedTokenSource(
             cancellationToken,
-            timeoutCts.Token
+            aspNetCts.Token
         );
 
-        WriteMessage("Waiting for ASP.NET Core server to be ready...");
+        await WaitForHttpConnectionAsync(BaseUrl, linkedAspNetCts.Token).ConfigureAwait(false);
+        WriteMessage("✓ ASP.NET Core server is accepting connections");
 
-        // Phase 1: Wait for ASP.NET Core to respond
-        await WaitForHttpEndpointAsync(BaseUrl, linkedCts.Token).ConfigureAwait(false);
-        WriteMessage("✓ ASP.NET Core server is responding");
+        // Phase 2: Wait for Gradio UI to be fully initialized (slow in CI)
+        // In CI, UV needs to install Python dependencies which takes significant time
+        WriteMessage(
+            $"Phase 2: Waiting for Gradio UI to initialize (timeout: {GradioReadyTimeoutSeconds}s)..."
+        );
+        WriteMessage(
+            "  Note: In CI, this may take several minutes while UV/Python dependencies are installed."
+        );
 
-        // Phase 2: Wait for Gradio UI to be fully initialized
-        // Gradio takes additional time to start after ASP.NET Core is ready
-        WriteMessage("Waiting for Gradio UI to initialize...");
-        await WaitForGradioReadyAsync(linkedCts.Token).ConfigureAwait(false);
+        using var gradioCts = new CancellationTokenSource(
+            TimeSpan.FromSeconds(GradioReadyTimeoutSeconds)
+        );
+        using var linkedGradioCts = CancellationTokenSource.CreateLinkedTokenSource(
+            cancellationToken,
+            gradioCts.Token
+        );
+
+        await WaitForGradioReadyAsync(linkedGradioCts.Token).ConfigureAwait(false);
         WriteMessage("✓ Gradio UI is ready");
     }
 
-    private async Task WaitForHttpEndpointAsync(string url, CancellationToken cancellationToken)
+    /// <summary>
+    /// Waits for the HTTP server to accept connections. This only verifies that ASP.NET Core
+    /// is running and accepting requests - it does NOT verify that Gradio is ready.
+    /// </summary>
+    private async Task WaitForHttpConnectionAsync(string url, CancellationToken cancellationToken)
     {
-        using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
+        using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
         var attempt = 0;
-        var delay = 100; // Start with 100ms
+        var delay = 500; // Start with 500ms
 
         while (!cancellationToken.IsCancellationRequested)
         {
             attempt++;
             try
             {
+                // Any response (including 502) means ASP.NET Core is running
                 var response = await httpClient
                     .GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
                     .ConfigureAwait(false);
 
-                // Accept any response (even 404) as long as the server is responding
-                if (
-                    response.StatusCode != HttpStatusCode.BadGateway
-                    && response.StatusCode != HttpStatusCode.ServiceUnavailable
-                )
-                {
-                    WriteMessage(
-                        $"Server responded with status: {response.StatusCode} after {attempt} attempts"
-                    );
-                    return;
-                }
+                // 502/503 from YARP means Gradio isn't ready yet, but ASP.NET Core is
+                WriteMessage(
+                    $"  ASP.NET Core responded with status: {(int)response.StatusCode} after {attempt} attempts"
+                );
+                return;
             }
-            catch (HttpRequestException)
+            catch (HttpRequestException ex)
             {
-                // Server not ready yet
+                // Connection refused - server not ready yet
+                if (attempt % 5 == 1)
+                {
+                    // Log every 5th attempt to reduce noise
+                    WriteMessage($"  Waiting for ASP.NET Core (attempt {attempt}): {ex.Message}");
+                }
             }
             catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
             {
                 // Timeout on individual request, continue polling
+                if (attempt % 5 == 1)
+                {
+                    WriteMessage($"  Request timeout (attempt {attempt}), continuing...");
+                }
             }
 
-            // Exponential backoff with max delay of 2 seconds
+            // Linear backoff with max delay of 2 seconds
             await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
-            delay = Math.Min(delay * 2, 2000);
+            delay = Math.Min(delay + 250, 2000);
         }
 
         cancellationToken.ThrowIfCancellationRequested();
     }
 
+    /// <summary>
+    /// Waits for Gradio to be fully initialized by checking for Gradio-specific content in responses.
+    /// This can take several minutes in CI while UV/Python dependencies are being installed.
+    /// </summary>
     private async Task WaitForGradioReadyAsync(CancellationToken cancellationToken)
     {
-        using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(5) };
+        using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
         var attempt = 0;
-        var maxAttempts = 30; // 30 attempts with 1 second delay = 30 seconds max
-        var delay = 1000; // Check every second
+        var startTime = DateTime.UtcNow;
+        var lastStatusReport = DateTime.UtcNow;
 
-        while (!cancellationToken.IsCancellationRequested && attempt < maxAttempts)
+        while (!cancellationToken.IsCancellationRequested)
         {
             attempt++;
+            var elapsed = DateTime.UtcNow - startTime;
+
             try
             {
-                // Try to fetch the root page and check if Gradio content is present
                 var response = await httpClient
                     .GetAsync(BaseUrl, HttpCompletionOption.ResponseContentRead, cancellationToken)
                     .ConfigureAwait(false);
+
+                var statusCode = (int)response.StatusCode;
+
+                // Log progress every 15 seconds to show the wait is active
+                if ((DateTime.UtcNow - lastStatusReport).TotalSeconds >= 15)
+                {
+                    WriteMessage(
+                        $"  Still waiting for Gradio (attempt {attempt}, elapsed: {elapsed.TotalSeconds:F0}s, last status: {statusCode})..."
+                    );
+                    lastStatusReport = DateTime.UtcNow;
+                }
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -278,11 +336,33 @@ public sealed class McpServerFixture : IAsyncDisposable
                         || content.Contains("Roslyn-Stone MCP", StringComparison.OrdinalIgnoreCase)
                     )
                     {
-                        WriteMessage($"Gradio UI detected after {attempt} attempts");
-                        // Give it one more second to fully stabilize
-                        await Task.Delay(1000, cancellationToken).ConfigureAwait(false);
+                        WriteMessage(
+                            $"  Gradio UI detected after {attempt} attempts ({elapsed.TotalSeconds:F1}s)"
+                        );
+                        // Give it a brief moment to fully stabilize
+                        await Task.Delay(500, cancellationToken).ConfigureAwait(false);
                         return;
                     }
+
+                    // Got 200 but no Gradio content - log for diagnostics
+                    WriteMessage(
+                        $"  Got HTTP 200 but Gradio content not detected yet (attempt {attempt}, elapsed: {elapsed.TotalSeconds:F0}s)"
+                    );
+                }
+                else if (
+                    response.StatusCode == HttpStatusCode.BadGateway
+                    || response.StatusCode == HttpStatusCode.ServiceUnavailable
+                )
+                {
+                    // 502/503 means YARP is proxying but Gradio backend isn't ready yet
+                    // This is expected during Gradio startup - don't spam logs
+                }
+                else
+                {
+                    // Unexpected status code - log it
+                    WriteMessage(
+                        $"  Unexpected status {statusCode} while waiting for Gradio (attempt {attempt})"
+                    );
                 }
             }
             catch (HttpRequestException)
@@ -292,14 +372,16 @@ public sealed class McpServerFixture : IAsyncDisposable
             catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
             {
                 // Timeout on individual request, continue polling
+                WriteMessage(
+                    $"  Request timeout (attempt {attempt}), Gradio may still be starting..."
+                );
             }
 
-            await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+            await Task.Delay(GradioPollingDelayMs, cancellationToken).ConfigureAwait(false);
         }
 
-        // If we get here, Gradio didn't fully initialize, but ASP.NET is running
-        // Log a warning but don't fail - some tests might still work
-        WriteMessage($"[WARNING] Gradio UI may not be fully initialized after {attempt} attempts");
+        // If we get here due to cancellation, throw to indicate failure
+        cancellationToken.ThrowIfCancellationRequested();
     }
 
     private async Task StopServerAsync()
