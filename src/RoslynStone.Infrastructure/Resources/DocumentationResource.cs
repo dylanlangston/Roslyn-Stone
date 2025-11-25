@@ -20,7 +20,11 @@ public class DocumentationResource
     /// <param name="id">The resource ID (symbol name) extracted from the URI</param>
     /// <param name="cancellationToken">Cancellation token for async operations</param>
     /// <returns>Documentation content in structured format</returns>
-    [McpServerResource(UriTemplate = "doc://{id}", Name = "Documentation", MimeType = "application/json")] 
+    [McpServerResource(
+        UriTemplate = "doc://{id}",
+        Name = "Documentation",
+        MimeType = "application/json"
+    )]
     [Description(
         "Access comprehensive XML documentation for .NET types, methods, properties, and other symbols, including NuGet packages. Returns detailed information including summary, remarks, parameters, return values, exceptions, and code examples. Use this to: understand .NET APIs, learn method signatures, discover available members, and get context-aware help. Supports all .NET 10 types and methods, plus NuGet packages. URI formats: 'doc://{FullyQualifiedTypeName}' for .NET types, or 'doc://{PackageId}@{FullyQualifiedTypeName}' for NuGet package types"
     )]

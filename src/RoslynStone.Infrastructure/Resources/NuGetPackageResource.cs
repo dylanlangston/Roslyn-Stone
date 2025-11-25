@@ -21,7 +21,11 @@ public class NuGetPackageResource
     /// <param name="id">The package ID extracted from the URI</param>
     /// <param name="cancellationToken">Cancellation token for async operations</param>
     /// <returns>List of package versions with metadata</returns>
-    [McpServerResource(UriTemplate = "nuget://packages/{id}/versions", Name = "NuGet Package Versions", MimeType = "application/json")]
+    [McpServerResource(
+        UriTemplate = "nuget://packages/{id}/versions",
+        Name = "NuGet Package Versions",
+        MimeType = "application/json"
+    )]
     [Description(
         "Access all published versions of a specific NuGet package, sorted from newest to oldest. Returns version numbers, download counts, and flags indicating prerelease or deprecated status. Use this to choose a specific version to load, check version history, avoid deprecated versions, and identify stable releases. URI format: nuget://packages/{PackageId}/versions"
     )]
@@ -31,7 +35,7 @@ public class NuGetPackageResource
         [Description(
             "The package ID extracted from the URI. Example: 'Newtonsoft.Json', 'Serilog', 'Dapper'."
         )]
-        string id,
+            string id,
         CancellationToken cancellationToken = default
     )
     {
@@ -67,7 +71,11 @@ public class NuGetPackageResource
     /// <param name="version">Optional package version to load</param>
     /// <param name="cancellationToken">Cancellation token for async operations</param>
     /// <returns>Package README content</returns>
-    [McpServerResource(UriTemplate = "nuget://packages/{id}/readme?version={version}", Name = "NuGet Package README", MimeType = "text/markdown")]
+    [McpServerResource(
+        UriTemplate = "nuget://packages/{id}/readme?version={version}",
+        Name = "NuGet Package README",
+        MimeType = "text/markdown"
+    )]
     [Description(
         "Access README documentation for a NuGet package. README files typically contain installation instructions, quick start guides, API overview, usage examples, and links to detailed documentation. Use this to understand how to use a package, see code examples, learn about package features, and check requirements before loading. URI format: nuget://packages/{PackageId}/readme?version={version}"
     )]
@@ -77,11 +85,8 @@ public class NuGetPackageResource
         [Description(
             "The package ID extracted from the URI. Example: 'Newtonsoft.Json', 'Serilog', 'Dapper'."
         )]
-        string id,
-        [Description(
-            "Optional package version to load. Example: '13.0.1'"
-        )]
-        string? version = null,
+            string id,
+        [Description("Optional package version to load. Example: '13.0.1'")] string? version = null,
         CancellationToken cancellationToken = default
     )
     {

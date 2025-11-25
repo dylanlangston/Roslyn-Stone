@@ -20,7 +20,11 @@ public class ReplStateResource
     /// <param name="contextManager">The REPL context manager</param>
     /// <param name="requestContext">The request context containing the URI and optional params.</param>
     /// <returns>Information about current REPL state</returns>
-    [McpServerResource(UriTemplate = "repl://state", Name = "REPL State Information", MimeType = "application/json")]
+    [McpServerResource(
+        UriTemplate = "repl://state",
+        Name = "REPL State Information",
+        MimeType = "application/json"
+    )]
     [Description(
         "Access the current REPL environment state, including active sessions, default imports, capabilities, tips, and examples."
     )]
@@ -45,7 +49,11 @@ public class ReplStateResource
     /// <param name="contextId">The ID of the REPL session to query (path variable).</param>
     /// <param name="requestContext">The request context containing the URI and optional params.</param>
     /// <returns>Information about specific REPL session state</returns>
-    [McpServerResource(UriTemplate = "repl://sessions/{contextId}/state", Name = "REPL Session State Information", MimeType = "application/json")]
+    [McpServerResource(
+        UriTemplate = "repl://sessions/{contextId}/state",
+        Name = "REPL Session State Information",
+        MimeType = "application/json"
+    )]
     [Description(
         "Access detailed state information for a specific REPL session identified by its context ID. Returns session metadata including creation time, last accessed time, execution count, and initialization status. Use this to monitor and manage individual REPL sessions, track their activity, and understand their current state. URI format: repl://sessions/{contextId}/state"
     )]

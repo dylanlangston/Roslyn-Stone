@@ -23,19 +23,23 @@ public class NuGetSearchResource
     /// <param name="take">Optional number of records to return (default: 20, max: 100)</param>
     /// <param name="cancellationToken">Cancellation token for async operations</param>
     /// <returns>Search results with package metadata</returns>
-    [McpServerResource(UriTemplate = "nuget://search?q={query}&skip={skip}&take={take}", Name = "NuGet Package Search", MimeType = "application/json")]
+    [McpServerResource(
+        UriTemplate = "nuget://search?q={query}&skip={skip}&take={take}",
+        Name = "NuGet Package Search",
+        MimeType = "application/json"
+    )]
     [Description(
         "Access the NuGet package repository catalog to find libraries and tools. Returns matching packages with metadata including name, description, authors, latest version, download count, and URLs. Use this to discover packages for specific functionality, find popular libraries, and check package information before loading. Search by keywords, package names, tags, or descriptions. URI format: nuget://search?q={query}&skip={skip}&take={take}"
     )]
     public static async Task<ResourceContents> SearchPackages(
         NuGetService nugetService,
         RequestContext<ReadResourceRequestParams> requestContext,
-        [Description("Search query; examples: 'json', 'http client', 'Newtonsoft.Json', 'csv parser', 'logging'.")]
+        [Description(
+            "Search query; examples: 'json', 'http client', 'Newtonsoft.Json', 'csv parser', 'logging'."
+        )]
             string query,
-        [Description("Optional number of records to skip; default: 0")]
-            int? skip = null,
-        [Description("Optional number of records to take; default: 20, max: 100")]
-            int? take = null,
+        [Description("Optional number of records to skip; default: 0")] int? skip = null,
+        [Description("Optional number of records to take; default: 20, max: 100")] int? take = null,
         CancellationToken cancellationToken = default
     )
     {

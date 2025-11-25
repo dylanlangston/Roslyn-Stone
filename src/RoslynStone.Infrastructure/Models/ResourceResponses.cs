@@ -190,7 +190,8 @@ public class PackageInfo
         {
             Uri = $"nuget://packages/{pkgInfo.Id}",
             MimeType = "application/json",
-            Text = $"Package ID: {pkgInfo.Id}\nTitle: {pkgInfo.Title}\nDescription: {pkgInfo.Description}\nAuthors: {pkgInfo.Authors}\nLatest Version: {pkgInfo.LatestVersion}\nDownload Count: {pkgInfo.DownloadCount}\nIcon URL: {pkgInfo.IconUrl}\nProject URL: {pkgInfo.ProjectUrl}\nTags: {pkgInfo.Tags}",
+            Text =
+                $"Package ID: {pkgInfo.Id}\nTitle: {pkgInfo.Title}\nDescription: {pkgInfo.Description}\nAuthors: {pkgInfo.Authors}\nLatest Version: {pkgInfo.LatestVersion}\nDownload Count: {pkgInfo.DownloadCount}\nIcon URL: {pkgInfo.IconUrl}\nProject URL: {pkgInfo.ProjectUrl}\nTags: {pkgInfo.Tags}",
         };
     }
 }
@@ -300,7 +301,8 @@ public class PackageVersionInfo
         {
             Uri = $"nuget://packages/{{packageId}}/versions/{versionInfo.Version}",
             MimeType = "application/json",
-            Text = $"Version: {versionInfo.Version}\nDownload Count: {versionInfo.DownloadCount}\nIs Prerelease: {versionInfo.IsPrerelease}\nIs Deprecated: {versionInfo.IsDeprecated}",
+            Text =
+                $"Version: {versionInfo.Version}\nDownload Count: {versionInfo.DownloadCount}\nIs Prerelease: {versionInfo.IsPrerelease}\nIs Deprecated: {versionInfo.IsDeprecated}",
         };
     }
 }
@@ -342,7 +344,6 @@ public class PackageReadmeResponse
     /// Implicit conversion to TextResourceContents
     /// </summary>
     /// <param name="readmeResponse"></param>
-
     public static implicit operator TextResourceContents(PackageReadmeResponse readmeResponse)
     {
         return new TextResourceContents
