@@ -122,6 +122,8 @@ public sealed class McpServerFixture : IAsyncDisposable
                         ["PYTHONUNBUFFERED"] = "1",
                         // Allow pre-release packages for UV (gradio 6.0 needs gradio-client 2.0.0.dev3)
                         ["UV_PRERELEASE"] = "allow",
+                        // Skip CSnakes Python install in CI when deps are pre-installed by CI workflow
+                        ["SKIP_PYTHON_INSTALL"] = Environment.GetEnvironmentVariable("SKIP_PYTHON_INSTALL") ?? "false",
                     },
                 },
                 EnableRaisingEvents = true,

@@ -11,6 +11,7 @@ jobs:
   ci:
     name: Build and Test
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     
     steps:
       - name: Checkout code
@@ -21,13 +22,50 @@ jobs:
         with:
           dotnet-version: '10.0.x'
       
+      - name: Setup Python for Gradio tests
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Install UV and Python dependencies
+        timeout-minutes: 5
+        run: |
+          # Install UV
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          export PATH="$HOME/.local/bin:$PATH"
+          
+          # Create a virtual environment in the expected location for both Debug and Release
+          # The test build uses Debug, but Cake CI uses Release
+          for CONFIG in Debug Release; do
+            VENV_PATH="${{ github.workspace }}/src/RoslynStone.Api/bin/$CONFIG/net10.0/.venv"
+            mkdir -p "$(dirname "$VENV_PATH")"
+            python -m venv "$VENV_PATH"
+            
+            # Install dependencies with pre-releases allowed (gradio 6.0 needs gradio-client 2.0.0.dev3)
+            uv pip install --python "$VENV_PATH/bin/python" --prerelease=allow \
+              gradio>=6.0.0 \
+              httpx>=0.25.0 \
+              openai>=1.0.0 \
+              anthropic>=0.18.0 \
+              google-generativeai>=0.3.0 \
+              huggingface_hub>=0.20.0 \
+              pygments>=2.17.0
+          done
+      
       - name: Install Playwright browsers
+        timeout-minutes: 3
         run: |
           dotnet build tests/RoslynStone.GradioTests/RoslynStone.GradioTests.csproj
           pwsh tests/RoslynStone.GradioTests/bin/Debug/net10.0/playwright.ps1 install --with-deps chromium
       
       - name: Run Cake CI
+        timeout-minutes: 20
         run: dotnet cake --target=CI --configuration=Release
+        env:
+          # Skip CSnakes Python install since we pre-installed deps
+          SKIP_PYTHON_INSTALL: 'true'
+          # Allow pre-release packages for UV (fallback if needed)
+          UV_PRERELEASE: 'allow'
       
       - name: Upload test results
         uses: actions/upload-artifact@v4

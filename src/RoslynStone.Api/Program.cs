@@ -93,11 +93,26 @@ if (useHttpTransport)
     var skipPythonInstall = Environment.GetEnvironmentVariable("SKIP_PYTHON_INSTALL") == "true";
     var preInstalled = isContainer || skipPythonInstall;
 
+    // Check if setup-python action set Python3_ROOT_DIR (used in CI)
+    var pythonRootDir = Environment.GetEnvironmentVariable("Python3_ROOT_DIR");
+    var useEnvVarLocator = !string.IsNullOrEmpty(pythonRootDir);
+
     var pythonBuilder = builder
         .Services.WithPython()
         .WithHome(pythonHome)
-        .WithVirtualEnvironment(venvPath)
-        .FromRedistributable(); // Use Python from CSnakes redistributable
+        .WithVirtualEnvironment(venvPath);
+
+    // Choose Python locator based on environment:
+    // - In CI with setup-python: use environment variable locator (Python3_ROOT_DIR)
+    // - Otherwise: use redistributable (downloads Python automatically)
+    if (useEnvVarLocator)
+    {
+        pythonBuilder = pythonBuilder.FromEnvironmentVariable("Python3_ROOT_DIR", "3.12");
+    }
+    else
+    {
+        pythonBuilder = pythonBuilder.FromRedistributable(); // Use Python from CSnakes redistributable
+    }
 
     // Only install dependencies at runtime if not pre-installed (e.g., in Docker)
     // In containers, dependencies are installed during docker build for faster startup

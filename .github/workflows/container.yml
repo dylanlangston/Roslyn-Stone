@@ -16,6 +16,7 @@ jobs:
     environment:
       name: production
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     permissions:
       contents: read
       packages: write
@@ -56,6 +57,7 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         id: build
+        timeout-minutes: 30
         with:
           context: .
           file: ./src/RoslynStone.Api/Dockerfile
@@ -83,6 +85,7 @@ jobs:
 
       - name: Install HF CLI
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        timeout-minutes: 2
         run: |
           python -m pip install --upgrade pip
           pip install huggingface-hub
@@ -95,6 +98,7 @@ jobs:
 
       - name: Login to Hugging Face (non-interactive using token)
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        timeout-minutes: 1
         run: |
           set -eux
           if [ -z "${HF_TOKEN}" ]; then
@@ -111,6 +115,7 @@ jobs:
 
       - name: Upload to Hugging Face Space (using uvx if available, else hf)
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        timeout-minutes: 10
         run: |
           # Use uvx wrapper if present, otherwise use hf CLI directly.
           # This uploads the repository root while excluding common build and binary dirs.
