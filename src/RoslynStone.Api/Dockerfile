@@ -40,11 +40,21 @@ RUN setup-python --python 3.12 --venv /app/.venv --verbose
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.local/bin:${PATH}"
 
-# Install all Python dependencies from pyproject.toml using UV into the venv
+# Install all Python dependencies using UV into the venv
 # This happens at build time, not runtime, for faster container startup
 # --prerelease=allow is needed because gradio 6.0.0 depends on gradio-client 2.0.0.dev3
+# We install dependencies directly rather than using editable install since this is just a script, not a package
 WORKDIR "/src/src/RoslynStone.GradioModule"
-RUN uv pip install -e . --python /app/.venv/bin/python --prerelease=allow
+RUN uv pip install \
+    "gradio>=6.0.0" \
+    "httpx>=0.27.0" \
+    "pygments>=2.17.0" \
+    "openai>=1.0.0" \
+    "anthropic>=0.25.0" \
+    "google-generativeai>=0.3.0" \
+    "huggingface_hub>=0.20.0" \
+    --python /app/.venv/bin/python \
+    --prerelease=allow
 
 # Verify Gradio is installed correctly
 RUN /app/.venv/bin/python3 -c "import gradio; print(f'Gradio {gradio.__version__} installed successfully')"
