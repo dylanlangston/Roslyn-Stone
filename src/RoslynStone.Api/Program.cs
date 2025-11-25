@@ -87,12 +87,26 @@ if (useHttpTransport)
         Environment.SetEnvironmentVariable("PATH", $"{uvPath}:{currentPath}");
     }
 
-    builder
+    // Check if we're running in a container where dependencies are pre-installed
+    // or in development mode where we need to install at runtime
+    var isContainer = Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true";
+    var skipPythonInstall = Environment.GetEnvironmentVariable("SKIP_PYTHON_INSTALL") == "true";
+    var preInstalled = isContainer || skipPythonInstall;
+
+    var pythonBuilder = builder
         .Services.WithPython()
         .WithHome(pythonHome)
         .WithVirtualEnvironment(venvPath)
-        .FromRedistributable() // Use Python from CSnakes redistributable
-        .WithUvInstaller("pyproject.toml"); // Use UV to install from pyproject.toml
+        .FromRedistributable(); // Use Python from CSnakes redistributable
+
+    // Only install dependencies at runtime if not pre-installed (e.g., in Docker)
+    // In containers, dependencies are installed during docker build for faster startup
+    if (!preInstalled)
+    {
+        // Set UV_PRERELEASE=allow because gradio 6.0 depends on gradio-client 2.0.0.dev3
+        Environment.SetEnvironmentVariable("UV_PRERELEASE", "allow");
+        pythonBuilder.WithUvInstaller("pyproject.toml");
+    }
 
     builder.Services.AddHttpClient();
 

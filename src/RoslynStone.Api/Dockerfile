@@ -40,10 +40,11 @@ RUN setup-python --python 3.12 --venv /app/.venv --verbose
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.local/bin:${PATH}"
 
-# Install Gradio and dependencies using UV into the venv
-# This happens at build time, not runtime
+# Install all Python dependencies from pyproject.toml using UV into the venv
+# This happens at build time, not runtime, for faster container startup
+# --prerelease=allow is needed because gradio 6.0.0 depends on gradio-client 2.0.0.dev3
 WORKDIR "/src/src/RoslynStone.GradioModule"
-RUN uv pip install "gradio>=5.0.0,<6.0.0" --python /app/.venv/bin/python
+RUN uv pip install -e . --python /app/.venv/bin/python --prerelease=allow
 
 # Verify Gradio is installed correctly
 RUN /app/.venv/bin/python3 -c "import gradio; print(f'Gradio {gradio.__version__} installed successfully')"
@@ -94,10 +95,13 @@ RUN chown -R appuser:appuser /app /home/appuser/.config
 # Set environment variables for MCP server and Python
 # MCP_TRANSPORT: "stdio" (default) or "http"
 # When using HTTP transport, set ASPNETCORE_URLS to configure listening address
+# DOTNET_RUNNING_IN_CONTAINER tells the app to skip Python dependency installation
+# since dependencies are pre-installed during docker build
 ENV DOTNET_ENVIRONMENT=Production \
     MCP_TRANSPORT=stdio \
     ASPNETCORE_URLS= \
     DOTNET_EnableDiagnostics=0 \
+    DOTNET_RUNNING_IN_CONTAINER=true \
     LD_LIBRARY_PATH=/home/appuser/.config/CSnakes/python3.12.9/python/install/lib \
     PYTHONHOME=/home/appuser/.config/CSnakes/python3.12.9/python/install
 

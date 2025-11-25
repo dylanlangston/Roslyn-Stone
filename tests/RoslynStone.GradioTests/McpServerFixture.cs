@@ -120,6 +120,8 @@ public sealed class McpServerFixture : IAsyncDisposable
                         ["ASPNETCORE_URLS"] = BaseUrl,
                         // Ensure Python output is not buffered for better diagnostics
                         ["PYTHONUNBUFFERED"] = "1",
+                        // Allow pre-release packages for UV (gradio 6.0 needs gradio-client 2.0.0.dev3)
+                        ["UV_PRERELEASE"] = "allow",
                     },
                 },
                 EnableRaisingEvents = true,
