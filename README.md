@@ -5,13 +5,14 @@ colorFrom: gray
 colorTo: blue
 sdk: docker
 app_port: 7860
-pinned: false
+pinned: true
 tags:
   - mcp
   - csharp
   - roslyn
   - repl
   - building-mcp-track-enterprise
+short_description: LLM-friendly C# sandbox for creating single-file programs
 ---
 
 # Roslyn-Stone
