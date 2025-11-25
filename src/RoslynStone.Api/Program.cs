@@ -222,16 +222,19 @@ if (useHttpTransport)
                 {
                     // ASPNETCORE_URLS can be semicolon-separated, take the first HTTP URL
                     // and replace '+' or '*' with 'localhost' for local connections
-                    var firstUrl = aspNetCoreUrls.Split(';').FirstOrDefault(u => u.StartsWith("http://"));
+                    var firstUrl = aspNetCoreUrls
+                        .Split(';')
+                        .FirstOrDefault(u => u.StartsWith("http://"));
                     if (!string.IsNullOrEmpty(firstUrl))
                     {
-                        baseUrl = firstUrl.Replace("http://+:", "http://localhost:")
-                                         .Replace("http://*:", "http://localhost:")
-                                         .Replace("http://0.0.0.0:", "http://localhost:");
+                        baseUrl = firstUrl
+                            .Replace("http://+:", "http://localhost:")
+                            .Replace("http://*:", "http://localhost:")
+                            .Replace("http://0.0.0.0:", "http://localhost:");
                     }
                 }
             }
-            
+
             // Final fallback
             if (string.IsNullOrEmpty(baseUrl))
             {
