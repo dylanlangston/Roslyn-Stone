@@ -282,6 +282,37 @@ def call_huggingface_chat(messages: List[Dict], api_key: str, model: str, mcp_cl
         return f"Error: {str(e)}"
 
 
+def get_mcp_endpoint_url() -> str:
+    """
+    Get the public MCP endpoint URL for clients to connect to.
+    On HuggingFace Spaces, this returns the embed URL.
+    Otherwise, returns the configured base URL.
+    """
+    # Check for HuggingFace Space
+    space_id = os.environ.get("SPACE_ID")
+    if space_id:
+        # Format: username/repo -> username-repo.hf.space
+        space_subdomain = space_id.replace("/", "-").lower()
+        return f"https://{space_subdomain}.hf.space/mcp"
+    
+    # Check for custom BASE_URL
+    base_url = os.environ.get("BASE_URL")
+    if base_url:
+        return f"{base_url.rstrip('/')}/mcp"
+    
+    # Check for ASPNETCORE_URLS
+    aspnetcore_urls = os.environ.get("ASPNETCORE_URLS")
+    if aspnetcore_urls:
+        first_url = aspnetcore_urls.split(";")[0]
+        # Replace wildcards with localhost for display
+        first_url = first_url.replace("http://+:", "http://localhost:")
+        first_url = first_url.replace("http://*:", "http://localhost:")
+        first_url = first_url.replace("http://0.0.0.0:", "http://localhost:")
+        return f"{first_url.rstrip('/')}/mcp"
+    
+    return "http://localhost:7071/mcp"
+
+
 def create_landing_page(base_url: Optional[str] = None) -> gr.Blocks:
     """
     Create the interactive Gradio UI for MCP server testing.
@@ -299,6 +330,9 @@ def create_landing_page(base_url: Optional[str] = None) -> gr.Blocks:
     
     # Initialize MCP client
     mcp_client = McpHttpClient(base_url)
+    
+    # Get the public MCP endpoint URL for display
+    mcp_endpoint = get_mcp_endpoint_url()
     
     # Register cleanup to close the HTTP client on exit
     def cleanup():
@@ -439,6 +473,94 @@ def create_landing_page(base_url: Optional[str] = None) -> gr.Blocks:
         )
         
         with gr.Tabs():
+            # Setup Tab (Welcome page with connection instructions)
+            with gr.Tab("🚀 Setup"):
+                gr.Markdown(
+                    f"""
+                    ## Welcome to Roslyn-Stone MCP Server!
+                    
+                    This is an interactive C# sandbox that provides AI tools through the Model Context Protocol (MCP).
+                    
+                    ### 🔗 MCP Server Endpoint
+                    
+                    Connect your MCP client to this server using the following endpoint:
+                    
+                    ```
+                    {mcp_endpoint}
+                    ```
+                    
+                    ---
+                    
+                    ### 📋 Quick Setup Instructions
+                    
+                    #### Claude Desktop
+                    
+                    Add to your `claude_desktop_config.json`:
+                    
+                    ```json
+                    {{
+                      "mcpServers": {{
+                        "roslyn-stone": {{
+                          "command": "npx",
+                          "args": [
+                            "mcp-remote",
+                            "{mcp_endpoint}"
+                          ]
+                        }}
+                      }}
+                    }}
+                    ```
+                    
+                    #### VS Code with Copilot
+                    
+                    Add to your VS Code `settings.json`:
+                    
+                    ```json
+                    {{
+                      "github.copilot.chat.mcpServers": {{
+                        "roslyn-stone": {{
+                          "type": "http",
+                          "url": "{mcp_endpoint}"
+                        }}
+                      }}
+                    }}
+                    ```
+                    
+                    #### Using mcp-remote (Any MCP Client)
+                    
+                    If your client doesn't support HTTP transport directly, use `mcp-remote` as a bridge:
+                    
+                    ```bash
+                    npx mcp-remote {mcp_endpoint}
+                    ```
+                    
+                    ---
+                    
+                    ### 🛠️ Available Capabilities
+                    
+                    | Category | Description |
+                    |----------|-------------|
+                    | **🔧 Tools** | Execute C# code, validate syntax, search NuGet packages, load assemblies |
+                    | **📚 Resources** | Access .NET documentation, NuGet package info, REPL state |
+                    | **💬 Prompts** | Get guidance and best practices for C# development |
+                    | **🤖 Chat** | Interactive chat with AI using MCP tools (try the Chat tab!) |
+                    
+                    ---
+                    
+                    ### 🔒 Security Note
+                    
+                    ⚠️ This server can execute arbitrary C# code. When self-hosting:
+                    - Run in isolated containers or sandboxes
+                    - Implement authentication and rate limiting
+                    - Restrict network access as needed
+                    - Monitor resource usage
+                    
+                    ---
+                    
+                    **Explore the tabs above to test tools, browse resources, view prompts, or chat with AI!**
+                    """
+                )
+            
             # Tools Tab
             with gr.Tab("🔧 Tools"):
                 gr.Markdown("### Execute MCP Tools")
