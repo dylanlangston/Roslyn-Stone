@@ -252,8 +252,13 @@ def call_huggingface_chat(messages: List[Dict], api_key: str, model: str, mcp_cl
     try:
         from huggingface_hub import InferenceClient
         
-        # Use serverless API if no key provided, otherwise use key
-        client = InferenceClient(token=api_key) if api_key else InferenceClient()
+        # Use provided key, or fall back to HF_API_KEY/HF_TOKEN from environment (HF Spaces secrets)
+        token = api_key
+        if not token:
+            token = os.environ.get("HF_API_KEY") or os.environ.get("HF_TOKEN")
+        
+        # Create client (serverless works without token, but rate limited)
+        client = InferenceClient(token=token) if token else InferenceClient()
         
         # Convert messages to chat format
         chat_messages = []
@@ -849,9 +854,9 @@ def create_landing_page(base_url: Optional[str] = None) -> gr.Blocks:
                 gr.Markdown("""
                 Connect to various LLM providers and use Roslyn-Stone MCP tools in your conversations.
                 
-                **🚀 Free Option:** Use HuggingFace serverless inference (no API key needed)
+                **🚀 Free Option:** Use HuggingFace serverless inference (no API key needed, or use HF_API_KEY secret)
                 
-                ⚠️ **Security Note:** API keys are not stored and are only used for the current session.
+                ⚠️ **Security Note:** API keys are not stored. HF will use HF_API_KEY/HF_TOKEN secret if available.
                 """)
                 
                 with gr.Row():
@@ -865,12 +870,13 @@ def create_landing_page(base_url: Optional[str] = None) -> gr.Blocks:
                         )
                         
                         # API Key input (session state only, not stored)
+                        # For HF, will use HF_API_KEY/HF_TOKEN secret if blank
                         api_key = gr.Textbox(
                             label="API Key (optional for HF)",
                             type="password",
-                            placeholder="Enter API key (not stored, session only)",
+                            placeholder="Enter API key (or leave blank to use HF_API_KEY secret)",
                             lines=1,
-                            info="Not stored - only used during this session"
+                            info="Not stored - HF will use HF_API_KEY secret if blank"
                         )
                         
                         # Model selection
