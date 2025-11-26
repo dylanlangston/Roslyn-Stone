@@ -1,6 +1,7 @@
 using System.Text.Json;
 using RoslynStone.Infrastructure.Services;
 using RoslynStone.Infrastructure.Tools;
+using RoslynStone.Tests.Serialization;
 
 namespace RoslynStone.Tests;
 
@@ -12,20 +13,19 @@ namespace RoslynStone.Tests;
 public class McpToolsIntegrationTests : IDisposable
 {
     private readonly RoslynScriptingService _scriptingService;
-    private readonly DocumentationService _documentationService;
     private readonly IReplContextManager _contextManager;
     private readonly NuGetService _nugetService;
 
     public McpToolsIntegrationTests()
     {
         _scriptingService = new RoslynScriptingService();
-        _documentationService = new DocumentationService();
         _contextManager = new ReplContextManager();
         _nugetService = new NuGetService();
     }
 
     public void Dispose()
     {
+        // ReSharper disable once ConditionalAccessQualifierIsNonNullableAccordingToAPIContract
         _nugetService?.Dispose();
     }
 
@@ -44,8 +44,8 @@ public class McpToolsIntegrationTests : IDisposable
             code,
             createContext: true
         );
-        var json = JsonSerializer.Serialize(result);
-        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var resultDict = TestJsonContext.DeserializeToDictionary(json);
 
         // Assert
         Assert.NotNull(resultDict);
@@ -68,8 +68,8 @@ public class McpToolsIntegrationTests : IDisposable
             _nugetService,
             code
         );
-        var json = JsonSerializer.Serialize(result);
-        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var resultDict = TestJsonContext.DeserializeToDictionary(json);
 
         // Assert
         Assert.NotNull(resultDict);
@@ -92,8 +92,8 @@ public class McpToolsIntegrationTests : IDisposable
             _nugetService,
             code
         );
-        var json = JsonSerializer.Serialize(result);
-        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var resultDict = TestJsonContext.DeserializeToDictionary(json);
 
         // Assert
         Assert.NotNull(resultDict);
@@ -110,8 +110,8 @@ public class McpToolsIntegrationTests : IDisposable
 
         // Act
         var result = await ReplTools.ValidateCsharp(_scriptingService, _contextManager, code);
-        var json = JsonSerializer.Serialize(result);
-        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var resultDict = TestJsonContext.DeserializeToDictionary(json);
 
         // Assert
         Assert.NotNull(resultDict);
@@ -127,8 +127,8 @@ public class McpToolsIntegrationTests : IDisposable
 
         // Act
         var result = await ReplTools.ValidateCsharp(_scriptingService, _contextManager, code);
-        var json = JsonSerializer.Serialize(result);
-        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var resultDict = TestJsonContext.DeserializeToDictionary(json);
 
         // Assert
         Assert.NotNull(resultDict);
@@ -149,7 +149,7 @@ public class McpToolsIntegrationTests : IDisposable
             createContext: true
         );
         var json1 = JsonSerializer.Serialize(result1);
-        var resultDict1 = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json1);
+        var resultDict1 = TestJsonContext.DeserializeToDictionary(json1);
         var contextId = resultDict1!["contextId"].GetString();
 
         // Act
@@ -161,8 +161,8 @@ public class McpToolsIntegrationTests : IDisposable
             "x",
             contextId
         );
-        var json = JsonSerializer.Serialize(result);
-        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var resultDict = TestJsonContext.DeserializeToDictionary(json);
 
         // Assert
         Assert.NotNull(resultDict);
@@ -187,7 +187,7 @@ public class McpToolsIntegrationTests : IDisposable
             createContext: true
         );
         var json1 = JsonSerializer.Serialize(result1);
-        var result1Dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json1);
+        var result1Dict = TestJsonContext.DeserializeToDictionary(json1);
         var contextId = result1Dict!["contextId"].GetString();
 
         // Second execution uses same context
@@ -200,7 +200,7 @@ public class McpToolsIntegrationTests : IDisposable
         );
 
         var json2 = JsonSerializer.Serialize(result2);
-        var result2Dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json2);
+        var result2Dict = TestJsonContext.DeserializeToDictionary(json2);
 
         // Assert
         Assert.NotNull(result1Dict);
@@ -224,8 +224,8 @@ public class McpToolsIntegrationTests : IDisposable
             _nugetService,
             code
         );
-        var json = JsonSerializer.Serialize(result);
-        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var resultDict = TestJsonContext.DeserializeToDictionary(json);
 
         // Assert
         Assert.NotNull(resultDict);
@@ -249,8 +249,8 @@ public class McpToolsIntegrationTests : IDisposable
             code,
             invalidContextId
         );
-        var json = JsonSerializer.Serialize(result);
-        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var resultDict = TestJsonContext.DeserializeToDictionary(json);
 
         // Assert
         Assert.NotNull(resultDict);
@@ -282,7 +282,7 @@ public class McpToolsIntegrationTests : IDisposable
             createContext: true
         );
         var json1 = JsonSerializer.Serialize(result1);
-        var result1Dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json1);
+        var result1Dict = TestJsonContext.DeserializeToDictionary(json1);
         var contextId = result1Dict!["contextId"].GetString();
 
         // Wait for context to expire
@@ -298,7 +298,7 @@ public class McpToolsIntegrationTests : IDisposable
             contextId
         );
         var json2 = JsonSerializer.Serialize(result2);
-        var result2Dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json2);
+        var result2Dict = TestJsonContext.DeserializeToDictionary(json2);
 
         // Assert
         Assert.NotNull(result2Dict);
@@ -326,8 +326,8 @@ public class McpToolsIntegrationTests : IDisposable
             code,
             invalidContextId
         );
-        var json = JsonSerializer.Serialize(result);
-        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var resultDict = TestJsonContext.DeserializeToDictionary(json);
 
         // Assert
         Assert.NotNull(resultDict);
@@ -354,7 +354,7 @@ public class McpToolsIntegrationTests : IDisposable
             createContext: true
         );
         var json1 = JsonSerializer.Serialize(result1);
-        var result1Dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json1);
+        var result1Dict = TestJsonContext.DeserializeToDictionary(json1);
         var context1Id = result1Dict!["contextId"].GetString();
 
         var result2 = await ReplTools.EvaluateCsharp(
@@ -365,7 +365,7 @@ public class McpToolsIntegrationTests : IDisposable
             createContext: true
         );
         var json2 = JsonSerializer.Serialize(result2);
-        var result2Dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json2);
+        var result2Dict = TestJsonContext.DeserializeToDictionary(json2);
         var context2Id = result2Dict!["contextId"].GetString();
 
         // Use variables in their respective contexts
@@ -377,7 +377,7 @@ public class McpToolsIntegrationTests : IDisposable
             context1Id
         );
         var json1Use = JsonSerializer.Serialize(result1Use);
-        var result1UseDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json1Use);
+        var result1UseDict = TestJsonContext.DeserializeToDictionary(json1Use);
 
         var result2Use = await ReplTools.EvaluateCsharp(
             service,
@@ -387,7 +387,7 @@ public class McpToolsIntegrationTests : IDisposable
             context2Id
         );
         var json2Use = JsonSerializer.Serialize(result2Use);
-        var result2UseDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json2Use);
+        var result2UseDict = TestJsonContext.DeserializeToDictionary(json2Use);
 
         // Assert - Both contexts work correctly and independently
         Assert.NotNull(result1UseDict);
@@ -417,13 +417,13 @@ public class McpToolsIntegrationTests : IDisposable
             createContext: true
         );
         var json1 = JsonSerializer.Serialize(result1);
-        var result1Dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json1);
+        var result1Dict = TestJsonContext.DeserializeToDictionary(json1);
         _ = result1Dict!["contextId"].GetString(); // Context 1 created but not used for validation
 
         // Try to access variable from context2 (should fail - creates new temporary context)
         var result2 = await ReplTools.EvaluateCsharp(service, contextMgr, nugetSvc, "secretValue");
         var json2 = JsonSerializer.Serialize(result2);
-        var result2Dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json2);
+        var result2Dict = TestJsonContext.DeserializeToDictionary(json2);
 
         // Assert
         Assert.NotNull(result2Dict);
@@ -449,7 +449,7 @@ public class McpToolsIntegrationTests : IDisposable
             createContext: true
         );
         var json1 = JsonSerializer.Serialize(result1);
-        var result1Dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json1);
+        var result1Dict = TestJsonContext.DeserializeToDictionary(json1);
         var context1Id = result1Dict!["contextId"].GetString();
 
         var result2 = await ReplTools.EvaluateCsharp(
@@ -460,13 +460,13 @@ public class McpToolsIntegrationTests : IDisposable
             createContext: true
         );
         var json2 = JsonSerializer.Serialize(result2);
-        var result2Dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json2);
+        var result2Dict = TestJsonContext.DeserializeToDictionary(json2);
         var context2Id = result2Dict!["contextId"].GetString();
 
         // Act - Reset only context1
         var resetResult = ReplTools.ResetRepl(contextMgr, context1Id);
-        var resetJson = JsonSerializer.Serialize(resetResult);
-        var resetDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(resetJson);
+        var resetJson = TestJsonContext.SerializeDynamic(resetResult);
+        var resetDict = TestJsonContext.DeserializeToDictionary(resetJson);
 
         // Try to use both contexts
         var result1After = await ReplTools.EvaluateCsharp(
@@ -531,7 +531,7 @@ public class McpToolsIntegrationTests : IDisposable
             createContext: true
         );
         var json1 = JsonSerializer.Serialize(result1);
-        var result1Dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json1);
+        var result1Dict = TestJsonContext.DeserializeToDictionary(json1);
         var context1Id = result1Dict!["contextId"].GetString();
 
         var result2 = await ReplTools.EvaluateCsharp(
@@ -542,13 +542,13 @@ public class McpToolsIntegrationTests : IDisposable
             createContext: true
         );
         var json2 = JsonSerializer.Serialize(result2);
-        var result2Dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json2);
+        var result2Dict = TestJsonContext.DeserializeToDictionary(json2);
         var context2Id = result2Dict!["contextId"].GetString();
 
         // Act - Reset all contexts
         var resetResult = ReplTools.ResetRepl(contextMgr);
-        var resetJson = JsonSerializer.Serialize(resetResult);
-        var resetDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(resetJson);
+        var resetJson = TestJsonContext.SerializeDynamic(resetResult);
+        var resetDict = TestJsonContext.DeserializeToDictionary(resetJson);
 
         // Try to use contexts
         var result1After = await ReplTools.EvaluateCsharp(

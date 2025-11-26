@@ -1,7 +1,6 @@
 ﻿using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Testing;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace RoslynStone.AppHost.Tests;
 
@@ -131,7 +130,7 @@ public class AppHostTests
 
         // Assert
         Assert.NotNull(inspector);
-        var endpoints = inspector.GetEndpoints();
+        var endpoints = inspector.GetEndpoints().ToList();
         Assert.Contains(endpoints, e => e.EndpointName == "client");
         Assert.Contains(endpoints, e => e.EndpointName == "server-proxy");
     }

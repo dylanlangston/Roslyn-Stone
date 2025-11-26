@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using ModelContextProtocol.Protocol;
+using RoslynStone.Infrastructure.Serialization;
 
 namespace RoslynStone.Infrastructure.Models;
 
@@ -429,10 +430,10 @@ public class ReplStateResponse
             $"Context ID: {replState.ContextId}",
             $"Is Session Specific: {replState.IsSessionSpecific}",
             $"Default Imports: {string.Join(", ", replState.DefaultImports)}",
-            $"Capabilities: {JsonSerializer.Serialize(replState.Capabilities)}",
+            $"Capabilities: {JsonSerializer.Serialize(replState.Capabilities, RoslynStoneJsonContext.Default.ReplCapabilities)}",
             $"Tips: {string.Join("\n", replState.Tips)}",
-            $"Examples: {JsonSerializer.Serialize(replState.Examples)}",
-            $"Session Metadata: {JsonSerializer.Serialize(replState.SessionMetadata)}",
+            $"Examples: {JsonSerializer.Serialize(replState.Examples, RoslynStoneJsonContext.Default.ReplExamples)}",
+            $"Session Metadata: {JsonSerializer.Serialize(replState.SessionMetadata, RoslynStoneJsonContext.Default.SessionMetadata)}",
         };
 
         return new TextResourceContents

@@ -2,6 +2,7 @@ using System.Text.Json;
 using RoslynStone.Core.Models;
 using RoslynStone.Infrastructure.Services;
 using RoslynStone.Infrastructure.Tools;
+using RoslynStone.Tests.Serialization;
 
 namespace RoslynStone.Tests;
 
@@ -28,11 +29,7 @@ public class CriticalBugsTests : IDisposable
 
     public void Dispose()
     {
-        _nugetService?.Dispose();
-        if (_contextManager is IDisposable disposable)
-        {
-            disposable.Dispose();
-        }
+        _nugetService.Dispose();
     }
 
     #region Package Loading in Context
@@ -60,8 +57,8 @@ public class CriticalBugsTests : IDisposable
         );
 
         // Assert - Should succeed
-        var json = JsonSerializer.Serialize(result);
-        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var resultDict = TestJsonContext.DeserializeToDictionary(json);
 
         Assert.NotNull(resultDict);
         Assert.True(
@@ -100,8 +97,8 @@ public class CriticalBugsTests : IDisposable
             createContext: true
         );
 
-        var json = JsonSerializer.Serialize(createResult);
-        var dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(createResult);
+        var dict = TestJsonContext.DeserializeToDictionary(json);
         var contextId = dict!["contextId"].GetString()!;
 
         // Act - Use package in same context (without specifying nugetPackages again)
@@ -114,8 +111,8 @@ public class CriticalBugsTests : IDisposable
         );
 
         // Assert
-        var useJson = JsonSerializer.Serialize(useResult);
-        var useDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(useJson);
+        var useJson = TestJsonContext.SerializeDynamic(useResult);
+        var useDict = TestJsonContext.DeserializeToDictionary(useJson);
 
         Assert.NotNull(useDict);
         Assert.True(useDict["success"].GetBoolean(), "Package should persist in context");
@@ -144,8 +141,8 @@ public class CriticalBugsTests : IDisposable
             createContext: true
         );
 
-        var json = JsonSerializer.Serialize(createResult);
-        var dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(createResult);
+        var dict = TestJsonContext.DeserializeToDictionary(json);
         var contextId = dict!["contextId"].GetString()!;
 
         // Act - Use both packages
@@ -161,8 +158,8 @@ public class CriticalBugsTests : IDisposable
         );
 
         // Assert
-        var resultJson = JsonSerializer.Serialize(result);
-        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(resultJson);
+        var resultJson = TestJsonContext.SerializeDynamic(result);
+        var resultDict = TestJsonContext.DeserializeToDictionary(resultJson);
 
         Assert.NotNull(resultDict);
         Assert.True(resultDict["success"].GetBoolean(), "Both packages should be available");
@@ -248,8 +245,8 @@ public class CriticalBugsTests : IDisposable
         );
 
         // Assert - Tool should return success response
-        var json = JsonSerializer.Serialize(result);
-        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var resultDict = TestJsonContext.DeserializeToDictionary(json);
 
         Assert.NotNull(resultDict);
         Assert.True(
@@ -282,8 +279,8 @@ public class CriticalBugsTests : IDisposable
             createContext: true
         );
 
-        var json = JsonSerializer.Serialize(createResult);
-        var dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(createResult);
+        var dict = TestJsonContext.DeserializeToDictionary(json);
         var contextId = dict!["contextId"].GetString()!;
 
         // Act - Continue with context
@@ -296,7 +293,7 @@ public class CriticalBugsTests : IDisposable
         );
 
         // Assert - Should succeed or provide detailed error
-        var continueJson = JsonSerializer.Serialize(continueResult);
+        var continueJson = TestJsonContext.SerializeDynamic(continueResult);
         var continueDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
             continueJson
         );
@@ -342,8 +339,8 @@ public class CriticalBugsTests : IDisposable
         );
 
         // Assert - Should provide helpful error
-        var json = JsonSerializer.Serialize(result);
-        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var resultDict = TestJsonContext.DeserializeToDictionary(json);
 
         Assert.NotNull(resultDict);
         Assert.False(resultDict["success"].GetBoolean());

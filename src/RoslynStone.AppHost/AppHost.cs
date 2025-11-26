@@ -36,7 +36,7 @@ if (
 
     // Add the MCP Inspector as a managed AppHost resource instead of launching the JS inspector via npx.
     // Use server and client ports from configuration and attach to the MCP server created above.
-    var inspector = builder
+    _ = builder
         .AddMcpInspector(
             "mcp-inspector",
             options =>

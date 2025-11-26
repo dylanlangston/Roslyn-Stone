@@ -1,9 +1,11 @@
+// ReSharper disable RedundantUsingDirective - Required for FormatterServices
 using System.Runtime.Serialization;
 using System.Text.Json;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using RoslynStone.Infrastructure.Resources;
 using RoslynStone.Infrastructure.Services;
+using RoslynStone.Tests.Serialization;
 
 namespace RoslynStone.Tests;
 
@@ -69,8 +71,8 @@ public class ResourceTests
             requestContext,
             id
         );
-        var json = JsonSerializer.Serialize(result);
-        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var resultDict = TestJsonContext.DeserializeToDictionary(json);
 
         // Assert
         Assert.NotNull(resultDict);
@@ -95,8 +97,8 @@ public class ResourceTests
             requestContext,
             id
         );
-        var json = JsonSerializer.Serialize(result);
-        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var resultDict = TestJsonContext.DeserializeToDictionary(json);
 
         // Assert
         Assert.NotNull(resultDict);
@@ -118,8 +120,8 @@ public class ResourceTests
             requestContext,
             id
         );
-        var json = JsonSerializer.Serialize(result);
-        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var resultDict = TestJsonContext.DeserializeToDictionary(json);
 
         // Assert — either a structured response with a 'found' boolean or a TextResourceContents with a message
         Assert.NotNull(resultDict);
@@ -150,8 +152,8 @@ public class ResourceTests
             requestContext,
             id
         );
-        var json = JsonSerializer.Serialize(result);
-        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var resultDict = TestJsonContext.DeserializeToDictionary(json);
 
         // Assert — check URI and either a 'found' flag or a textual message
         Assert.NotNull(resultDict);
@@ -185,8 +187,8 @@ public class ResourceTests
             0,
             5
         );
-        var json = JsonSerializer.Serialize(result);
-        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var resultDict = TestJsonContext.DeserializeToDictionary(json);
 
         // Assert — prefer structured properties; fallback to parsing the text content
         Assert.NotNull(resultDict);
@@ -214,6 +216,7 @@ public class ResourceTests
         var requestContext = CreateRequestContext(uri);
 
         // Act
+        // ReSharper disable RedundantArgumentDefaultValue - Explicit for test clarity
         var result = await NuGetSearchResource.SearchPackages(
             _nugetService,
             requestContext,
@@ -221,8 +224,9 @@ public class ResourceTests
             null,
             null
         );
-        var json = JsonSerializer.Serialize(result);
-        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        // ReSharper restore RedundantArgumentDefaultValue
+        var json = TestJsonContext.SerializeDynamic(result);
+        var resultDict = TestJsonContext.DeserializeToDictionary(json);
 
         // Assert — if structured response, check skip/take; otherwise verify text contains query and defaults implied
         Assert.NotNull(resultDict);
@@ -259,8 +263,8 @@ public class ResourceTests
             requestContext,
             id
         );
-        var json = JsonSerializer.Serialize(result);
-        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var resultDict = TestJsonContext.DeserializeToDictionary(json);
 
         // Assert — prefer structured response; fallback to parsing text
         Assert.NotNull(resultDict);
@@ -298,8 +302,8 @@ public class ResourceTests
             requestContext,
             id
         );
-        var json = JsonSerializer.Serialize(result);
-        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var resultDict = TestJsonContext.DeserializeToDictionary(json);
 
         // Assert — structured fallback, otherwise check textual message
         Assert.NotNull(resultDict);
@@ -331,8 +335,8 @@ public class ResourceTests
             uri.Split('/', StringSplitOptions.RemoveEmptyEntries).Skip(1).FirstOrDefault()
             ?? string.Empty; // 'packages/{id}/readme'
         var result = await NuGetPackageResource.GetPackageReadme(_nugetService, requestContext, id);
-        var json = JsonSerializer.Serialize(result);
-        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var resultDict = TestJsonContext.DeserializeToDictionary(json);
 
         // Assert
         Assert.NotNull(resultDict);
@@ -364,8 +368,8 @@ public class ResourceTests
             id,
             version
         );
-        var json = JsonSerializer.Serialize(result);
-        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var resultDict = TestJsonContext.DeserializeToDictionary(json);
 
         // Assert
         Assert.NotNull(resultDict);
@@ -388,8 +392,8 @@ public class ResourceTests
             _contextManager,
             requestContext
         );
-        var json = JsonSerializer.Serialize(result);
-        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var resultDict = TestJsonContext.DeserializeToDictionary(json);
 
         // Assert — check structured results or fallback to text content
         Assert.NotNull(resultDict);
@@ -423,8 +427,8 @@ public class ResourceTests
             _contextManager,
             requestContext
         );
-        var json = JsonSerializer.Serialize(result);
-        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var resultDict = TestJsonContext.DeserializeToDictionary(json);
 
         // Assert
         Assert.NotNull(resultDict);
@@ -446,8 +450,8 @@ public class ResourceTests
             _contextManager,
             requestContext
         );
-        var json = JsonSerializer.Serialize(result);
-        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var resultDict = TestJsonContext.DeserializeToDictionary(json);
 
         // Assert — structured response or text fallback
         Assert.NotNull(resultDict);

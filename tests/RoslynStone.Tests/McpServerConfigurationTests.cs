@@ -36,8 +36,8 @@ public class McpServerConfigurationTests
             .Where(m => m.GetCustomAttributes(typeof(McpServerToolAttribute), false).Any())
             .ToList();
 
-        // We expect: LoadNuGetPackage, SearchNuGetPackages, GetNuGetPackageVersions, GetNuGetPackageReadme
-        Assert.Equal(4, methods.Count);
+        // We expect: SearchNuGetPackages, GetNuGetPackageVersions, GetNuGetPackageReadme (LoadNuGetPackage removed for security)
+        Assert.Equal(3, methods.Count);
     }
 
     [Fact]

@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
 using Microsoft.CodeAnalysis.Scripting;
 using Microsoft.Extensions.Logging;
+using RoslynStone.Infrastructure.Helpers;
+using RoslynStone.Infrastructure.Models;
 
 namespace RoslynStone.Infrastructure.Services;
 
@@ -13,6 +15,7 @@ public class ReplContextManager : IReplContextManager
     private readonly ConcurrentDictionary<string, ReplContext> _contexts = new();
     private readonly TimeSpan _contextTimeout;
     private readonly ILogger<ReplContextManager>? _logger;
+    private readonly SecurityConfiguration _securityConfig;
 
     /// <summary>
     /// Internal class to track context state and metadata
@@ -82,13 +85,16 @@ public class ReplContextManager : IReplContextManager
     /// </summary>
     /// <param name="contextTimeout">Timeout for context expiration (default: 30 minutes)</param>
     /// <param name="logger">Optional logger for diagnostics</param>
+    /// <param name="securityConfig">Optional security configuration (uses development defaults if not provided)</param>
     public ReplContextManager(
         TimeSpan? contextTimeout = null,
-        ILogger<ReplContextManager>? logger = null
+        ILogger<ReplContextManager>? logger = null,
+        SecurityConfiguration? securityConfig = null
     )
     {
         _contextTimeout = contextTimeout ?? TimeSpan.FromMinutes(30);
         _logger = logger;
+        _securityConfig = securityConfig ?? SecurityConfiguration.CreateDevelopmentDefaults();
     }
 
     /// <inheritdoc/>
@@ -105,7 +111,8 @@ public class ReplContextManager : IReplContextManager
 
         if (_contexts.TryAdd(contextId, context))
         {
-            _logger?.LogDebug("Created new REPL context: {ContextId}", contextId);
+            var maskedId = ContextIdMasker.Mask(contextId, !_securityConfig.LogContextIds);
+            _logger?.LogDebug("Created new REPL context: {ContextId}", maskedId);
             return contextId;
         }
 
@@ -152,9 +159,10 @@ public class ReplContextManager : IReplContextManager
         context.UpdateState(state);
         context.IncrementExecutionCount();
 
+        var maskedId = ContextIdMasker.Mask(contextId, !_securityConfig.LogContextIds);
         _logger?.LogDebug(
             "Updated context {ContextId}, execution count: {Count}",
-            contextId,
+            maskedId,
             context.ExecutionCount
         );
     }
@@ -186,7 +194,8 @@ public class ReplContextManager : IReplContextManager
         // Thread-safe options update
         context.UpdateOptions(options);
 
-        _logger?.LogDebug("Updated script options for context {ContextId}", contextId);
+        var maskedId = ContextIdMasker.Mask(contextId, !_securityConfig.LogContextIds);
+        _logger?.LogDebug("Updated script options for context {ContextId}", maskedId);
     }
 
     /// <inheritdoc/>
@@ -198,7 +207,8 @@ public class ReplContextManager : IReplContextManager
         var removed = _contexts.TryRemove(contextId, out _);
         if (removed)
         {
-            _logger?.LogDebug("Removed REPL context: {ContextId}", contextId);
+            var maskedId = ContextIdMasker.Mask(contextId, !_securityConfig.LogContextIds);
+            _logger?.LogDebug("Removed REPL context: {ContextId}", maskedId);
         }
 
         return removed;

@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using Microsoft.AspNetCore.WebUtilities;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using RoslynStone.Infrastructure.Models;
@@ -46,7 +45,7 @@ public class NuGetSearchResource
         var uri = requestContext.Params?.Uri ?? "nuget://search";
 
         // Finalize defaults if still null
-        var finalQuery = query ?? string.Empty;
+        var finalQuery = query;
         var finalSkip = skip ?? 0;
         var finalTake = take.HasValue ? Math.Min(take.Value, 100) : 20;
 

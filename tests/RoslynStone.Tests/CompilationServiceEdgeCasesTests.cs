@@ -176,6 +176,7 @@ public class Program
         var code = "public class Program { public static void Main() { } }";
 
         // Act
+        // ReSharper disable once RedundantArgumentDefaultValue - Explicit for test clarity
         var result = service.Compile(code, null);
 
         // Assert

@@ -2,6 +2,7 @@ using System.Text.Json;
 using RoslynStone.Core.Models;
 using RoslynStone.Infrastructure.Services;
 using RoslynStone.Infrastructure.Tools;
+using RoslynStone.Tests.Serialization;
 
 namespace RoslynStone.Tests;
 
@@ -25,7 +26,7 @@ public class ReplToolsContextControlTests : IDisposable
 
     public void Dispose()
     {
-        _nugetService?.Dispose();
+        _nugetService.Dispose();
     }
 
     [Fact]
@@ -45,8 +46,8 @@ public class ReplToolsContextControlTests : IDisposable
         );
 
         // Serialize to inspect result
-        var json = JsonSerializer.Serialize(result);
-        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var resultDict = TestJsonContext.DeserializeToDictionary(json);
 
         // Assert
         Assert.NotNull(resultDict);
@@ -74,8 +75,8 @@ public class ReplToolsContextControlTests : IDisposable
             createContext: true
         );
 
-        var json = JsonSerializer.Serialize(result);
-        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var resultDict = TestJsonContext.DeserializeToDictionary(json);
 
         // Assert
         Assert.NotNull(resultDict);
@@ -100,8 +101,8 @@ public class ReplToolsContextControlTests : IDisposable
             code
         );
 
-        var json = JsonSerializer.Serialize(result);
-        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var resultDict = TestJsonContext.DeserializeToDictionary(json);
 
         // Assert
         Assert.NotNull(resultDict);
@@ -124,8 +125,8 @@ public class ReplToolsContextControlTests : IDisposable
             "var x = 10;",
             createContext: true
         );
-        var json1 = JsonSerializer.Serialize(createResult);
-        var dict1 = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json1);
+        var json1 = TestJsonContext.SerializeDynamic(createResult);
+        var dict1 = TestJsonContext.DeserializeToDictionary(json1);
         var contextId = dict1!["contextId"].GetString();
 
         // Act - Continue with the context (createContext should be ignored)
@@ -138,8 +139,8 @@ public class ReplToolsContextControlTests : IDisposable
             createContext: false // This should be ignored since contextId is provided
         );
 
-        var json = JsonSerializer.Serialize(result);
-        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var resultDict = TestJsonContext.DeserializeToDictionary(json);
 
         // Assert
         Assert.NotNull(resultDict);
@@ -171,8 +172,8 @@ JsonConvert.SerializeObject(obj)
             createContext: false
         );
 
-        var json = JsonSerializer.Serialize(result);
-        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var resultDict = TestJsonContext.DeserializeToDictionary(json);
 
         // Assert
         Assert.NotNull(resultDict);
@@ -206,8 +207,8 @@ JsonConvert.SerializeObject(new { Test = 1 })
             createContext: false
         );
 
-        var json = JsonSerializer.Serialize(result);
-        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var resultDict = TestJsonContext.DeserializeToDictionary(json);
 
         // Assert
         Assert.NotNull(resultDict);
@@ -232,8 +233,8 @@ JsonConvert.SerializeObject(new { Test = 1 })
             createContext: false
         );
 
-        var json = JsonSerializer.Serialize(result);
-        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var resultDict = TestJsonContext.DeserializeToDictionary(json);
 
         // Assert
         Assert.NotNull(resultDict);
@@ -258,8 +259,8 @@ JsonConvert.SerializeObject(new { Test = 1 })
             createContext: false
         );
 
-        var json = JsonSerializer.Serialize(result);
-        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var resultDict = TestJsonContext.DeserializeToDictionary(json);
 
         // Assert
         Assert.NotNull(resultDict);
@@ -269,7 +270,7 @@ JsonConvert.SerializeObject(new { Test = 1 })
 
     [Fact]
     [Trait("Feature", "ContextControl")]
-    public async Task EvaluateCsharp_TemporaryContext_VariablesNotPersisted()
+    public async Task ValidateCsharp_CreateContextFalse_ReturnsValidationWithoutContextId()
     {
         // Arrange & Act - Execute code in temporary context
         await ReplTools.EvaluateCsharp(
@@ -325,8 +326,8 @@ JsonConvert.SerializeObject(data)
             createContext: false
         );
 
-        var json = JsonSerializer.Serialize(result);
-        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var resultDict = TestJsonContext.DeserializeToDictionary(json);
 
         // Assert
         Assert.NotNull(resultDict);
@@ -382,8 +383,8 @@ JsonConvert.SerializeObject(data)
         // Act
         var result = await ReplTools.ValidateCsharp(_scriptingService, _contextManager, code);
 
-        var json = JsonSerializer.Serialize(result);
-        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var resultDict = TestJsonContext.DeserializeToDictionary(json);
 
         // Assert
         Assert.NotNull(resultDict);

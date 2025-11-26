@@ -70,9 +70,9 @@ public class GradioLandingPageTests : IAsyncLifetime
     [Fact]
     public async Task GradioLandingPage_Assets_ShouldLoad()
     {
-        // First get the HTML
+        // First get the HTML to verify page exists
         var htmlResponse = await _httpClient!.GetAsync(_fixture.GradioUrl);
-        var html = await htmlResponse.Content.ReadAsStringAsync();
+        _ = await htmlResponse.Content.ReadAsStringAsync();
 
         // Try to fetch theme.css (common Gradio asset)
         var cssResponse = await _httpClient.GetAsync($"{_fixture.GradioUrl}/theme.css");

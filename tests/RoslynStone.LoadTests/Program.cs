@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
+using RoslynStone.LoadTests.Serialization;
 
 namespace RoslynStone.LoadTests;
 
@@ -29,6 +30,7 @@ public class Program
 
         // Check if server is available
         Console.WriteLine("Checking server availability...");
+        // ReSharper disable once UseObjectOrCollectionInitializer - HttpClient initialization is safe
         using var client = new HttpClient
         {
             BaseAddress = new Uri(baseUrl),
@@ -188,7 +190,7 @@ public class LoadTester
             @params = new { name = "EvaluateCsharp", arguments = new { code = "2 + 2" } },
             id = 1,
         };
-        return JsonSerializer.Serialize(request);
+        return JsonSerializer.Serialize(request, LoadTestJsonContext.Default.Object);
     }
 
     private static string CreateVariableAssignmentRequest()
@@ -204,7 +206,7 @@ public class LoadTester
             },
             id = 1,
         };
-        return JsonSerializer.Serialize(request);
+        return JsonSerializer.Serialize(request, LoadTestJsonContext.Default.Object);
     }
 
     private static string CreateLinqQueryRequest()
@@ -220,7 +222,7 @@ public class LoadTester
             },
             id = 1,
         };
-        return JsonSerializer.Serialize(request);
+        return JsonSerializer.Serialize(request, LoadTestJsonContext.Default.Object);
     }
 
     private static string CreateContextManagementRequest()
@@ -236,7 +238,7 @@ public class LoadTester
             },
             id = 1,
         };
-        return JsonSerializer.Serialize(request);
+        return JsonSerializer.Serialize(request, LoadTestJsonContext.Default.Object);
     }
 }
 
@@ -244,7 +246,11 @@ public record RoundResult
 {
     public bool Success { get; init; }
     public long ResponseTimeMs { get; init; }
+
+    // ReSharper disable once UnusedAutoPropertyAccessor.Global - Part of result contract
     public int StatusCode { get; init; }
+
+    // ReSharper disable once UnusedAutoPropertyAccessor.Global - Part of result contract
     public string? Error { get; init; }
 }
 
@@ -257,6 +263,8 @@ public class ScenarioResults
         int Failures,
         double AvgResponseMs
     )> _rounds = new();
+
+    // ReSharper disable once NotAccessedField.Local - Reserved for future validation logic
     private readonly int _expectedRounds;
 
     public ScenarioResults(int expectedRounds)

@@ -38,7 +38,7 @@ public class ReplStateResource
     )
     {
         var uri = requestContext.Params?.Uri ?? "repl://state";
-        return GetReplState_Internal(scriptingService, contextManager, uri);
+        return GetReplState_Internal(contextManager, uri);
     }
 
     /// <summary>
@@ -69,18 +69,16 @@ public class ReplStateResource
     {
         // Construct URI from the provided contextId if available, otherwise fall back to requestContext
         var uri = requestContext.Params?.Uri ?? $"repl://sessions/{contextId}/state";
-        return GetReplState_Internal(scriptingService, contextManager, uri);
+        return GetReplState_Internal(contextManager, uri);
     }
 
     /// <summary>
     /// Internal method to get REPL state information
     /// </summary>
-    /// <param name="scriptingService"></param>
     /// <param name="contextManager"></param>
     /// <param name="uri"></param>
     /// <returns></returns>
     static ResourceContents GetReplState_Internal(
-        RoslynScriptingService scriptingService,
         IReplContextManager contextManager,
         [Description(
             "Resource URI. Use 'repl://state' or 'repl://info' for general info, or 'repl://sessions/{contextId}/state' for session-specific state."

@@ -1,8 +1,8 @@
 using System.Diagnostics;
-using Microsoft.AspNetCore.Hosting.Server;
-using Microsoft.AspNetCore.Hosting.Server.Features;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
+using System.Net;
+// ReSharper disable once RedundantUsingDirective - Required for type resolution
+using System.Net.Http;
+using System.Net.Sockets;
 
 namespace RoslynStone.GradioTests;
 
@@ -103,12 +103,12 @@ public sealed class McpServerFixture : IAsyncLifetime
 
                 if (uvProcess != null)
                 {
-                    uvProcess.OutputDataReceived += (s, e) =>
+                    uvProcess.OutputDataReceived += (_, e) =>
                     {
                         if (!string.IsNullOrEmpty(e.Data))
                             Console.WriteLine($"[UV] {e.Data}");
                     };
-                    uvProcess.ErrorDataReceived += (s, e) =>
+                    uvProcess.ErrorDataReceived += (_, e) =>
                     {
                         if (!string.IsNullOrEmpty(e.Data))
                             Console.WriteLine($"[UV] {e.Data}");
@@ -160,14 +160,14 @@ public sealed class McpServerFixture : IAsyncLifetime
         }
 
         // Capture output for debugging
-        _serverProcess.OutputDataReceived += (sender, e) =>
+        _serverProcess.OutputDataReceived += (_, e) =>
         {
             if (!string.IsNullOrEmpty(e.Data))
             {
                 Console.WriteLine($"[SERVER] {e.Data}");
             }
         };
-        _serverProcess.ErrorDataReceived += (sender, e) =>
+        _serverProcess.ErrorDataReceived += (_, e) =>
         {
             if (!string.IsNullOrEmpty(e.Data))
             {
@@ -183,7 +183,7 @@ public sealed class McpServerFixture : IAsyncLifetime
         await Task.Delay(startupDelay);
 
         // Verify server is responding
-        using var httpClient = new System.Net.Http.HttpClient();
+        using var httpClient = new HttpClient();
         httpClient.Timeout = TimeSpan.FromSeconds(5);
         var maxRetries = 10;
         var retry = 0;
@@ -192,10 +192,7 @@ public sealed class McpServerFixture : IAsyncLifetime
             try
             {
                 var response = await httpClient.GetAsync(BaseUrl);
-                if (
-                    response.IsSuccessStatusCode
-                    || response.StatusCode == System.Net.HttpStatusCode.NotFound
-                )
+                if (response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.NotFound)
                 {
                     Console.WriteLine($"[FIXTURE] Server is responding at {BaseUrl}");
                     break;
@@ -209,16 +206,14 @@ public sealed class McpServerFixture : IAsyncLifetime
             }
 
             retry++;
-            if (retry < maxRetries)
-            {
-                await Task.Delay(1000);
-            }
-            else
-            {
-                throw new TimeoutException(
-                    $"Server at {BaseUrl} did not respond after {maxRetries} attempts"
-                );
-            }
+            await Task.Delay(1000);
+        }
+
+        if (retry >= maxRetries)
+        {
+            throw new TimeoutException(
+                $"Server at {BaseUrl} did not respond after {maxRetries} attempts"
+            );
         }
     }
 
@@ -246,9 +241,9 @@ public sealed class McpServerFixture : IAsyncLifetime
 
     private static int FindFreePort()
     {
-        using var socket = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
+        using var socket = new TcpListener(IPAddress.Loopback, 0);
         socket.Start();
-        var port = ((System.Net.IPEndPoint)socket.LocalEndpoint).Port;
+        var port = ((IPEndPoint)socket.LocalEndpoint).Port;
         socket.Stop();
         return port;
     }

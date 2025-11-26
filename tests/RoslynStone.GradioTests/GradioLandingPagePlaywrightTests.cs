@@ -1,5 +1,4 @@
 using Microsoft.Playwright;
-using Microsoft.Playwright.Xunit;
 
 namespace RoslynStone.GradioTests;
 

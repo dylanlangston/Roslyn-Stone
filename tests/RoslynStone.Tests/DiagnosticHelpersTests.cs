@@ -163,6 +163,7 @@ int y;  // CS0168: Variable is declared but never used
 ";
         var tree = CSharpSyntaxTree.ParseText(
             code,
+            // ReSharper disable once RedundantNameQualifier - Explicit for clarity
             CSharpParseOptions.Default.WithLanguageVersion(
                 Microsoft.CodeAnalysis.CSharp.LanguageVersion.Latest
             )

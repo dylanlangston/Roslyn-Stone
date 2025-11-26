@@ -1,4 +1,5 @@
 using CSnakes.Runtime;
+using RoslynStone.Infrastructure.Models;
 using RoslynStone.Infrastructure.Resources;
 using RoslynStone.Infrastructure.Services;
 using RoslynStone.Infrastructure.Tools;
@@ -22,6 +23,10 @@ static void ConfigureLogging(ILoggingBuilder logging)
 // Shared method to register all services
 static void RegisterServices(IServiceCollection services)
 {
+    // Register security configuration
+    // Use development defaults for now, can be configured via appsettings.json later
+    services.AddSingleton(SecurityConfiguration.CreateDevelopmentDefaults());
+
     // Register services
     services.AddSingleton<RoslynScriptingService>();
     services.AddSingleton<DocumentationService>();
@@ -133,11 +138,11 @@ if (useHttpTransport)
 
     // Add YARP reverse proxy for Gradio landing page
     // Proxy ALL traffic except /mcp to Gradio (simplifies routing and catches all assets)
+    // ReSharper disable once RedundantTypeArgumentsOfMethod
     builder
         .Services.AddReverseProxy()
         .LoadFromMemory(
-            new[]
-            {
+            [
                 new Yarp.ReverseProxy.Configuration.RouteConfig
                 {
                     RouteId = "gradio-catchall",
@@ -181,9 +186,8 @@ if (useHttpTransport)
                         },
                     },
                 },
-            },
-            new[]
-            {
+            ],
+            [
                 new Yarp.ReverseProxy.Configuration.ClusterConfig
                 {
                     ClusterId = "gradio-cluster",
@@ -201,7 +205,7 @@ if (useHttpTransport)
                         },
                     },
                 },
-            }
+            ]
         );
 
     // WARNING: HTTP transport has no authentication by default.

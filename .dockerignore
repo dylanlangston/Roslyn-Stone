@@ -83,3 +83,6 @@ charts/
 
 # Python virtual environment
 .venv/
+
+.mypy_cache
+.ruff_cache

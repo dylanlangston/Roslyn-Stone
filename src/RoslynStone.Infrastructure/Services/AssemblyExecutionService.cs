@@ -1,5 +1,7 @@
 using System.Reflection;
+// ReSharper disable once RedundantUsingDirective - System.Text.StringBuilder is used
 using System.Text;
+using RoslynStone.Infrastructure.Models;
 
 namespace RoslynStone.Infrastructure.Services;
 
@@ -10,14 +12,20 @@ namespace RoslynStone.Infrastructure.Services;
 public class AssemblyExecutionService
 {
     private readonly CompilationService _compilationService;
+    private readonly SecurityConfiguration _securityConfig;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AssemblyExecutionService"/> class
     /// </summary>
     /// <param name="compilationService">The compilation service</param>
-    public AssemblyExecutionService(CompilationService compilationService)
+    /// <param name="securityConfig">Optional security configuration (uses development defaults if not provided)</param>
+    public AssemblyExecutionService(
+        CompilationService compilationService,
+        SecurityConfiguration? securityConfig = null
+    )
     {
         _compilationService = compilationService;
+        _securityConfig = securityConfig ?? SecurityConfiguration.CreateDevelopmentDefaults();
     }
 
     /// <summary>
@@ -95,7 +103,10 @@ public class AssemblyExecutionService
     {
         ArgumentNullException.ThrowIfNull(compilationResult.AssemblyStream);
 
-        var context = new UnloadableAssemblyLoadContext();
+        var context = new UnloadableAssemblyLoadContext(
+            _securityConfig.BlockedAssemblies,
+            logger: null // AssemblyExecutionService doesn't have ILogger
+        );
         WeakReference contextWeakRef = new(context, trackResurrection: true);
 
         try
@@ -132,13 +143,32 @@ public class AssemblyExecutionService
                     entryPoint.GetParameters().Length == 0 ? null : [Array.Empty<string>()]
                 );
 
-                // Handle async Task return types
+                // Handle async Task return types with timeout
                 if (result is Task task)
                 {
-                    await task.WaitAsync(cancellationToken);
+                    if (_securityConfig.EnableExecutionTimeout)
+                    {
+                        var completedTask = await Task.WhenAny(
+                            task,
+                            Task.Delay(_securityConfig.ExecutionTimeout, cancellationToken)
+                        );
+
+                        if (completedTask != task)
+                        {
+                            // Timeout occurred
+                            return new AssemblyExecutionResult
+                            {
+                                Success = false,
+                                ErrorMessage =
+                                    $"Code execution exceeded the timeout limit of {_securityConfig.ExecutionTimeout.TotalSeconds} seconds",
+                            };
+                        }
+                    }
+
+                    await task;
                 }
 
-                // Flush output after async completion
+                // Flush output after completion
                 await Console.Out.FlushAsync(cancellationToken);
                 await outputWriter.FlushAsync(cancellationToken);
 
@@ -155,7 +185,11 @@ public class AssemblyExecutionService
                 Console.SetError(originalError);
             }
         }
-        catch (Exception ex)
+        catch (InsufficientMemoryException ex)
+        {
+            return new AssemblyExecutionResult { Success = false, ErrorMessage = ex.Message };
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
             return new AssemblyExecutionResult
             {
@@ -170,17 +204,24 @@ public class AssemblyExecutionService
             context.Unload();
 
             // Wait for garbage collection to ensure unloading
-            await Task.Run(
-                () =>
-                {
-                    for (int i = 0; i < 10 && contextWeakRef.IsAlive; i++)
+            try
+            {
+                await Task.Run(
+                    () =>
                     {
-                        GC.Collect();
-                        GC.WaitForPendingFinalizers();
-                    }
-                },
-                cancellationToken
-            );
+                        for (int i = 0; i < 10 && contextWeakRef.IsAlive; i++)
+                        {
+                            GC.Collect();
+                            GC.WaitForPendingFinalizers();
+                        }
+                    },
+                    CancellationToken.None // Use None to ensure cleanup happens even on timeout
+                );
+            }
+            catch
+            {
+                // Ignore cleanup errors
+            }
 
             // Dispose streams
             if (compilationResult.AssemblyStream != null)

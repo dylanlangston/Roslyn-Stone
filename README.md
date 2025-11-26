@@ -13,6 +13,7 @@ tags:
   - repl
   - building-mcp-track-enterprise
 short_description: LLM-friendly C# sandbox for creating single-file programs
+space_sdk: docker
 ---
 
 # Roslyn-Stone

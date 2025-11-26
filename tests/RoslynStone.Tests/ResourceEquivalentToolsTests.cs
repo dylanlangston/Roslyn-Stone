@@ -1,6 +1,7 @@
 using System.Text.Json;
 using RoslynStone.Infrastructure.Services;
 using RoslynStone.Infrastructure.Tools;
+using RoslynStone.Tests.Serialization;
 
 namespace RoslynStone.Tests;
 
@@ -38,8 +39,8 @@ public class ResourceEquivalentToolsTests
 
         // Assert
         Assert.NotNull(result);
-        var json = JsonSerializer.Serialize(result);
-        var dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var dict = TestJsonContext.DeserializeToDictionary(json);
         Assert.NotNull(dict);
     }
 
@@ -55,8 +56,8 @@ public class ResourceEquivalentToolsTests
 
         // Assert
         Assert.NotNull(result);
-        var json = JsonSerializer.Serialize(result);
-        var dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var dict = TestJsonContext.DeserializeToDictionary(json);
         Assert.NotNull(dict);
         Assert.True(dict.TryGetValue("found", out var foundElement));
         Assert.False(foundElement.GetBoolean());
@@ -98,8 +99,8 @@ public class ResourceEquivalentToolsTests
 
         // Assert
         Assert.NotNull(result);
-        var json = JsonSerializer.Serialize(result);
-        var dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var dict = TestJsonContext.DeserializeToDictionary(json);
         Assert.NotNull(dict);
         Assert.True(dict.TryGetValue("packages", out _));
         Assert.True(dict.TryGetValue("totalCount", out var totalCountElement));
@@ -118,8 +119,8 @@ public class ResourceEquivalentToolsTests
 
         // Assert
         Assert.NotNull(result);
-        var json = JsonSerializer.Serialize(result);
-        var dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var dict = TestJsonContext.DeserializeToDictionary(json);
         Assert.NotNull(dict);
         Assert.True(dict.TryGetValue("skip", out var skipElement));
         Assert.Equal(0, skipElement.GetInt32());
@@ -139,8 +140,8 @@ public class ResourceEquivalentToolsTests
 
         // Assert
         Assert.NotNull(result);
-        var json = JsonSerializer.Serialize(result);
-        var dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var dict = TestJsonContext.DeserializeToDictionary(json);
         Assert.NotNull(dict);
         Assert.True(dict.TryGetValue("take", out var takeElement));
         Assert.Equal(100, takeElement.GetInt32());
@@ -158,8 +159,8 @@ public class ResourceEquivalentToolsTests
 
         // Assert
         Assert.NotNull(result);
-        var json = JsonSerializer.Serialize(result);
-        var dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var dict = TestJsonContext.DeserializeToDictionary(json);
         Assert.NotNull(dict);
         Assert.True(dict.TryGetValue("found", out var foundElement));
         Assert.True(foundElement.GetBoolean());
@@ -183,8 +184,8 @@ public class ResourceEquivalentToolsTests
 
         // Assert
         Assert.NotNull(result);
-        var json = JsonSerializer.Serialize(result);
-        var dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var dict = TestJsonContext.DeserializeToDictionary(json);
         Assert.NotNull(dict);
         // The service returns an empty list for non-existent packages
         // Our tool should still return found=true but with 0 versions
@@ -206,8 +207,8 @@ public class ResourceEquivalentToolsTests
 
         // Assert
         Assert.NotNull(result);
-        var json = JsonSerializer.Serialize(result);
-        var dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var dict = TestJsonContext.DeserializeToDictionary(json);
         Assert.NotNull(dict);
         Assert.True(dict.TryGetValue("packageId", out var packageIdElement));
         Assert.Equal(packageId, packageIdElement.GetString());
@@ -227,8 +228,8 @@ public class ResourceEquivalentToolsTests
 
         // Assert
         Assert.NotNull(result);
-        var json = JsonSerializer.Serialize(result);
-        var dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var dict = TestJsonContext.DeserializeToDictionary(json);
         Assert.NotNull(dict);
         Assert.True(dict.TryGetValue("packageId", out var packageIdElement));
         Assert.Equal(packageId, packageIdElement.GetString());
@@ -249,8 +250,8 @@ public class ResourceEquivalentToolsTests
 
         // Assert
         Assert.NotNull(result);
-        var json = JsonSerializer.Serialize(result);
-        var dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var dict = TestJsonContext.DeserializeToDictionary(json);
         Assert.NotNull(dict);
         Assert.True(dict.TryGetValue("frameworkVersion", out _));
         Assert.True(dict.TryGetValue("language", out _));
@@ -272,8 +273,8 @@ public class ResourceEquivalentToolsTests
 
         // Assert
         Assert.NotNull(result);
-        var json = JsonSerializer.Serialize(result);
-        var dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var dict = TestJsonContext.DeserializeToDictionary(json);
         Assert.NotNull(dict);
         Assert.True(dict.TryGetValue("contextId", out var contextIdElement));
         Assert.Equal(contextId, contextIdElement.GetString());
@@ -297,8 +298,8 @@ public class ResourceEquivalentToolsTests
 
         // Assert
         Assert.NotNull(result);
-        var json = JsonSerializer.Serialize(result);
-        var dict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+        var json = TestJsonContext.SerializeDynamic(result);
+        var dict = TestJsonContext.DeserializeToDictionary(json);
         Assert.NotNull(dict);
         Assert.True(dict.TryGetValue("contextId", out var contextIdElement));
         Assert.Equal(contextId, contextIdElement.GetString());

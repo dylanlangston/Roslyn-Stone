@@ -6,8 +6,9 @@ Developer and LLM-friendly C# REPL with Model Context Protocol integration.
 
 ## Project Overview
 
-**Stack**: .NET 8.0+, Roslyn, MCP, NuGet  
-**Purpose**: C# REPL for MCP with actionable errors, XML docs, and NuGet extensibility
+**Stack**: .NET 10.0, Roslyn, MCP, NuGet  
+**Purpose**: C# REPL for MCP with actionable errors, XML docs, and NuGet extensibility  
+**Optimization**: ReadyToRun (R2R) compilation for fast startup
 
 ---
 

@@ -3,6 +3,7 @@ using System.Runtime.Loader;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Scripting;
+using Microsoft.Extensions.Logging;
 using RoslynStone.Infrastructure.Helpers;
 
 namespace RoslynStone.Infrastructure.Services;
@@ -137,23 +138,63 @@ public class CompilationResult
 /// <summary>
 /// Custom AssemblyLoadContext that can be unloaded
 /// Based on Laurent Kempé's approach for proper memory management
+/// Validates assembly loading against a blocklist when configured
 /// </summary>
 public class UnloadableAssemblyLoadContext : AssemblyLoadContext
 {
+    private readonly IReadOnlyList<string>? _blockedAssemblies;
+    private readonly ILogger? _logger;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="UnloadableAssemblyLoadContext"/> class
     /// </summary>
-    public UnloadableAssemblyLoadContext()
-        : base(isCollectible: true) { }
+    /// <param name="blockedAssemblies">Optional list of blocked assembly names (null = allow all)</param>
+    /// <param name="logger">Optional logger for tracking blocked assemblies</param>
+    public UnloadableAssemblyLoadContext(
+        IReadOnlyList<string>? blockedAssemblies = null,
+        ILogger? logger = null
+    )
+        : base(isCollectible: true)
+    {
+        _blockedAssemblies = blockedAssemblies;
+        _logger = logger;
+    }
 
     /// <summary>
     /// Resolves an assembly by name
+    /// Blocks assemblies in the blocklist if configured
     /// </summary>
     /// <param name="assemblyName">The assembly name to resolve</param>
     /// <returns>The loaded assembly or null to use default loading behavior</returns>
     protected override Assembly? Load(AssemblyName assemblyName)
     {
-        // Return null to use default loading behavior
+        var name = assemblyName.Name;
+        if (string.IsNullOrEmpty(name))
+            return null;
+
+        // If no blocklist configured, use default behavior
+        if (_blockedAssemblies == null || _blockedAssemblies.Count == 0)
+            return null;
+
+        // Check if assembly is in blocklist
+        var isBlocked = _blockedAssemblies.Any(blocked =>
+            name.Equals(blocked, StringComparison.OrdinalIgnoreCase)
+            || name.StartsWith($"{blocked}.", StringComparison.OrdinalIgnoreCase)
+        );
+
+        if (isBlocked)
+        {
+            _logger?.LogWarning(
+                "Blocked assembly load attempt: {AssemblyName} is in the blocklist",
+                name
+            );
+            throw new FileLoadException(
+                $"Assembly '{name}' is blocked for security reasons. "
+                    + $"This assembly provides dangerous APIs that could be used maliciously."
+            );
+        }
+
+        // Return null to use default loading behavior for allowed assemblies
         return null;
     }
 }

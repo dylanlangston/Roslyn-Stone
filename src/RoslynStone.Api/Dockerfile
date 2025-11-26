@@ -11,17 +11,19 @@ COPY ["src/RoslynStone.Infrastructure/RoslynStone.Infrastructure.csproj", "src/R
 COPY ["src/RoslynStone.ServiceDefaults/RoslynStone.ServiceDefaults.csproj", "src/RoslynStone.ServiceDefaults/"]
 COPY ["src/RoslynStone.GradioModule/RoslynStone.GradioModule.csproj", "src/RoslynStone.GradioModule/"]
 
-# Restore dependencies (this layer will be cached if project files don't change)
-RUN dotnet restore "src/RoslynStone.Api/RoslynStone.Api.csproj"
+# Restore dependencies with linux-x64 RID for ReadyToRun compilation
+# ReadyToRun requires a specific RID to be set during restore
+RUN dotnet restore "src/RoslynStone.Api/RoslynStone.Api.csproj" -r linux-x64
 
 # Copy all source files
 COPY . .
 
 # Build the application
 WORKDIR "/src/src/RoslynStone.Api"
-# Build into the standard bin/$(Configuration)/$(TargetFramework) output which publish expects
+# Build with linux-x64 RID for ReadyToRun compilation
 RUN dotnet build "RoslynStone.Api.csproj" \
     -c $BUILD_CONFIGURATION \
+    -r linux-x64 \
     --no-restore
 
 # Publish stage
@@ -32,41 +34,35 @@ ARG BUILD_CONFIGURATION=Release
 RUN dotnet tool install --global CSnakes.Stage
 ENV PATH="/root/.dotnet/tools:${PATH}"
 
-# Set up Python environment with CSnakes
-# This downloads Python 3.12 redistributable and creates a venv
+# Set up Python environment with CSnakes following official deployment docs
+# This downloads Python 3.12 redistributable and creates an empty venv
 RUN setup-python --python 3.12 --venv /app/.venv --verbose
 
-# Install UV (fast Python package installer) - only needed in build stage
+# Install UV (fast Python package installer) for dependency installation
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.local/bin:${PATH}"
 
-# Install all Python dependencies using UV into the venv
-# This happens at build time, not runtime, for faster container startup
-# --prerelease=allow is needed because gradio 6.0.0 depends on gradio-client 2.0.0.dev3
-# We install dependencies directly rather than using editable install since this is just a script, not a package
+# Install Python dependencies from requirements.txt using UV
 WORKDIR "/src/src/RoslynStone.GradioModule"
-RUN uv pip install \
-    "gradio>=6.0.0" \
-    "httpx>=0.27.0" \
-    "pygments>=2.17.0" \
-    "openai>=1.0.0" \
-    "anthropic>=0.25.0" \
-    "google-generativeai>=0.3.0" \
-    "huggingface_hub>=0.20.0" \
-    --python /app/.venv/bin/python \
-    --prerelease=allow
+RUN uv pip install -r requirements.txt --python /app/.venv/bin/python
 
 # Verify Gradio is installed correctly
 RUN /app/.venv/bin/python3 -c "import gradio; print(f'Gradio {gradio.__version__} installed successfully')"
 
-# Publish the application
+# Publish the application with ReadyToRun (R2R) for faster startup
+# Note: We cannot use Native AOT because Roslyn requires dynamic code compilation
+# R2R provides a hybrid approach - pre-compiled code with JIT fallback for dynamic scenarios
 WORKDIR "/src/src/RoslynStone.Api"
 RUN dotnet publish "RoslynStone.Api.csproj" \
     -c $BUILD_CONFIGURATION \
+    -r linux-x64 \
     -o /app/publish \
     --no-restore \
     --no-build \
-    /p:UseAppHost=false
+    /p:UseAppHost=false \
+    /p:PublishReadyToRun=true \
+    /p:PublishSingleFile=false \
+    /p:PublishTrimmed=false
 
 # Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final

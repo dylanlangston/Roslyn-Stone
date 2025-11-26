@@ -44,5 +44,6 @@ public record DocumentationInfo
     /// <summary>
     /// Gets the full XML documentation
     /// </summary>
+    // ReSharper disable once UnusedAutoPropertyAccessor.Global - Part of public API
     public string? FullDocumentation { get; init; }
 }

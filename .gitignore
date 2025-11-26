@@ -62,3 +62,6 @@ __pycache__/
 *.pyo
 *.pyd
 .Python
+
+.mypy_cache
+.ruff_cache
