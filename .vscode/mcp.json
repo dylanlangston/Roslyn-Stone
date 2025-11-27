@@ -11,6 +11,11 @@
 		// 		"ghcr.io/dylanlangston/roslyn-stone:latest"
 		// 	]
 		// },
+		// },
+		// "roslyn-stone-hf-spaces": {
+		// 	"url": "https://mcp-1st-birthday-roslyn-stone.hf.space/mcp",
+		// 	"type": "http"
+		// }
 		"roslyn-stone-local": {
 			"command": "dotnet",
 			"type": "stdio",

@@ -10,18 +10,18 @@ namespace RoslynStone.Infrastructure.Services;
 /// Manages REPL context lifecycle and state
 /// Thread-safe implementation using concurrent collections
 /// </summary>
-public class ReplContextManager : IReplContextManager
+public class ExecutionContextManager : IExecutionContextManager
 {
-    private readonly ConcurrentDictionary<string, ReplContext> _contexts = new();
+    private readonly ConcurrentDictionary<string, ExecutionContext> _contexts = new();
     private readonly TimeSpan _contextTimeout;
-    private readonly ILogger<ReplContextManager>? _logger;
+    private readonly ILogger<ExecutionContextManager>? _logger;
     private readonly SecurityConfiguration _securityConfig;
 
     /// <summary>
     /// Internal class to track context state and metadata
     /// Thread-safe with Lock object for property updates
     /// </summary>
-    private class ReplContext
+    private class ExecutionContext
     {
         private readonly Lock _lock = new();
 
@@ -81,27 +81,27 @@ public class ReplContextManager : IReplContextManager
     }
 
     /// <summary>
-    /// Initializes a new instance of the ReplContextManager
+    /// Initializes a new instance of the ExecutionContextManager
     /// </summary>
     /// <param name="contextTimeout">Timeout for context expiration (default: 30 minutes)</param>
     /// <param name="logger">Optional logger for diagnostics</param>
     /// <param name="securityConfig">Optional security configuration (uses development defaults if not provided)</param>
-    public ReplContextManager(
+    public ExecutionContextManager(
         TimeSpan? contextTimeout = null,
-        ILogger<ReplContextManager>? logger = null,
+        ILogger<ExecutionContextManager>? logger = null,
         SecurityConfiguration? securityConfig = null
     )
     {
         _contextTimeout = contextTimeout ?? TimeSpan.FromMinutes(30);
         _logger = logger;
-        _securityConfig = securityConfig ?? SecurityConfiguration.CreateDevelopmentDefaults();
+        _securityConfig = securityConfig ?? SecurityConfiguration.CreateProductionDefaults();
     }
 
     /// <inheritdoc/>
     public string CreateContext()
     {
         var contextId = Guid.NewGuid().ToString();
-        var context = new ReplContext
+        var context = new ExecutionContext
         {
             ContextId = contextId,
             CreatedAt = DateTimeOffset.UtcNow,

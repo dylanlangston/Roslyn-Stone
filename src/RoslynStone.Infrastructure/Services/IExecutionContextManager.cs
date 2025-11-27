@@ -5,7 +5,7 @@ namespace RoslynStone.Infrastructure.Services;
 /// <summary>
 /// Interface for managing REPL context lifecycle and state
 /// </summary>
-public interface IReplContextManager
+public interface IExecutionContextManager
 {
     /// <summary>
     /// Create a new REPL context and return its unique identifier

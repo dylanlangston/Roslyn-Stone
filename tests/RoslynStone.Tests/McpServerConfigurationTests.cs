@@ -18,13 +18,13 @@ public class McpServerConfigurationTests
         // This test verifies that we have the expected number of tools
         // to detect if tools are accidentally removed or duplicated
 
-        var methods = typeof(ReplTools)
+        var methods = typeof(FileBasedTools)
             .GetMethods()
             .Where(m => m.GetCustomAttributes(typeof(McpServerToolAttribute), false).Any())
             .ToList();
 
-        // We expect: EvaluateCsharp, ValidateCsharp, ResetRepl, GetReplInfo
-        Assert.Equal(4, methods.Count);
+        // We expect: EvaluateCsharp, ValidateCsharp (removed ResetRepl and GetReplInfo)
+        Assert.Equal(2, methods.Count);
     }
 
     [Fact]
@@ -94,9 +94,9 @@ public class McpServerConfigurationTests
 
     [Fact]
     [Trait("Feature", "ResourceDiscovery")]
-    public void ReplStateResource_HasExpectedResourceCount()
+    public void ExecutionStateResource_HasExpectedResourceCount()
     {
-        var methods = typeof(ReplStateResource)
+        var methods = typeof(ExecutionStateResource)
             .GetMethods()
             .Where(m => m.GetCustomAttributes(typeof(McpServerResourceAttribute), false).Any())
             .ToList();
@@ -123,7 +123,12 @@ public class McpServerConfigurationTests
     public void AllTools_HaveDescriptions()
     {
         // Verify all tools have [Description] attributes for MCP protocol
-        var toolTypes = new[] { typeof(ReplTools), typeof(NuGetTools), typeof(DocumentationTools) };
+        var toolTypes = new[]
+        {
+            typeof(FileBasedTools),
+            typeof(NuGetTools),
+            typeof(DocumentationTools),
+        };
 
         foreach (var toolType in toolTypes)
         {
@@ -164,7 +169,7 @@ public class McpServerConfigurationTests
             typeof(DocumentationResource),
             typeof(NuGetSearchResource),
             typeof(NuGetPackageResource),
-            typeof(ReplStateResource),
+            typeof(ExecutionStateResource),
         };
 
         foreach (var resourceType in resourceTypes)

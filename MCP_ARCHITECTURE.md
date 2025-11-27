@@ -235,6 +235,41 @@ Get XML documentation for .NET types/methods (Tool alternative to `doc://` resou
 - GetDocumentation("System.String")
 - GetDocumentation("JsonConvert", "Newtonsoft.Json")
 
+## Execution Architecture: Isolated Model
+
+Roslyn-Stone uses **isolated execution** aligned with the file-based C# app model (`dotnet run app.cs`).
+
+### All Executions Use SessionIsolatedExecutionService
+
+- **Service**: `SessionIsolatedExecutionService` using `UnloadableAssemblyLoadContext`
+- **Behavior**: Every execution is independent and isolated - **variables do NOT persist**
+- **Use Case**: Testing file-based C# apps before finalizing with `#:package` directive
+- **Memory**: Proper cleanup - each execution in isolated context that can be unloaded
+- **Alignment**: Matches `dotnet run app.cs` behavior - single-shot, independent programs
+
+### Why Isolated-Only?
+
+**Goal**: Roslyn-Stone helps build **file-based C# apps** - single `.cs` files with top-level statements that run with `dotnet run app.cs`. These are NOT stateful REPL sessions.
+
+**Problem with Stateful REPL**: Roslyn's Scripting API loads assemblies into the default AppDomain which can **never be unloaded**. This causes permanent memory leaks, especially with NuGet packages.
+
+**Solution**: Use CSharpCompilation API + UnloadableAssemblyLoadContext for ALL executions:
+1. Compile code using `CSharpCompilation`
+2. Load compiled assembly into `UnloadableAssemblyLoadContext` (with `isCollectible: true`)
+3. Execute in isolated context
+4. Unload context and verify garbage collection with `WeakReference`
+
+**Philosophy**: File-based apps are designed to run once and complete. Testing them should mirror production behavior - independent executions with proper cleanup.
+
+### Code Transformation
+
+All code uses console application format, requiring transformation from REPL-style expressions:
+- **Return statements**: `return expression;` → `Console.WriteLine(expression);`
+- **Trailing expressions**: Last expression wrapped in `Console.WriteLine()`
+- **Console output** becomes the return value
+
+Transformation uses Roslyn's `CSharpSyntaxRewriter` for proper syntax tree manipulation.
+
 ## Context Management
 
 ### IReplContextManager
@@ -244,10 +279,12 @@ Interface for managing REPL session lifecycle.
 **Key Methods**:
 - `CreateContext()`: Create new session, return GUID
 - `ContextExists(contextId)`: Check if session exists
-- `GetContextState(contextId)`: Retrieve script state
-- `UpdateContextState(contextId, state)`: Update script state
+- `GetContextState(contextId)`: Retrieve script state (simple contexts only)
+- `UpdateContextState(contextId, state)`: Update script state (simple contexts only)
 - `RemoveContext(contextId)`: Delete session
 - `CleanupExpiredContexts()`: Remove old sessions
+
+**Note**: Context state only applies to simple (non-package) contexts. Package contexts cannot maintain state.
 
 ### ReplContextManager
 

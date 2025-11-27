@@ -20,7 +20,7 @@ namespace RoslynStone.Infrastructure.Serialization;
 [JsonSerializable(typeof(PackageVersionsResponse))]
 [JsonSerializable(typeof(PackageVersionInfo))]
 [JsonSerializable(typeof(PackageReadmeResponse))]
-[JsonSerializable(typeof(ReplStateResponse))]
+[JsonSerializable(typeof(ExecutionStateResponse))]
 [JsonSerializable(typeof(ReplCapabilities))]
 [JsonSerializable(typeof(ReplExamples))]
 [JsonSerializable(typeof(SessionMetadata))]

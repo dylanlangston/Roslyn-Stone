@@ -48,14 +48,16 @@ jobs:
           for CONFIG in Debug Release; do
             VENV_PATH="${{ github.workspace }}/src/RoslynStone.Api/bin/$CONFIG/net10.0/.venv"
             mkdir -p "$(dirname "$VENV_PATH")"
-            python -m venv "$VENV_PATH"
+            
+            # Use UV to create venv (faster and consistent with test fixture)
+            uv venv "$VENV_PATH" --python python3.12
             
             # Install dependencies with pre-releases allowed (gradio 6.0 needs gradio-client 2.0.0.dev3)
             uv pip install --python "$VENV_PATH/bin/python" --prerelease=allow \
               gradio>=6.0.0 \
-              httpx>=0.25.0 \
+              httpx>=0.27.0 \
               openai>=1.0.0 \
-              anthropic>=0.18.0 \
+              anthropic>=0.25.0 \
               google-generativeai>=0.3.0 \
               huggingface_hub>=0.20.0 \
               pygments>=2.17.0

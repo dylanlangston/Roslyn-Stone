@@ -43,6 +43,30 @@ public static class MetadataReferenceHelper
             refs.Add(MetadataReference.CreateFromFile(collectionsAssemblyPath));
         }
 
+        // Add netstandard - required for packages that target netstandard (like Newtonsoft.Json)
+        var netstandardAssemblyPath = Path.Combine(coreLibDirectory, "netstandard.dll");
+        if (File.Exists(netstandardAssemblyPath))
+        {
+            refs.Add(MetadataReference.CreateFromFile(netstandardAssemblyPath));
+        }
+
+        // Add System.Text.Json for JSON serialization
+        var jsonAssemblyPath = Path.Combine(coreLibDirectory, "System.Text.Json.dll");
+        if (File.Exists(jsonAssemblyPath))
+        {
+            refs.Add(MetadataReference.CreateFromFile(jsonAssemblyPath));
+        }
+
+        // Add System.Text.RegularExpressions for Regex support
+        var regexAssemblyPath = Path.Combine(
+            coreLibDirectory,
+            "System.Text.RegularExpressions.dll"
+        );
+        if (File.Exists(regexAssemblyPath))
+        {
+            refs.Add(MetadataReference.CreateFromFile(regexAssemblyPath));
+        }
+
         return refs;
     }
 
@@ -59,6 +83,8 @@ public static class MetadataReferenceHelper
                 "System.Collections.Generic",
                 "System.Linq",
                 "System.Text",
+                "System.Text.Json",
+                "System.Text.RegularExpressions",
                 "System.Threading.Tasks"
             );
     }

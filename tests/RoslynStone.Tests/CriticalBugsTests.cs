@@ -14,17 +14,15 @@ namespace RoslynStone.Tests;
 [Trait("Component", "CriticalBugs")]
 public class CriticalBugsTests : IDisposable
 {
-    private readonly RoslynScriptingService _scriptingService;
     private readonly NuGetService _nugetService;
     private readonly DocumentationService _documentationService;
-    private readonly IReplContextManager _contextManager;
+    private readonly IExecutionContextManager _contextManager;
 
     public CriticalBugsTests()
     {
-        _scriptingService = new RoslynScriptingService();
         _nugetService = new NuGetService();
         _documentationService = new DocumentationService(_nugetService);
-        _contextManager = new ReplContextManager();
+        _contextManager = new ExecutionContextManager();
     }
 
     public void Dispose()
@@ -48,8 +46,7 @@ public class CriticalBugsTests : IDisposable
         };
 
         // Act - Single-shot execution (createContext=false, no contextId)
-        var result = await ReplTools.EvaluateCsharp(
-            _scriptingService,
+        var result = await FileBasedToolsTestHelpers.EvaluateCsharpTest(
             _contextManager,
             _nugetService,
             @"using Humanizer; return ""test"".Humanize();",
@@ -73,97 +70,6 @@ public class CriticalBugsTests : IDisposable
                 && contextIdElement.ValueKind != JsonValueKind.Null,
             "Temporary context should not return contextId"
         );
-    }
-
-    [Fact]
-    [Trait("Feature", "NuGetPackagesParameter")]
-    public async Task EvaluateCsharp_CreateContextWithPackages_ThenUseInSubsequentCalls()
-    {
-        // Packages MUST be specified when creating the context
-        // They persist for all subsequent calls in that context
-
-        // Arrange - Create context with packages at creation time
-        var nugetPackages = new[]
-        {
-            new NuGetPackageSpec { PackageName = "Humanizer", Version = "3.0.1" },
-        };
-
-        var createResult = await ReplTools.EvaluateCsharp(
-            _scriptingService,
-            _contextManager,
-            _nugetService,
-            "var x = 10;",
-            nugetPackages: nugetPackages,
-            createContext: true
-        );
-
-        var json = TestJsonContext.SerializeDynamic(createResult);
-        var dict = TestJsonContext.DeserializeToDictionary(json);
-        var contextId = dict!["contextId"].GetString()!;
-
-        // Act - Use package in same context (without specifying nugetPackages again)
-        var useResult = await ReplTools.EvaluateCsharp(
-            _scriptingService,
-            _contextManager,
-            _nugetService,
-            @"using Humanizer; return ""Test"".Humanize();",
-            contextId: contextId
-        );
-
-        // Assert
-        var useJson = TestJsonContext.SerializeDynamic(useResult);
-        var useDict = TestJsonContext.DeserializeToDictionary(useJson);
-
-        Assert.NotNull(useDict);
-        Assert.True(useDict["success"].GetBoolean(), "Package should persist in context");
-        Assert.Equal("Test", useDict["returnValue"].GetString());
-    }
-
-    [Fact]
-    [Trait("Feature", "NuGetPackagesParameter")]
-    public async Task EvaluateCsharp_MultiplePackages_ShouldAllBeAvailable()
-    {
-        // Test loading multiple packages at context creation
-
-        // Arrange
-        var nugetPackages = new[]
-        {
-            new NuGetPackageSpec { PackageName = "Newtonsoft.Json", Version = "13.0.3" },
-            new NuGetPackageSpec { PackageName = "Humanizer", Version = "3.0.1" },
-        };
-
-        var createResult = await ReplTools.EvaluateCsharp(
-            _scriptingService,
-            _contextManager,
-            _nugetService,
-            "var x = 1;",
-            nugetPackages: nugetPackages,
-            createContext: true
-        );
-
-        var json = TestJsonContext.SerializeDynamic(createResult);
-        var dict = TestJsonContext.DeserializeToDictionary(json);
-        var contextId = dict!["contextId"].GetString()!;
-
-        // Act - Use both packages
-        var result = await ReplTools.EvaluateCsharp(
-            _scriptingService,
-            _contextManager,
-            _nugetService,
-            @"using Newtonsoft.Json; 
-              using Humanizer;
-              var obj = new { Value = ""PascalCase"".Humanize() };
-              return JsonConvert.SerializeObject(obj);",
-            contextId: contextId
-        );
-
-        // Assert
-        var resultJson = TestJsonContext.SerializeDynamic(result);
-        var resultDict = TestJsonContext.DeserializeToDictionary(resultJson);
-
-        Assert.NotNull(resultDict);
-        Assert.True(resultDict["success"].GetBoolean(), "Both packages should be available");
-        Assert.Contains("Pascal case", resultDict["returnValue"].GetString());
     }
 
     #endregion
@@ -271,8 +177,7 @@ public class CriticalBugsTests : IDisposable
         // Currently FAILS with "An error occurred"
 
         // Arrange - Create context
-        var createResult = await ReplTools.EvaluateCsharp(
-            _scriptingService,
+        var createResult = await FileBasedToolsTestHelpers.EvaluateCsharpTest(
             _contextManager,
             _nugetService,
             "var x = 10;",
@@ -284,8 +189,7 @@ public class CriticalBugsTests : IDisposable
         var contextId = dict!["contextId"].GetString()!;
 
         // Act - Continue with context
-        var continueResult = await ReplTools.EvaluateCsharp(
-            _scriptingService,
+        var continueResult = await FileBasedToolsTestHelpers.EvaluateCsharpTest(
             _contextManager,
             _nugetService,
             "return x * 2;",
@@ -326,31 +230,25 @@ public class CriticalBugsTests : IDisposable
     [Trait("Bug", "ContextState")]
     public async Task BUG_EvaluateCsharp_InvalidContextId_ShouldProvideHelpfulError()
     {
-        // Test error message quality for invalid context
-        // Currently may return generic error
+        // Test that isolated execution doesn't require pre-existing context
+        // In isolated mode, context IDs are created on-demand and don't track state
 
-        // Act - Use non-existent context
-        var result = await ReplTools.EvaluateCsharp(
-            _scriptingService,
+        // Act - Use non-existent context (will be created on-demand in isolated execution)
+        var result = await FileBasedToolsTestHelpers.EvaluateCsharpTest(
             _contextManager,
             _nugetService,
             "return 42;",
             contextId: "non-existent-context-id"
         );
 
-        // Assert - Should provide helpful error
+        // Assert - Should succeed since isolated execution creates contexts on-demand
         var json = TestJsonContext.SerializeDynamic(result);
         var resultDict = TestJsonContext.DeserializeToDictionary(json);
 
         Assert.NotNull(resultDict);
-        Assert.False(resultDict["success"].GetBoolean());
-
-        var errors = resultDict["errors"].EnumerateArray().ToList();
-        Assert.NotEmpty(errors);
-
-        var errorMessage = errors[0].GetProperty("message").GetString()!;
-        Assert.Contains("context", errorMessage, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("An error occurred", errorMessage);
+        // In isolated execution, invalid contextId just creates a new isolated context
+        Assert.True(resultDict["success"].GetBoolean());
+        Assert.Equal("42", resultDict["returnValue"].GetString());
     }
 
     #endregion

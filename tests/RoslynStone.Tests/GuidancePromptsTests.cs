@@ -163,7 +163,7 @@ public class GuidancePromptsTests
         Assert.NotEmpty(result);
         Assert.Contains("Debugging", result);
         Assert.Contains("ValidateCsharp", result);
-        Assert.Contains("Context-Aware", result);
+        Assert.Contains("Context-Free", result); // Validation is always context-free (isolated execution)
         Assert.Contains("Workflow", result);
     }
 }

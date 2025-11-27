@@ -34,7 +34,12 @@ public class CompilationService
     {
         assemblyName ??= $"DynamicAssembly_{Guid.NewGuid():N}";
 
-        var syntaxTree = CSharpSyntaxTree.ParseText(code);
+        // Parse with latest language features to support modern C# syntax (including proper string interpolation)
+        var parseOptions = CSharpParseOptions
+            .Default.WithKind(SourceCodeKind.Regular)
+            .WithLanguageVersion(LanguageVersion.Preview);
+
+        var syntaxTree = CSharpSyntaxTree.ParseText(code, parseOptions);
 
         // Get metadata references from script options (already configured in constructor)
         var references = _scriptOptions

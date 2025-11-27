@@ -12,17 +12,15 @@ namespace RoslynStone.Tests;
 [Trait("Component", "Tools")]
 public class ResourceEquivalentToolsTests
 {
-    private readonly RoslynScriptingService _scriptingService;
     private readonly DocumentationService _documentationService;
     private readonly NuGetService _nugetService;
-    private readonly IReplContextManager _contextManager;
+    private readonly IExecutionContextManager _contextManager;
 
     public ResourceEquivalentToolsTests()
     {
-        _scriptingService = new RoslynScriptingService();
         _documentationService = new DocumentationService();
         _nugetService = new NuGetService();
-        _contextManager = new ReplContextManager();
+        _contextManager = new ExecutionContextManager();
     }
 
     #region Documentation Tools Tests
@@ -235,79 +233,6 @@ public class ResourceEquivalentToolsTests
         Assert.Equal(packageId, packageIdElement.GetString());
         Assert.True(dict.TryGetValue("version", out var versionElement));
         Assert.Equal(version, versionElement.GetString());
-    }
-
-    #endregion
-
-    #region REPL Tools Tests
-
-    [Fact]
-    [Trait("Feature", "REPL")]
-    public void GetReplInfo_WithoutContext_ReturnsGeneralInfo()
-    {
-        // Act
-        var result = ReplTools.GetReplInfo(_scriptingService, _contextManager);
-
-        // Assert
-        Assert.NotNull(result);
-        var json = TestJsonContext.SerializeDynamic(result);
-        var dict = TestJsonContext.DeserializeToDictionary(json);
-        Assert.NotNull(dict);
-        Assert.True(dict.TryGetValue("frameworkVersion", out _));
-        Assert.True(dict.TryGetValue("language", out _));
-        Assert.True(dict.TryGetValue("capabilities", out _));
-        Assert.True(dict.TryGetValue("defaultImports", out _));
-        Assert.True(dict.TryGetValue("isSessionSpecific", out var isSessionSpecificElement));
-        Assert.False(isSessionSpecificElement.GetBoolean());
-    }
-
-    [Fact]
-    [Trait("Feature", "REPL")]
-    public void GetReplInfo_WithValidContext_ReturnsSessionInfo()
-    {
-        // Arrange
-        var contextId = _contextManager.CreateContext();
-
-        // Act
-        var result = ReplTools.GetReplInfo(_scriptingService, _contextManager, contextId);
-
-        // Assert
-        Assert.NotNull(result);
-        var json = TestJsonContext.SerializeDynamic(result);
-        var dict = TestJsonContext.DeserializeToDictionary(json);
-        Assert.NotNull(dict);
-        Assert.True(dict.TryGetValue("contextId", out var contextIdElement));
-        Assert.Equal(contextId, contextIdElement.GetString());
-        Assert.True(dict.TryGetValue("isSessionSpecific", out var isSessionSpecificElement));
-        Assert.True(isSessionSpecificElement.GetBoolean());
-        Assert.True(dict.TryGetValue("sessionMetadata", out _));
-
-        // Cleanup
-        _contextManager.RemoveContext(contextId);
-    }
-
-    [Fact]
-    [Trait("Feature", "REPL")]
-    public void GetReplInfo_WithInvalidContext_ReturnsGeneralInfo()
-    {
-        // Arrange
-        var contextId = "non-existent-context";
-
-        // Act
-        var result = ReplTools.GetReplInfo(_scriptingService, _contextManager, contextId);
-
-        // Assert
-        Assert.NotNull(result);
-        var json = TestJsonContext.SerializeDynamic(result);
-        var dict = TestJsonContext.DeserializeToDictionary(json);
-        Assert.NotNull(dict);
-        Assert.True(dict.TryGetValue("contextId", out var contextIdElement));
-        Assert.Equal(contextId, contextIdElement.GetString());
-        Assert.True(dict.TryGetValue("isSessionSpecific", out var isSessionSpecificElement));
-        Assert.True(isSessionSpecificElement.GetBoolean());
-        // sessionMetadata should be null for invalid context
-        Assert.True(dict.TryGetValue("sessionMetadata", out var sessionMetadataElement));
-        Assert.Equal(JsonValueKind.Null, sessionMetadataElement.ValueKind);
     }
 
     #endregion

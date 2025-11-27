@@ -20,7 +20,7 @@ public class DocumentationTools
     /// <returns>Documentation content in structured format</returns>
     [McpServerTool]
     [Description(
-        "Access comprehensive XML documentation for .NET types, methods, properties, and other symbols, including NuGet packages. Returns detailed information including summary, remarks, parameters, return values, exceptions, and code examples. Use this to: understand .NET APIs, learn method signatures, discover available members, and get context-aware help. Supports all .NET 10 types and methods, plus NuGet packages."
+        "Get comprehensive XML documentation for .NET types, methods, properties, and symbols (includes .NET 10 BCL and NuGet packages). Returns: summary, remarks, parameters, return values, exceptions, code examples. \n\nUSE CASES:\n- Understand API behavior before using\n- Learn method signatures and parameters\n- Discover available members\n- Get async/await usage examples\n\nEXAMPLES:\n- Types: 'System.String', 'System.Linq.Enumerable', 'System.Threading.Tasks.Task'\n- Methods: 'System.Console.WriteLine', 'System.Linq.Enumerable.Select'\n- Generics: 'System.Collections.Generic.List`1', 'System.Collections.Generic.Dictionary`2'\n- NuGet: symbolName='JsonConvert', packageId='Newtonsoft.Json'"
     )]
     public static async Task<object> GetDocumentation(
         DocumentationService documentationService,

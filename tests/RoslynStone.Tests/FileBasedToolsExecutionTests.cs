@@ -13,14 +13,12 @@ namespace RoslynStone.Tests;
 [Trait("Component", "REPL")]
 public class ReplToolsContextControlTests : IDisposable
 {
-    private readonly RoslynScriptingService _scriptingService;
-    private readonly IReplContextManager _contextManager;
+    private readonly IExecutionContextManager _contextManager;
     private readonly NuGetService _nugetService;
 
     public ReplToolsContextControlTests()
     {
-        _scriptingService = new RoslynScriptingService();
-        _contextManager = new ReplContextManager();
+        _contextManager = new ExecutionContextManager();
         _nugetService = new NuGetService();
     }
 
@@ -37,8 +35,7 @@ public class ReplToolsContextControlTests : IDisposable
         var code = "1 + 1";
 
         // Act
-        var result = await ReplTools.EvaluateCsharp(
-            _scriptingService,
+        var result = await FileBasedToolsTestHelpers.EvaluateCsharpTest(
             _contextManager,
             _nugetService,
             code,
@@ -52,7 +49,7 @@ public class ReplToolsContextControlTests : IDisposable
         // Assert
         Assert.NotNull(resultDict);
         Assert.True(resultDict["success"].GetBoolean());
-        Assert.Equal(2, resultDict["returnValue"].GetInt32());
+        Assert.Equal("2", resultDict["returnValue"].GetString());
         Assert.False(
             resultDict.TryGetValue("contextId", out var contextIdElem)
                 && contextIdElem.ValueKind != JsonValueKind.Null
@@ -67,8 +64,7 @@ public class ReplToolsContextControlTests : IDisposable
         var code = "var x = 42;";
 
         // Act
-        var result = await ReplTools.EvaluateCsharp(
-            _scriptingService,
+        var result = await FileBasedToolsTestHelpers.EvaluateCsharpTest(
             _contextManager,
             _nugetService,
             code,
@@ -94,8 +90,7 @@ public class ReplToolsContextControlTests : IDisposable
         var code = "1 + 1";
 
         // Act - Call without createContext parameter (should default to false)
-        var result = await ReplTools.EvaluateCsharp(
-            _scriptingService,
+        var result = await FileBasedToolsTestHelpers.EvaluateCsharpTest(
             _contextManager,
             _nugetService,
             code
@@ -114,42 +109,6 @@ public class ReplToolsContextControlTests : IDisposable
     }
 
     [Fact]
-    [Trait("Feature", "ContextControl")]
-    public async Task EvaluateCsharp_WithContextId_IgnoresCreateContextParameter()
-    {
-        // Arrange - First create a context
-        var createResult = await ReplTools.EvaluateCsharp(
-            _scriptingService,
-            _contextManager,
-            _nugetService,
-            "var x = 10;",
-            createContext: true
-        );
-        var json1 = TestJsonContext.SerializeDynamic(createResult);
-        var dict1 = TestJsonContext.DeserializeToDictionary(json1);
-        var contextId = dict1!["contextId"].GetString();
-
-        // Act - Continue with the context (createContext should be ignored)
-        var result = await ReplTools.EvaluateCsharp(
-            _scriptingService,
-            _contextManager,
-            _nugetService,
-            "x * 2",
-            contextId: contextId,
-            createContext: false // This should be ignored since contextId is provided
-        );
-
-        var json = TestJsonContext.SerializeDynamic(result);
-        var resultDict = TestJsonContext.DeserializeToDictionary(json);
-
-        // Assert
-        Assert.NotNull(resultDict);
-        Assert.True(resultDict["success"].GetBoolean());
-        Assert.Equal(20, resultDict["returnValue"].GetInt32());
-        Assert.Equal(contextId, resultDict["contextId"].GetString());
-    }
-
-    [Fact]
     [Trait("Feature", "NuGetIntegration")]
     public async Task EvaluateCsharp_WithNuGetPackages_LoadsPackagesBeforeExecution()
     {
@@ -163,8 +122,7 @@ JsonConvert.SerializeObject(obj)
         var packages = new[] { new NuGetPackageSpec { PackageName = "Newtonsoft.Json" } };
 
         // Act
-        var result = await ReplTools.EvaluateCsharp(
-            _scriptingService,
+        var result = await FileBasedToolsTestHelpers.EvaluateCsharpTest(
             _contextManager,
             _nugetService,
             code,
@@ -198,8 +156,7 @@ JsonConvert.SerializeObject(new { Test = 1 })
         };
 
         // Act
-        var result = await ReplTools.EvaluateCsharp(
-            _scriptingService,
+        var result = await FileBasedToolsTestHelpers.EvaluateCsharpTest(
             _contextManager,
             _nugetService,
             code,
@@ -224,8 +181,7 @@ JsonConvert.SerializeObject(new { Test = 1 })
         var code = "1 + 1";
 
         // Act
-        var result = await ReplTools.EvaluateCsharp(
-            _scriptingService,
+        var result = await FileBasedToolsTestHelpers.EvaluateCsharpTest(
             _contextManager,
             _nugetService,
             code,
@@ -239,7 +195,7 @@ JsonConvert.SerializeObject(new { Test = 1 })
         // Assert
         Assert.NotNull(resultDict);
         Assert.True(resultDict["success"].GetBoolean());
-        Assert.Equal(2, resultDict["returnValue"].GetInt32());
+        Assert.Equal("2", resultDict["returnValue"].GetString());
     }
 
     [Fact]
@@ -250,8 +206,7 @@ JsonConvert.SerializeObject(new { Test = 1 })
         var code = "1 + 1";
 
         // Act
-        var result = await ReplTools.EvaluateCsharp(
-            _scriptingService,
+        var result = await FileBasedToolsTestHelpers.EvaluateCsharpTest(
             _contextManager,
             _nugetService,
             code,
@@ -265,7 +220,7 @@ JsonConvert.SerializeObject(new { Test = 1 })
         // Assert
         Assert.NotNull(resultDict);
         Assert.True(resultDict["success"].GetBoolean());
-        Assert.Equal(2, resultDict["returnValue"].GetInt32());
+        Assert.Equal("2", resultDict["returnValue"].GetString());
     }
 
     [Fact]
@@ -273,8 +228,7 @@ JsonConvert.SerializeObject(new { Test = 1 })
     public async Task ValidateCsharp_CreateContextFalse_ReturnsValidationWithoutContextId()
     {
         // Arrange & Act - Execute code in temporary context
-        await ReplTools.EvaluateCsharp(
-            _scriptingService,
+        await FileBasedToolsTestHelpers.EvaluateCsharpTest(
             _contextManager,
             _nugetService,
             "var x = 10;",
@@ -282,8 +236,7 @@ JsonConvert.SerializeObject(new { Test = 1 })
         );
 
         // Try to access variable from previous execution
-        var result2 = await ReplTools.EvaluateCsharp(
-            _scriptingService,
+        var result2 = await FileBasedToolsTestHelpers.EvaluateCsharpTest(
             _contextManager,
             _nugetService,
             "x * 2",
@@ -317,8 +270,7 @@ JsonConvert.SerializeObject(data)
         };
 
         // Act
-        var result = await ReplTools.EvaluateCsharp(
-            _scriptingService,
+        var result = await FileBasedToolsTestHelpers.EvaluateCsharpTest(
             _contextManager,
             _nugetService,
             code,
@@ -336,52 +288,18 @@ JsonConvert.SerializeObject(data)
     }
 
     [Fact]
-    [Trait("Feature", "NuGetIntegration")]
-    public async Task EvaluateCsharp_WithStatefulContextAndPackages_PackagesPersistInContext()
-    {
-        // Arrange - Load package in stateful context
-        var packages = new[] { new NuGetPackageSpec { PackageName = "Newtonsoft.Json" } };
-
-        var result1 = await ReplTools.EvaluateCsharp(
-            _scriptingService,
-            _contextManager,
-            _nugetService,
-            "using Newtonsoft.Json;",
-            nugetPackages: packages,
-            createContext: true
-        );
-
-        var json1 = JsonSerializer.Serialize(result1);
-        var dict1 = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json1);
-        var contextId = dict1!["contextId"].GetString();
-
-        // Act - Use package in the same context without loading again
-        var result2 = await ReplTools.EvaluateCsharp(
-            _scriptingService,
-            _contextManager,
-            _nugetService,
-            @"JsonConvert.SerializeObject(new { Test = 1 })",
-            contextId: contextId
-        );
-
-        var json2 = JsonSerializer.Serialize(result2);
-        var resultDict = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json2);
-
-        // Assert
-        Assert.NotNull(resultDict);
-        Assert.True(resultDict["success"].GetBoolean());
-        Assert.Contains("Test", resultDict["returnValue"].GetString());
-    }
-
-    [Fact]
     [Trait("Feature", "ContextControl")]
     public async Task ValidateCsharp_WithoutContext_ValidatesCode()
     {
         // Arrange
-        var code = "int x = 10; x * 2";
+        var code = "int x = 10; return x * 2;";
 
         // Act
-        var result = await ReplTools.ValidateCsharp(_scriptingService, _contextManager, code);
+        var result = await FileBasedToolsTestHelpers.ValidateCsharpTest(
+            _contextManager,
+            _nugetService,
+            code
+        );
 
         var json = TestJsonContext.SerializeDynamic(result);
         var resultDict = TestJsonContext.DeserializeToDictionary(json);

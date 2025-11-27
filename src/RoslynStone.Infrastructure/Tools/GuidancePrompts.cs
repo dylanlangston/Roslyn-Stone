@@ -276,15 +276,14 @@ ValidateCsharp(code: ""...<complete program>..."")
 EvaluateCsharp(code: ""...<complete program>..."")
 ```
 
-**Context-aware validation:**
+**Validation (always context-free):**
 ```
-// Without context - syntax check only
+// Error - undefined variable
 ValidateCsharp(code: ""x * 2"")
 → Error: 'x' does not exist
 
-// With context - validates against session state
-EvaluateCsharp(code: ""var x = 10;"", contextId: ""session1"")
-ValidateCsharp(code: ""x * 2"", contextId: ""session1"")
+// Correct - include variable in same code
+ValidateCsharp(code: ""var x = 10; return x * 2;"")
 → { isValid: true }
 ```
 
@@ -641,18 +640,17 @@ ValidateCsharp(code: ""string x = 123;"")
 → { isValid: false, issues: [{ code: ""CS0029"", line: 1, message: ""Cannot convert..."" }] }
 ```
 
-## Context-Aware Validation
+## Validation is Always Context-Free
 
-**Without context** - syntax check only:
+All validation checks syntax and semantics in isolation. Variables don't persist, so include them in the same code:
+
 ```
+// Error - undefined variable
 ValidateCsharp(code: ""x * 2"")
 → Error: 'x' does not exist
-```
 
-**With context** - validates against session state:
-```
-EvaluateCsharp(code: ""var x = 10;"", contextId: ""session1"")
-ValidateCsharp(code: ""x * 2"", contextId: ""session1"")
+// Correct - define variable in same code
+ValidateCsharp(code: ""var x = 10; return x * 2;"")
 → { isValid: true }
 ```
 
@@ -678,23 +676,23 @@ ValidateCsharp(code: ""int x = \""hello\"";"")
 → Fix: Use int.Parse(""123"") or proper type
 ```
 
-**Undefined variable (context-free):**
+**Undefined variable:**
 ```
 ValidateCsharp(code: ""y + 10"")
-→ Fix: Define 'y' first or use contextId with existing session
+→ Fix: Include variable in code: ""var y = 5; return y + 10;""
 ```
 
 ## Workflow
 
-1. Write code
-2. Validate: `ValidateCsharp(code, contextId?)`
+1. Write complete, self-contained code (include all variable definitions)
+2. Validate: `ValidateCsharp(code)`
 3. Read errors and fix
 4. Re-validate until `isValid: true`
-5. Execute: `EvaluateCsharp(code, contextId?)`
+5. Execute: `EvaluateCsharp(code)`
 
 **Use resources for help:**
-- `doc://{symbol}` - Check API usage
-- `repl://sessions/{contextId}/state` - Check session variables"
+- `doc://{symbol}` - Check API usage and method signatures
+- `repl://state` - View execution environment capabilities"
         );
     }
 }

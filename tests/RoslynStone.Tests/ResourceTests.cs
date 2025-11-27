@@ -16,17 +16,15 @@ namespace RoslynStone.Tests;
 [Trait("Component", "Resources")]
 public class ResourceTests
 {
-    private readonly RoslynScriptingService _scriptingService;
     private readonly DocumentationService _documentationService;
     private readonly NuGetService _nugetService;
-    private readonly IReplContextManager _contextManager;
+    private readonly IExecutionContextManager _contextManager;
 
     public ResourceTests()
     {
-        _scriptingService = new RoslynScriptingService();
         _documentationService = new DocumentationService();
         _nugetService = new NuGetService();
-        _contextManager = new ReplContextManager();
+        _contextManager = new ExecutionContextManager();
     }
 
     private static RequestContext<ReadResourceRequestParams> CreateRequestContext(string uri)
@@ -380,18 +378,14 @@ public class ResourceTests
 
     [Fact]
     [Trait("Feature", "REPL")]
-    public void ReplStateResource_GetReplState_ReturnsState()
+    public void ExecutionStateResource_GetReplState_ReturnsState()
     {
         // Arrange
         var uri = "repl://state";
         var requestContext = CreateRequestContext(uri);
 
         // Act
-        var result = ReplStateResource.GetReplState(
-            _scriptingService,
-            _contextManager,
-            requestContext
-        );
+        var result = ExecutionStateResource.GetReplState(_contextManager, requestContext);
         var json = TestJsonContext.SerializeDynamic(result);
         var resultDict = TestJsonContext.DeserializeToDictionary(json);
 
@@ -415,18 +409,14 @@ public class ResourceTests
 
     [Fact]
     [Trait("Feature", "REPL")]
-    public void ReplStateResource_GetReplState_AlternativeUri_ReturnsState()
+    public void ExecutionStateResource_GetReplState_AlternativeUri_ReturnsState()
     {
         // Arrange
         var uri = "repl://info";
         var requestContext = CreateRequestContext(uri);
 
         // Act
-        var result = ReplStateResource.GetReplState(
-            _scriptingService,
-            _contextManager,
-            requestContext
-        );
+        var result = ExecutionStateResource.GetReplState(_contextManager, requestContext);
         var json = TestJsonContext.SerializeDynamic(result);
         var resultDict = TestJsonContext.DeserializeToDictionary(json);
 
@@ -438,18 +428,14 @@ public class ResourceTests
 
     [Fact]
     [Trait("Feature", "REPL")]
-    public void ReplStateResource_GetReplState_SessionSpecificUri_ReturnsSessionState()
+    public void ExecutionStateResource_GetReplState_SessionSpecificUri_ReturnsSessionState()
     {
         // Arrange
         var uri = "repl://sessions/test-context-123/state";
         var requestContext = CreateRequestContext(uri);
 
         // Act
-        var result = ReplStateResource.GetReplState(
-            _scriptingService,
-            _contextManager,
-            requestContext
-        );
+        var result = ExecutionStateResource.GetReplState(_contextManager, requestContext);
         var json = TestJsonContext.SerializeDynamic(result);
         var resultDict = TestJsonContext.DeserializeToDictionary(json);
 

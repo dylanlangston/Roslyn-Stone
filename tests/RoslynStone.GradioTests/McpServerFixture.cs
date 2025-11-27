@@ -55,9 +55,19 @@ public sealed class McpServerFixture : IAsyncLifetime
         {
             Console.WriteLine($"[FIXTURE] Setting up Python environment in {apiOutputDir}");
 
-            // Create venv if it doesn't exist using UV (faster and compatible with UV pip)
-            if (!Directory.Exists(venvPath))
+            // Check if venv is valid (has bin/python) - recreate if empty/invalid
+            var venvPython = Path.Combine(venvPath, "bin", "python");
+            var needsVenv = !Directory.Exists(venvPath) || !File.Exists(venvPython);
+
+            if (needsVenv)
             {
+                // Remove invalid venv if it exists
+                if (Directory.Exists(venvPath))
+                {
+                    Console.WriteLine($"[FIXTURE] Removing invalid venv at {venvPath}");
+                    Directory.Delete(venvPath, recursive: true);
+                }
+
                 Console.WriteLine($"[FIXTURE] Creating virtual environment at {venvPath} with UV");
                 var createVenvProcess = Process.Start(
                     new ProcessStartInfo
@@ -80,6 +90,10 @@ public sealed class McpServerFixture : IAsyncLifetime
                         "[FIXTURE] Continuing - CSnakes will handle Python environment"
                     );
                 }
+            }
+            else
+            {
+                Console.WriteLine($"[FIXTURE] Valid venv already exists at {venvPath}");
             }
 
             // Install dependencies with UV

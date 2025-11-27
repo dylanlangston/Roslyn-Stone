@@ -31,6 +31,7 @@ project.fragment.lock.json
 ### Test Results
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*
+BenchmarkDotNet.Artifacts/
 
 ### IDE / Editor
 .vs/

@@ -106,11 +106,24 @@ Roslyn-Stone implements the Model Context Protocol (MCP) to help LLMs create sin
 
 The solution follows clean architecture principles with functional programming patterns. It implements best practices for dynamic code compilation and execution, including proper AssemblyLoadContext usage for memory management.
 
+### Isolated Execution Model
+
+Roslyn-Stone uses **isolated execution** aligned with file-based C# apps:
+
+**All Executions Are Isolated**
+- Every execution uses `SessionIsolatedExecutionService` with `UnloadableAssemblyLoadContext`
+- **Each execution is independent** - no state persistence between calls
+- Proper memory cleanup and security isolation
+- Mirrors `dotnet run app.cs` behavior - single-shot programs
+
+**Why Isolated-Only?** File-based C# apps (the target of this MCP server) are designed to run once and complete, not maintain state. Testing should mirror production: compile → execute → cleanup. Using Roslyn's Scripting API would cause memory leaks with NuGet packages since assemblies can never be unloaded from the default AppDomain.
+
 ### Key Components
 
-- **Context Management**: Thread-safe session lifecycle with automatic cleanup (30min timeout)
-- **Stateful Execution**: Variables and types persist within sessions for iterative development
-- **Resource Discovery**: Query docs, packages, and state before execution for efficient workflows
+- **Context Management**: Thread-safe tracking of execution metadata with automatic cleanup (30min timeout)
+- **Isolated Execution**: All executions use UnloadableAssemblyLoadContext for proper memory management
+- **File-Based App Focus**: Every execution mirrors `dotnet run app.cs` - single-shot, independent
+- **Resource Discovery**: Query docs and packages before execution for efficient workflows
 - **Token Optimization**: Prompts guide LLMs to create complete, runnable .cs files
 
 See `MCP_ARCHITECTURE.md` for detailed design documentation and `DYNAMIC_COMPILATION_BEST_PRACTICES.md` for compilation details.

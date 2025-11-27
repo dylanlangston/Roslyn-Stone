@@ -21,19 +21,21 @@ static void ConfigureLogging(ILoggingBuilder logging)
 }
 
 // Shared method to register all services
-static void RegisterServices(IServiceCollection services)
+static void RegisterServices(IServiceCollection services, IHostEnvironment? environment = null)
 {
-    // Register security configuration
-    // Use development defaults for now, can be configured via appsettings.json later
-    services.AddSingleton(SecurityConfiguration.CreateDevelopmentDefaults());
+    // Register security configuration - use development mode only in Development environment
+    var securityConfig =
+        environment?.IsDevelopment() == true
+            ? SecurityConfiguration.CreateDevelopmentDefaults()
+            : SecurityConfiguration.CreateProductionDefaults();
+    services.AddSingleton(securityConfig);
 
     // Register services
-    services.AddSingleton<RoslynScriptingService>();
+    services.AddSingleton<SessionIsolatedExecutionService>();
     services.AddSingleton<DocumentationService>();
     services.AddSingleton<CompilationService>();
-    services.AddSingleton<AssemblyExecutionService>();
     services.AddSingleton<NuGetService>();
-    services.AddSingleton<IReplContextManager, ReplContextManager>();
+    services.AddSingleton<IExecutionContextManager, ExecutionContextManager>();
 }
 
 if (useHttpTransport)
@@ -49,7 +51,7 @@ if (useHttpTransport)
     builder.AddServiceDefaults();
 
     // Register all services, command handlers, and query handlers
-    RegisterServices(builder.Services);
+    RegisterServices(builder.Services, builder.Environment);
 
     // Configure CSnakes Python environment with UV for Gradio
     var pythonHome = AppContext.BaseDirectory; // Python files are copied to output from GradioModule
@@ -215,7 +217,7 @@ if (useHttpTransport)
         .Services.AddMcpServer()
         .WithHttpTransport()
         .WithPromptsFromAssembly(typeof(GuidancePrompts).Assembly)
-        .WithToolsFromAssembly(typeof(ReplTools).Assembly)
+        .WithToolsFromAssembly(typeof(FileBasedTools).Assembly)
         .WithResourcesFromAssembly(typeof(DocumentationResource).Assembly);
 
     var app = builder.Build();
@@ -321,7 +323,7 @@ else
     builder.AddServiceDefaults();
 
     // Register all services, command handlers, and query handlers
-    RegisterServices(builder.Services);
+    RegisterServices(builder.Services, builder.Environment);
 
     // Configure MCP server with stdio transport
     // Register tools from the Infrastructure assembly where the MCP tools are defined
@@ -329,7 +331,7 @@ else
         .Services.AddMcpServer()
         .WithStdioServerTransport()
         .WithPromptsFromAssembly(typeof(GuidancePrompts).Assembly)
-        .WithToolsFromAssembly(typeof(ReplTools).Assembly)
+        .WithToolsFromAssembly(typeof(FileBasedTools).Assembly)
         .WithResourcesFromAssembly(typeof(DocumentationResource).Assembly);
 
     // Build and run the host

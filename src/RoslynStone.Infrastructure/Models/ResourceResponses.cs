@@ -361,7 +361,7 @@ public class PackageReadmeResponse
 /// <summary>
 /// Response for REPL state resource requests
 /// </summary>
-public class ReplStateResponse
+public class ExecutionStateResponse
 {
     /// <summary>Resource URI</summary>
     [JsonPropertyName("uri")]
@@ -419,7 +419,7 @@ public class ReplStateResponse
     /// Implicit conversion to TextResourceContents
     /// </summary>
     /// <param name="replState"></param>
-    public static implicit operator TextResourceContents(ReplStateResponse replState)
+    public static implicit operator TextResourceContents(ExecutionStateResponse replState)
     {
         var contentLines = new List<string>
         {

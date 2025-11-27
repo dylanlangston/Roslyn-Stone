@@ -30,6 +30,13 @@ public class SecurityConfiguration
     public bool EnableMemoryLimits { get; set; } = true;
 
     /// <summary>
+    /// Whether to perform static analysis to block dangerous APIs (filesystem, network, etc.)
+    /// Default: true
+    /// Note: This is defense-in-depth. Container-level restrictions (seccomp, AppArmor) provide stronger isolation.
+    /// </summary>
+    public bool EnableApiRestrictions { get; set; } = true;
+
+    /// <summary>
     /// Whether to restrict filesystem access
     /// Default: true
     /// </summary>
@@ -127,19 +134,19 @@ public class SecurityConfiguration
 
     /// <summary>
     /// Creates a permissive configuration for development/testing
-    /// WARNING: Not safe for production use
+    /// WARNING: Less restrictive than production, but still enforces core security
     /// </summary>
     public static SecurityConfiguration CreateDevelopmentDefaults() =>
         new()
         {
             ExecutionTimeout = TimeSpan.FromMinutes(5),
-            MaxMemoryBytes = 0, // No limit
-            EnableExecutionTimeout = true,
-            EnableMemoryLimits = false,
-            EnableFilesystemRestrictions = false,
-            LogContextIds = true,
-            AllowedFilesystemPaths = new List<string>(),
-            BlockedFilesystemPaths = new List<string>(),
+            MaxMemoryBytes = 100 * 1024 * 1024, // 100MB
+            EnableExecutionTimeout = true, // CHANGED: Always enforce timeout
+            EnableMemoryLimits = true, // CHANGED: Always enforce memory limits
+            EnableFilesystemRestrictions = true, // CHANGED: Always restrict filesystem
+            LogContextIds = true, // Dev only - log actual IDs for debugging
+            AllowedFilesystemPaths = new List<string>(), // Empty = allow all
+            BlockedFilesystemPaths = new List<string>(), // Empty = no blocks
             BlockedAssemblies = new List<string>(), // No restrictions in dev
         };
 }

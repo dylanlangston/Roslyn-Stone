@@ -4,7 +4,7 @@ using RoslynStone.Infrastructure.Services;
 namespace RoslynStone.Tests;
 
 /// <summary>
-/// Tests for ReplContextManager
+/// Tests for ExecutionContextManager
 /// </summary>
 [Trait("Category", "Unit")]
 [Trait("Component", "ContextManagement")]
@@ -15,7 +15,7 @@ public class ReplContextManagerTests
     public void CreateContext_ReturnsUniqueId()
     {
         // Arrange
-        var manager = new ReplContextManager();
+        var manager = new ExecutionContextManager();
 
         // Act
         var contextId = manager.CreateContext();
@@ -31,7 +31,7 @@ public class ReplContextManagerTests
     public void CreateContext_MultipleCalls_ReturnsDifferentIds()
     {
         // Arrange
-        var manager = new ReplContextManager();
+        var manager = new ExecutionContextManager();
 
         // Act
         var contextId1 = manager.CreateContext();
@@ -46,7 +46,7 @@ public class ReplContextManagerTests
     public void ContextExists_ExistingContext_ReturnsTrue()
     {
         // Arrange
-        var manager = new ReplContextManager();
+        var manager = new ExecutionContextManager();
         var contextId = manager.CreateContext();
 
         // Act
@@ -61,7 +61,7 @@ public class ReplContextManagerTests
     public void ContextExists_NonExistingContext_ReturnsFalse()
     {
         // Arrange
-        var manager = new ReplContextManager();
+        var manager = new ExecutionContextManager();
 
         // Act
         var exists = manager.ContextExists("non-existing-id");
@@ -75,7 +75,7 @@ public class ReplContextManagerTests
     public void ContextExists_NullOrEmpty_ReturnsFalse()
     {
         // Arrange
-        var manager = new ReplContextManager();
+        var manager = new ExecutionContextManager();
 
         // Act & Assert
         Assert.False(manager.ContextExists(null!));
@@ -88,7 +88,7 @@ public class ReplContextManagerTests
     public void GetContextState_NewContext_ReturnsNull()
     {
         // Arrange
-        var manager = new ReplContextManager();
+        var manager = new ExecutionContextManager();
         var contextId = manager.CreateContext();
 
         // Act
@@ -103,7 +103,7 @@ public class ReplContextManagerTests
     public async Task UpdateContextState_ValidContext_UpdatesState()
     {
         // Arrange
-        var manager = new ReplContextManager();
+        var manager = new ExecutionContextManager();
         var contextId = manager.CreateContext();
         var scriptState = await CSharpScript.RunAsync("var x = 10;");
 
@@ -121,7 +121,7 @@ public class ReplContextManagerTests
     public async Task UpdateContextState_InvalidContext_ThrowsException()
     {
         // Arrange
-        var manager = new ReplContextManager();
+        var manager = new ExecutionContextManager();
         var scriptState = await CSharpScript.RunAsync("var x = 10;");
 
         // Act & Assert
@@ -135,7 +135,7 @@ public class ReplContextManagerTests
     public async Task UpdateContextState_NullContextId_ThrowsException()
     {
         // Arrange
-        var manager = new ReplContextManager();
+        var manager = new ExecutionContextManager();
         var scriptState = await CSharpScript.RunAsync("var x = 10;");
 
         // Act & Assert
@@ -147,7 +147,7 @@ public class ReplContextManagerTests
     public void RemoveContext_ExistingContext_ReturnsTrue()
     {
         // Arrange
-        var manager = new ReplContextManager();
+        var manager = new ExecutionContextManager();
         var contextId = manager.CreateContext();
 
         // Act
@@ -163,7 +163,7 @@ public class ReplContextManagerTests
     public void RemoveContext_NonExistingContext_ReturnsFalse()
     {
         // Arrange
-        var manager = new ReplContextManager();
+        var manager = new ExecutionContextManager();
 
         // Act
         var removed = manager.RemoveContext("non-existing-id");
@@ -178,7 +178,7 @@ public class ReplContextManagerTests
     {
         // Arrange
         var shortTimeout = TimeSpan.FromMilliseconds(100);
-        var manager = new ReplContextManager(contextTimeout: shortTimeout);
+        var manager = new ExecutionContextManager(contextTimeout: shortTimeout);
         var contextId1 = manager.CreateContext();
         var contextId2 = manager.CreateContext();
 
@@ -199,7 +199,7 @@ public class ReplContextManagerTests
     public void CleanupExpiredContexts_ActiveContexts_DoesNotRemove()
     {
         // Arrange
-        var manager = new ReplContextManager(contextTimeout: TimeSpan.FromHours(1));
+        var manager = new ExecutionContextManager(contextTimeout: TimeSpan.FromHours(1));
         var contextId = manager.CreateContext();
 
         // Act
@@ -215,7 +215,7 @@ public class ReplContextManagerTests
     public void GetActiveContexts_MultipleContexts_ReturnsAll()
     {
         // Arrange
-        var manager = new ReplContextManager();
+        var manager = new ExecutionContextManager();
         var contextId1 = manager.CreateContext();
         var contextId2 = manager.CreateContext();
         var contextId3 = manager.CreateContext();
@@ -235,7 +235,7 @@ public class ReplContextManagerTests
     public void GetActiveContexts_NoContexts_ReturnsEmpty()
     {
         // Arrange
-        var manager = new ReplContextManager();
+        var manager = new ExecutionContextManager();
 
         // Act
         var activeContexts = manager.GetActiveContexts();
@@ -249,7 +249,7 @@ public class ReplContextManagerTests
     public void GetContextMetadata_ExistingContext_ReturnsMetadata()
     {
         // Arrange
-        var manager = new ReplContextManager();
+        var manager = new ExecutionContextManager();
         var contextId = manager.CreateContext();
 
         // Act
@@ -267,7 +267,7 @@ public class ReplContextManagerTests
     public async Task GetContextMetadata_AfterExecution_ShowsUpdatedCount()
     {
         // Arrange
-        var manager = new ReplContextManager();
+        var manager = new ExecutionContextManager();
         var contextId = manager.CreateContext();
         var scriptState = await CSharpScript.RunAsync("var x = 10;");
 
@@ -286,7 +286,7 @@ public class ReplContextManagerTests
     public void GetContextMetadata_NonExistingContext_ReturnsNull()
     {
         // Arrange
-        var manager = new ReplContextManager();
+        var manager = new ExecutionContextManager();
 
         // Act
         var metadata = manager.GetContextMetadata("non-existing-id");
@@ -300,7 +300,7 @@ public class ReplContextManagerTests
     public void CreateContext_ConcurrentCalls_AllSucceed()
     {
         // Arrange
-        var manager = new ReplContextManager();
+        var manager = new ExecutionContextManager();
         var contextIds = new System.Collections.Concurrent.ConcurrentBag<string>();
 
         // Act

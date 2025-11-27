@@ -8,31 +8,29 @@ using RoslynStone.Infrastructure.Services;
 namespace RoslynStone.Infrastructure.Resources;
 
 /// <summary>
-/// MCP resource for REPL state information
+/// MCP resource for file-based C# execution environment information
 /// </summary>
 [McpServerResourceType]
-public class ReplStateResource
+public class ExecutionStateResource
 {
     /// <summary>
-    /// Get current REPL environment information as a resource
+    /// Get current file-based execution environment information as a resource
     /// </summary>
-    /// <param name="scriptingService">The Roslyn scripting service</param>
-    /// <param name="contextManager">The REPL context manager</param>
+    /// <param name="contextManager">The execution context manager</param>
     /// <param name="requestContext">The request context containing the URI and optional params.</param>
-    /// <returns>Information about current REPL state</returns>
+    /// <returns>Information about current execution state</returns>
     [McpServerResource(
         UriTemplate = "repl://state",
-        Name = "REPL State Information",
+        Name = "Execution Environment Information",
         MimeType = "application/json"
     )]
     [Description(
-        "Access the current REPL environment state, including active sessions, default imports, capabilities, tips, and examples."
+        "Access information about the file-based C# execution environment, including framework version, capabilities, and examples. NOTE: All executions are isolated and single-shot - no persistent state or sessions."
     )]
     public static ResourceContents GetReplState(
-        RoslynScriptingService scriptingService,
-        IReplContextManager contextManager,
+        IExecutionContextManager contextManager,
         [Description(
-            "RequestContext containing the resource URI. Use 'repl://state' or 'repl://info' for general info, or 'repl://sessions/{contextId}/state' for session-specific state."
+            "RequestContext containing the resource URI. Use 'repl://state' for execution environment information."
         )]
             RequestContext<ReadResourceRequestParams> requestContext
     )
@@ -42,27 +40,25 @@ public class ReplStateResource
     }
 
     /// <summary>
-    /// Get REPL session-specific state information as a resource
+    /// Get session-specific state information as a resource
     /// </summary>
-    /// <param name="scriptingService">The Roslyn scripting service</param>
-    /// <param name="contextManager">The REPL context manager</param>
-    /// <param name="contextId">The ID of the REPL session to query (path variable).</param>
+    /// <param name="contextManager">The execution context manager</param>
+    /// <param name="contextId">The ID of the session to query (path variable).</param>
     /// <param name="requestContext">The request context containing the URI and optional params.</param>
-    /// <returns>Information about specific REPL session state</returns>
+    /// <returns>Information about specific session state</returns>
     [McpServerResource(
         UriTemplate = "repl://sessions/{contextId}/state",
-        Name = "REPL Session State Information",
+        Name = "Context Metadata Information",
         MimeType = "application/json"
     )]
     [Description(
-        "Access detailed state information for a specific REPL session identified by its context ID. Returns session metadata including creation time, last accessed time, execution count, and initialization status. Use this to monitor and manage individual REPL sessions, track their activity, and understand their current state. URI format: repl://sessions/{contextId}/state"
+        "Access metadata for a specific context ID used for execution tracking. Returns metadata including creation time, last accessed time, and execution count. NOTE: Context IDs track execution history only - they do NOT provide state persistence. All executions are isolated and independent. URI format: repl://sessions/{contextId}/state"
     )]
     public static ResourceContents GetReplSessionState(
-        RoslynScriptingService scriptingService,
-        IReplContextManager contextManager,
+        IExecutionContextManager contextManager,
         RequestContext<ReadResourceRequestParams> requestContext,
         [Description(
-            "The REPL session context ID extracted from the URI. Use 'repl://sessions/{contextId}/state' to target a specific session."
+            "The session context ID extracted from the URI. Use 'repl://sessions/{contextId}/state' to target a specific session."
         )]
             string contextId
     )
@@ -79,7 +75,7 @@ public class ReplStateResource
     /// <param name="uri"></param>
     /// <returns></returns>
     static ResourceContents GetReplState_Internal(
-        IReplContextManager contextManager,
+        IExecutionContextManager contextManager,
         [Description(
             "Resource URI. Use 'repl://state' or 'repl://info' for general info, or 'repl://sessions/{contextId}/state' for session-specific state."
         )]
@@ -130,14 +126,15 @@ public class ReplStateResource
 
         var tips = new List<string>
         {
-            "Variables and types persist between executions",
+            "All executions are isolated and single-shot - no state persistence",
+            "Each execution is independent - variables do NOT carry over",
             "Use 'using' directives to import additional namespaces",
             "Console.WriteLine output is captured separately from return values",
-            "Async/await is fully supported in the REPL",
-            "Use LoadNuGetPackage to add external libraries",
-            "Use ResetRepl to clear all state and start fresh",
+            "Top-level await is fully supported for async operations",
+            "Use nugetPackages parameter to test packages inline",
+            "Use #:package directive in final .cs files for self-contained utilities",
             "Use ValidateCsharp to check syntax before execution",
-            "Use documentation resources to learn about .NET APIs",
+            "Use doc:// resources to learn about .NET APIs",
         };
 
         var capabilities = new ReplCapabilities
@@ -147,16 +144,16 @@ public class ReplStateResource
             TopLevelStatements = true,
             ConsoleOutput = true,
             NugetPackages = true,
-            Statefulness = true,
+            Statefulness = false, // All executions are isolated and independent
         };
 
         var examples = new ReplExamples
         {
-            SimpleExpression = "2 + 2",
-            VariableDeclaration = "var name = \"Alice\"; name",
-            AsyncOperation = "await Task.Delay(100); \"Done\"",
-            LinqQuery = "new[] { 1, 2, 3 }.Select(x => x * 2)",
-            ConsoleOutput = "Console.WriteLine(\"Debug\"); return \"Result\"",
+            SimpleExpression = "return 2 + 2;",
+            VariableDeclaration = "var name = \"Alice\"; return name;",
+            AsyncOperation = "await Task.Delay(100); return \"Done\";",
+            LinqQuery = "return new[] { 1, 2, 3 }.Select(x => x * 2).ToArray();",
+            ConsoleOutput = "Console.WriteLine(\"Debug\"); return \"Result\";",
         };
 
         SessionMetadata? sessionMetadata = null;
@@ -176,7 +173,7 @@ public class ReplStateResource
             }
         }
 
-        return new ReplStateResponse
+        return new ExecutionStateResponse
         {
             Uri = uri,
             MimeType = "application/json",
