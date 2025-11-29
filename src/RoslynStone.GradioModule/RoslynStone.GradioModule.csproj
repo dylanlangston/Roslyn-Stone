@@ -14,11 +14,15 @@
     </AdditionalFiles>
     <None Include="gradio_app.py" CopyToOutputDirectory="Always" />
     <None Include="pyproject.toml" CopyToOutputDirectory="Always" />
+    <None Include="requirements.txt" CopyToOutputDirectory="Always" />
     
-    <!-- Copy all Python modules and packages -->
-    <None Include="**\*.py" CopyToOutputDirectory="Always" LinkBase="\" />
+    <!-- Copy all Python modules and packages (using forward slashes for cross-platform) -->
+    <None Include="components/**/*.py" CopyToOutputDirectory="Always" LinkBase="components" />
+    <None Include="tabs/**/*.py" CopyToOutputDirectory="Always" LinkBase="tabs" />
+    <None Include="theme/**/*.py" CopyToOutputDirectory="Always" LinkBase="theme" />
+    <None Include="utils/**/*.py" CopyToOutputDirectory="Always" LinkBase="utils" />
     
-    <None Include=".venv\**\*" CopyToOutputDirectory="Always" Condition="Exists('.venv')" />
+    <None Include=".venv/**/*" CopyToOutputDirectory="Always" Condition="Exists('.venv')" />
   </ItemGroup>
 
   <ItemGroup>
