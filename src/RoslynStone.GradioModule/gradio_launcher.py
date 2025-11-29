@@ -2,6 +2,8 @@
 This module provides a simple function to start the Gradio server.
 """
 
+import importlib.util
+
 
 def start_gradio_server(base_url: str = "http://localhost:7071", server_port: int = 7860) -> str:
     """Start the Gradio server and return the server URL.
@@ -40,8 +42,6 @@ def check_gradio_installed() -> bool:
         True if Gradio is available, False otherwise
     """
     try:
-        import importlib.util
-
         return importlib.util.find_spec("gradio") is not None
     except ImportError:
         return False

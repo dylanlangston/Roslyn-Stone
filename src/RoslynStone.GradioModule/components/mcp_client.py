@@ -69,7 +69,6 @@ class McpHttpClient:
             if isinstance(e, (KeyboardInterrupt, SystemExit)):
                 raise
             return {"error": str(e)}
-        return {"error": "Unknown error"}
 
     def list_tools(self) -> list[dict[str, Any]]:
         """List all available MCP tools."""

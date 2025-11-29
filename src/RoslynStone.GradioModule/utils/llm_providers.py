@@ -12,6 +12,9 @@ if TYPE_CHECKING:
 # Maximum iterations for tool calls to prevent infinite loops
 MAX_TOOL_ITERATIONS = 10
 
+# Default model for HuggingFace chat when none specified
+DEFAULT_HUGGINGFACE_MODEL = "meta-llama/Llama-3.2-3B-Instruct"
+
 
 def call_openai_chat(
     messages: list[dict[str, Any]],
@@ -239,7 +242,7 @@ def call_huggingface_chat(
         response: str = ""
         for message in client.chat_completion(
             messages=chat_messages,
-            model=model if model else "meta-llama/Llama-3.2-3B-Instruct",
+            model=model if model else DEFAULT_HUGGINGFACE_MODEL,
             max_tokens=2048,
             stream=True,
         ):
